@@ -247,6 +247,14 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.jacoco</groupId>
+      <artifactId>org.jacoco.agent</artifactId>
+      <classifier>runtime</classifier>
+      <version>0.7.5.201505241946</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -577,6 +585,9 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>2.18.1</version>
         <configuration>
+          <properties>
+            <argLine>${argLine}</argLine>
+          </properties>
           <includes>
             <include>com/google/**/*.java</include>
           </includes>
@@ -603,7 +614,12 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.18.1</version>
         <configuration>
-          <argLine>-Duser.language=en -Duser.country=US -XX:-UseSplitVerifier</argLine>
+          <systemPropertyVariables>
+            <jacoco-agent.destfile>${basedir}/target/jacoco.exec</jacoco-agent.destfile>
+          </systemPropertyVariables>
+          <properties>
+            <argLine> -Duser.language=en -Duser.country=US -XX:-UseSplitVerifier</argLine>
+          </properties>
           <additionalClasspathElements>
             <additionalClasspathElement>src/test/resources-noncompilable</additionalClasspathElement>
           </additionalClasspathElements>
@@ -838,6 +854,28 @@
       </plugin>
 
       <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.7.5.201505241946</version>
+        <configuration>
+          <excludes>
+            <exclude>com/puppycrawl/tools/checkstyle/ant/CheckstyleAntTask*.class</exclude>
+            <exclude>com/puppycrawl/tools/checkstyle/doclets/*.class</exclude>
+            <exclude>com/puppycrawl/tools/checkstyle/grammars/*.class</exclude>
+            <exclude>com/puppycrawl/tools/checkstyle/grammars/javadoc/*.class</exclude>
+            <exclude>com/puppycrawl/tools/checkstyle/gui/*.class</exclude>
+          </excludes>
+        </configuration>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>report</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
         <version>2.5</version>
@@ -1053,6 +1091,81 @@
         </plugins>
       </build>
 
+    </profile>
+
+    <profile>
+      <id>jacoco</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.7.5.201505241946</version>
+            <configuration>
+              <haltOnFailure>true</haltOnFailure>
+            </configuration>
+            <executions>
+              <execution>
+                <id>default-instrument</id>
+                <goals>
+                  <goal>instrument</goal>
+                </goals>
+                <configuration>
+                  <excludes>
+                    <exclude>com/puppycrawl/tools/checkstyle/ant/CheckstyleAntTask*.class</exclude>
+                    <exclude>com/puppycrawl/tools/checkstyle/doclets/*.class</exclude>
+                    <exclude>com/puppycrawl/tools/checkstyle/grammars/*.class</exclude>
+                    <exclude>com/puppycrawl/tools/checkstyle/grammars/javadoc/*.class</exclude>
+                    <exclude>com/puppycrawl/tools/checkstyle/gui/*.class</exclude>
+                  </excludes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>default-restore-instrumented-classes</id>
+                <goals>
+                  <goal>restore-instrumented-classes</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>default-report</id>
+                <phase>site</phase>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+                <configuration>
+                  <dataFile>${basedir}/target/jacoco.exec</dataFile>
+                </configuration>
+              </execution>
+              <execution>
+                <id>default-check</id>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <configuration>
+                  <haltOnFailure>true</haltOnFailure>
+                  <rules>
+                    <rule>
+                      <element>BUNDLE</element>
+                      <limits>
+                        <limit>
+                          <counter>LINE</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>1.00</minimum>
+                        </limit>
+                        <limit>
+                          <counter>BRANCH</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>1.00</minimum>
+                        </limit>
+                      </limits>
+                    </rule>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
