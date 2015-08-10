@@ -26,31 +26,38 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.regex.PatternSyntaxException;
 
 import org.junit.Assume;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.powermock.reflect.Whitebox;
 import org.xml.sax.InputSource;
 
+import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.FilterSet;
 
 /**
  * Tests SuppressionsLoader.
  * @author Rick Giles
+ * @author <a href="mailto:andreyselkin@gmail.com">Andrei Selkin</a>
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ SuppressionsLoader.class, SuppressionsLoaderTest.class })
-public class SuppressionsLoaderTest {
+public class SuppressionsLoaderTest extends BaseCheckTestSupport {
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Test
     public void testNoSuppressions()
         throws CheckstyleException {
@@ -188,42 +195,34 @@ public class SuppressionsLoaderTest {
 
     @Test
     public void testUnableToFindSuppressions() throws Exception {
-        mockStatic(SuppressionsLoader.class);
+        Class<SuppressionsLoader> loaderClass = SuppressionsLoader.class;
+        Method loadSuppressions =
+            loaderClass.getDeclaredMethod("loadSuppressions", InputSource.class, String.class);
+        loadSuppressions.setAccessible(true);
 
-        String fileName = "suppressions_none.xml";
-        InputSource source = mock(InputSource.class);
+        String sourceName = "suppressions_none.xml";
+        InputSource inputSource = new InputSource(sourceName);
 
-        when(source.getByteStream()).thenThrow(FileNotFoundException.class);
-        when(SuppressionsLoader.class, "loadSuppressions", source, fileName).thenCallRealMethod();
+        thrown.expect(CheckstyleException.class);
+        thrown.expectMessage("unable to find " + sourceName);
 
-        try {
-            Whitebox.invokeMethod(SuppressionsLoader.class, "loadSuppressions", source, fileName);
-            fail("Exception is expected");
-        }
-        catch (CheckstyleException ex) {
-            assertTrue(ex.getCause() instanceof  FileNotFoundException);
-            assertEquals("unable to find " + fileName, ex.getMessage());
-        }
+        loadSuppressions.invoke(loaderClass, inputSource, sourceName);
     }
 
     @Test
     public void testUnableToReadSuppressions() throws Exception {
-        mockStatic(SuppressionsLoader.class);
+        Class<SuppressionsLoader> loaderClass = SuppressionsLoader.class;
+        Method loadSuppressions =
+            loaderClass.getDeclaredMethod("loadSuppressions", InputSource.class, String.class);
+        loadSuppressions.setAccessible(true);
 
-        String fileName = "suppressions_none.xml";
-        InputSource source = mock(InputSource.class);
+        String sourceName = "suppressions_none.xml";
+        InputSource inputSource = new InputSource();
 
-        when(source.getByteStream()).thenThrow(IOException.class);
-        when(SuppressionsLoader.class, "loadSuppressions", source, fileName).thenCallRealMethod();
+        thrown.expect(CheckstyleException.class);
+        thrown.expectMessage("unable to read " + sourceName);
 
-        try {
-            Whitebox.invokeMethod(SuppressionsLoader.class, "loadSuppressions", source, fileName);
-            fail("Exception is expected");
-        }
-        catch (CheckstyleException ex) {
-            assertTrue(ex.getCause() instanceof  IOException);
-            assertEquals("unable to read " + fileName, ex.getMessage());
-        }
+        loadSuppressions.invoke(loaderClass, inputSource, sourceName);
     }
 
     @Test
@@ -270,6 +269,7 @@ public class SuppressionsLoaderTest {
 
     @Test
     public void testloadSuppressionsURISyntaxException() throws Exception {
+
         mockStatic(SuppressionsLoader.class);
 
         URL configUrl = mock(URL.class);
