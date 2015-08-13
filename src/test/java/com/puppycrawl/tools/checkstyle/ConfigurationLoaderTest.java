@@ -36,6 +36,7 @@ import java.util.Properties;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.xml.sax.Attributes;
@@ -451,16 +452,13 @@ public class ConfigurationLoaderTest {
 
     @Test
     public void testLoadConfiguration_URISyntaxException() throws CheckstyleException {
-        mockStatic(ConfigurationLoader.class);
+        // TODO(Godin): explain why should call real methods by default
+        mockStatic(ConfigurationLoader.class, Mockito.CALLS_REAL_METHODS);
 
         PropertiesExpander expander = new PropertiesExpander(new Properties());
 
         when(ConfigurationLoader.class.getResource("config_with_ignore.xml"))
                 .thenThrow(URISyntaxException.class);
-        when(ConfigurationLoader.loadConfiguration("config_with_ignore.xml",
-                expander,
-                true))
-                .thenCallRealMethod();
 
         try {
             ConfigurationLoader.loadConfiguration(

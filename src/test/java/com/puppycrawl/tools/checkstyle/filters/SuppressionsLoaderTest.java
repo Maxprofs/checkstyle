@@ -38,6 +38,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.xml.sax.InputSource;
@@ -269,16 +270,14 @@ public class SuppressionsLoaderTest extends BaseCheckTestSupport {
 
     @Test
     public void testloadSuppressionsURISyntaxException() throws Exception {
-
-        mockStatic(SuppressionsLoader.class);
-
+        // TODO(Godin): explain why order matters for mocks
         URL configUrl = mock(URL.class);
         String fileName = "suppressions_none.xml";
-
-        when(SuppressionsLoader.class.getResource(fileName)).thenReturn(configUrl);
         when(configUrl.toURI()).thenThrow(URISyntaxException.class);
-        when(SuppressionsLoader.loadSuppressions(fileName))
-                .thenCallRealMethod();
+
+        // TODO(Godin): explain why should call real methods by default
+        mockStatic(SuppressionsLoader.class, Mockito.CALLS_REAL_METHODS);
+        when(SuppressionsLoader.class.getResource(fileName)).thenReturn(configUrl);
 
         try {
             SuppressionsLoader.loadSuppressions(fileName);
