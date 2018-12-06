@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,12 +20,12 @@
 package com.puppycrawl.tools.checkstyle.api;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.Serializable;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,58 +43,65 @@ import java.util.ResourceBundle.Control;
  * message.properties files. The underlying implementation uses
  * java.text.MessageFormat.
  *
- * @author Oliver Burn
- * @author lkuehne
+ * @noinspection SerializableHasSerializationMethods, ClassWithTooManyConstructors
  */
 public final class LocalizedMessage
     implements Comparable<LocalizedMessage>, Serializable {
-    /** Required for serialization. */
+
     private static final long serialVersionUID = 5675176836184862150L;
 
-    /** the locale to localise messages to **/
-    private static Locale sLocale = Locale.getDefault();
-
     /**
-     * A cache that maps bundle names to RessourceBundles.
+     * A cache that maps bundle names to ResourceBundles.
      * Avoids repetitive calls to ResourceBundle.getBundle().
      */
     private static final Map<String, ResourceBundle> BUNDLE_CACHE =
-        Collections.synchronizedMap(new HashMap<String, ResourceBundle>());
+        Collections.synchronizedMap(new HashMap<>());
 
-    /** the default severity level if one is not specified */
+    /** The default severity level if one is not specified. */
     private static final SeverityLevel DEFAULT_SEVERITY = SeverityLevel.ERROR;
 
-    /** the line number **/
-    private final int lineNo;
-    /** the column number **/
-    private final int colNo;
+    /** The locale to localise messages to. **/
+    private static Locale sLocale = Locale.getDefault();
 
-    /** the severity level **/
+    /** The line number. **/
+    private final int lineNo;
+    /** The column number. **/
+    private final int columnNo;
+    /** The column char index. **/
+    private final int columnCharIndex;
+    /** The token type constant. See {@link TokenTypes}. **/
+    private final int tokenType;
+
+    /** The severity level. **/
     private final SeverityLevel severityLevel;
 
-    /** the id of the module generating the message. */
+    /** The id of the module generating the message. */
     private final String moduleId;
 
-    /** key for the message format **/
+    /** Key for the message format. **/
     private final String key;
 
-    /** arguments for MessageFormat **/
+    /** Arguments for MessageFormat.
+     * @noinspection NonSerializableFieldInSerializableClass
+     */
     private final Object[] args;
 
-    /** name of the resource bundle to get messages from **/
+    /** Name of the resource bundle to get messages from. **/
     private final String bundle;
 
-    /** class of the source for this LocalizedMessage */
+    /** Class of the source for this LocalizedMessage. */
     private final Class<?> sourceClass;
 
-    /** a custom message overriding the default message from the bundle. */
+    /** A custom message overriding the default message from the bundle. */
     private final String customMessage;
 
     /**
      * Creates a new {@code LocalizedMessage} instance.
      *
      * @param lineNo line number associated with the message
-     * @param colNo column number associated with the message
+     * @param columnNo column number associated with the message
+     * @param columnCharIndex column char index associated with the message
+     * @param tokenType token type of the event associated with the message. See {@link TokenTypes}
      * @param bundle resource bundle name
      * @param key the key to locate the translation
      * @param args arguments for the translation
@@ -102,9 +109,13 @@ public final class LocalizedMessage
      * @param moduleId the id of the module the message is associated with
      * @param sourceClass the Class that is the source of the message
      * @param customMessage optional custom message overriding the default
+     * @noinspection ConstructorWithTooManyParameters
      */
+    // -@cs[ParameterNumber] Class is immutable, we need that amount of arguments.
     public LocalizedMessage(int lineNo,
-                            int colNo,
+                            int columnNo,
+                            int columnCharIndex,
+                            int tokenType,
                             String bundle,
                             String key,
                             Object[] args,
@@ -113,9 +124,17 @@ public final class LocalizedMessage
                             Class<?> sourceClass,
                             String customMessage) {
         this.lineNo = lineNo;
-        this.colNo = colNo;
+        this.columnNo = columnNo;
+        this.columnCharIndex = columnCharIndex;
+        this.tokenType = tokenType;
         this.key = key;
-        this.args = args == null ? null : args.clone();
+
+        if (args == null) {
+            this.args = null;
+        }
+        else {
+            this.args = Arrays.copyOf(args, args.length);
+        }
         this.bundle = bundle;
         this.severityLevel = severityLevel;
         this.moduleId = moduleId;
@@ -127,16 +146,76 @@ public final class LocalizedMessage
      * Creates a new {@code LocalizedMessage} instance.
      *
      * @param lineNo line number associated with the message
-     * @param colNo column number associated with the message
+     * @param columnNo column number associated with the message
+     * @param tokenType token type of the event associated with the message. See {@link TokenTypes}
+     * @param bundle resource bundle name
+     * @param key the key to locate the translation
+     * @param args arguments for the translation
+     * @param severityLevel severity level for the message
+     * @param moduleId the id of the module the message is associated with
+     * @param sourceClass the Class that is the source of the message
+     * @param customMessage optional custom message overriding the default
+     * @noinspection ConstructorWithTooManyParameters
+     */
+    // -@cs[ParameterNumber] Class is immutable, we need that amount of arguments.
+    public LocalizedMessage(int lineNo,
+                            int columnNo,
+                            int tokenType,
+                            String bundle,
+                            String key,
+                            Object[] args,
+                            SeverityLevel severityLevel,
+                            String moduleId,
+                            Class<?> sourceClass,
+                            String customMessage) {
+        this(lineNo, columnNo, columnNo, tokenType, bundle, key, args, severityLevel, moduleId,
+                sourceClass, customMessage);
+    }
+
+    /**
+     * Creates a new {@code LocalizedMessage} instance.
+     *
+     * @param lineNo line number associated with the message
+     * @param columnNo column number associated with the message
+     * @param bundle resource bundle name
+     * @param key the key to locate the translation
+     * @param args arguments for the translation
+     * @param severityLevel severity level for the message
+     * @param moduleId the id of the module the message is associated with
+     * @param sourceClass the Class that is the source of the message
+     * @param customMessage optional custom message overriding the default
+     * @noinspection ConstructorWithTooManyParameters
+     */
+    // -@cs[ParameterNumber] Class is immutable, we need that amount of arguments.
+    public LocalizedMessage(int lineNo,
+                            int columnNo,
+                            String bundle,
+                            String key,
+                            Object[] args,
+                            SeverityLevel severityLevel,
+                            String moduleId,
+                            Class<?> sourceClass,
+                            String customMessage) {
+        this(lineNo, columnNo, 0, bundle, key, args, severityLevel, moduleId, sourceClass,
+                customMessage);
+    }
+
+    /**
+     * Creates a new {@code LocalizedMessage} instance.
+     *
+     * @param lineNo line number associated with the message
+     * @param columnNo column number associated with the message
      * @param bundle resource bundle name
      * @param key the key to locate the translation
      * @param args arguments for the translation
      * @param moduleId the id of the module the message is associated with
      * @param sourceClass the Class that is the source of the message
      * @param customMessage optional custom message overriding the default
+     * @noinspection ConstructorWithTooManyParameters
      */
+    // -@cs[ParameterNumber] Class is immutable, we need that amount of arguments.
     public LocalizedMessage(int lineNo,
-                            int colNo,
+                            int columnNo,
                             String bundle,
                             String key,
                             Object[] args,
@@ -144,7 +223,7 @@ public final class LocalizedMessage
                             Class<?> sourceClass,
                             String customMessage) {
         this(lineNo,
-             colNo,
+                columnNo,
              bundle,
              key,
              args,
@@ -165,7 +244,9 @@ public final class LocalizedMessage
      * @param moduleId the id of the module the message is associated with
      * @param sourceClass the source class for the message
      * @param customMessage optional custom message overriding the default
+     * @noinspection ConstructorWithTooManyParameters
      */
+    // -@cs[ParameterNumber] Class is immutable, we need that amount of arguments.
     public LocalizedMessage(int lineNo,
                             String bundle,
                             String key,
@@ -202,6 +283,12 @@ public final class LocalizedMessage
                 sourceClass, customMessage);
     }
 
+    /**
+     * Indicates whether some other object is "equal to" this one.
+     * Suppression on enumeration is needed so code stays consistent.
+     * @noinspection EqualsCalledOnEnumConstant
+     */
+    // -@cs[CyclomaticComplexity] equals - a lot of fields to check.
     @Override
     public boolean equals(Object object) {
         if (this == object) {
@@ -212,7 +299,9 @@ public final class LocalizedMessage
         }
         final LocalizedMessage localizedMessage = (LocalizedMessage) object;
         return Objects.equals(lineNo, localizedMessage.lineNo)
-                && Objects.equals(colNo, localizedMessage.colNo)
+                && Objects.equals(columnNo, localizedMessage.columnNo)
+                && Objects.equals(columnCharIndex, localizedMessage.columnCharIndex)
+                && Objects.equals(tokenType, localizedMessage.tokenType)
                 && Objects.equals(severityLevel, localizedMessage.severityLevel)
                 && Objects.equals(moduleId, localizedMessage.moduleId)
                 && Objects.equals(key, localizedMessage.key)
@@ -224,40 +313,42 @@ public final class LocalizedMessage
 
     @Override
     public int hashCode() {
-        return Objects.hash(lineNo, colNo, severityLevel, moduleId, key, bundle, sourceClass,
-                customMessage, Arrays.hashCode(args));
+        return Objects.hash(lineNo, columnNo, columnCharIndex, tokenType, severityLevel, moduleId,
+                key, bundle, sourceClass, customMessage, Arrays.hashCode(args));
     }
 
     /** Clears the cache. */
     public static void clearCache() {
-        synchronized (BUNDLE_CACHE) {
-            BUNDLE_CACHE.clear();
-        }
+        BUNDLE_CACHE.clear();
     }
 
-    /** @return the translated message **/
+    /**
+     * Gets the translated message.
+     * @return the translated message
+     */
     public String getMessage() {
+        String message = getCustomMessage();
 
-        final String message = getCustomMessage();
-        if (message != null) {
-            return message;
+        if (message == null) {
+            try {
+                // Important to use the default class loader, and not the one in
+                // the GlobalProperties object. This is because the class loader in
+                // the GlobalProperties is specified by the user for resolving
+                // custom classes.
+                final ResourceBundle resourceBundle = getBundle(bundle);
+                final String pattern = resourceBundle.getString(key);
+                final MessageFormat formatter = new MessageFormat(pattern, Locale.ROOT);
+                message = formatter.format(args);
+            }
+            catch (final MissingResourceException ignored) {
+                // If the Check author didn't provide i18n resource bundles
+                // and logs error messages directly, this will return
+                // the author's original message
+                final MessageFormat formatter = new MessageFormat(key, Locale.ROOT);
+                message = formatter.format(args);
+            }
         }
-
-        try {
-            // Important to use the default class loader, and not the one in
-            // the GlobalProperties object. This is because the class loader in
-            // the GlobalProperties is specified by the user for resolving
-            // custom classes.
-            final ResourceBundle resourceBundle = getBundle(this.bundle);
-            final String pattern = resourceBundle.getString(key);
-            return MessageFormat.format(pattern, args);
-        }
-        catch (final MissingResourceException ignored) {
-            // If the Check author didn't provide i18n resource bundles
-            // and logs error messages directly, this will return
-            // the author's original message
-            return MessageFormat.format(key, args);
-        }
+        return message;
     }
 
     /**
@@ -266,12 +357,12 @@ public final class LocalizedMessage
      *          if there is no custom message
      */
     private String getCustomMessage() {
-
-        if (customMessage == null) {
-            return null;
+        String message = null;
+        if (customMessage != null) {
+            final MessageFormat formatter = new MessageFormat(customMessage, Locale.ROOT);
+            message = formatter.format(args);
         }
-
-        return MessageFormat.format(customMessage, args);
+        return message;
     }
 
     /**
@@ -282,34 +373,54 @@ public final class LocalizedMessage
      * @return a ResourceBundle
      */
     private ResourceBundle getBundle(String bundleName) {
-        synchronized (BUNDLE_CACHE) {
-            ResourceBundle resourceBundle = BUNDLE_CACHE
-                    .get(bundleName);
-            if (resourceBundle == null) {
-                resourceBundle = ResourceBundle.getBundle(bundleName, sLocale,
-                        sourceClass.getClassLoader(), new UTF8Control());
-                BUNDLE_CACHE.put(bundleName, resourceBundle);
-            }
-            return resourceBundle;
-        }
+        return BUNDLE_CACHE.computeIfAbsent(bundleName, name -> ResourceBundle.getBundle(
+                name, sLocale, sourceClass.getClassLoader(), new Utf8Control()));
     }
 
-    /** @return the line number **/
+    /**
+     * Gets the line number.
+     * @return the line number
+     */
     public int getLineNo() {
         return lineNo;
     }
 
-    /** @return the column number **/
+    /**
+     * Gets the column number.
+     * @return the column number
+     */
     public int getColumnNo() {
-        return colNo;
+        return columnNo;
     }
 
-    /** @return the severity level **/
+    /**
+     * Gets the column char index.
+     * @return the column char index
+     */
+    public int getColumnCharIndex() {
+        return columnCharIndex;
+    }
+
+    /**
+     * Gets the token type.
+     * @return the token type
+     */
+    public int getTokenType() {
+        return tokenType;
+    }
+
+    /**
+     * Gets the severity level.
+     * @return the severity level
+     */
     public SeverityLevel getSeverityLevel() {
         return severityLevel;
     }
 
-    /** @return the module identifier. */
+    /**
+     * Returns id of module.
+     * @return the module identifier.
+     */
     public String getModuleId() {
         return moduleId;
     }
@@ -324,13 +435,20 @@ public final class LocalizedMessage
         return key;
     }
 
-    /** @return the name of the source for this LocalizedMessage */
+    /**
+     * Gets the name of the source for this LocalizedMessage.
+     * @return the name of the source for this LocalizedMessage
+     */
     public String getSourceName() {
         return sourceClass.getName();
     }
 
-    /** @param locale the locale to use for localization **/
+    /**
+     * Sets a locale to use for localization.
+     * @param locale the locale to use for localization
+     */
     public static void setLocale(Locale locale) {
+        clearCache();
         if (Locale.ENGLISH.getLanguage().equals(locale.getLanguage())) {
             sLocale = Locale.ROOT;
         }
@@ -345,57 +463,63 @@ public final class LocalizedMessage
 
     @Override
     public int compareTo(LocalizedMessage other) {
-        if (getLineNo() == other.getLineNo()) {
-            if (getColumnNo() == other.getColumnNo()) {
-                return getMessage().compareTo(other.getMessage());
-            }
-            return getColumnNo() < other.getColumnNo() ? -1 : 1;
-        }
+        final int result;
 
-        return getLineNo() < other.getLineNo() ? -1 : 1;
+        if (lineNo == other.lineNo) {
+            if (columnNo == other.columnNo) {
+                if (Objects.equals(moduleId, other.moduleId)) {
+                    result = getMessage().compareTo(other.getMessage());
+                }
+                else if (moduleId == null) {
+                    result = -1;
+                }
+                else if (other.moduleId == null) {
+                    result = 1;
+                }
+                else {
+                    result = moduleId.compareTo(other.moduleId);
+                }
+            }
+            else {
+                result = Integer.compare(columnNo, other.columnNo);
+            }
+        }
+        else {
+            result = Integer.compare(lineNo, other.lineNo);
+        }
+        return result;
     }
 
     /**
      * <p>
      * Custom ResourceBundle.Control implementation which allows explicitly read
-     * the properties files as UTF-8
+     * the properties files as UTF-8.
      * </p>
-     *
-     * @author <a href="mailto:nesterenko-aleksey@list.ru">Aleksey Nesterenko</a>
      */
-    protected static class UTF8Control extends Control {
+    public static class Utf8Control extends Control {
+
         @Override
-        public ResourceBundle newBundle(String aBaseName, Locale aLocale, String aFormat,
-                 ClassLoader aLoader, boolean aReload) throws IOException {
+        public ResourceBundle newBundle(String baseName, Locale locale, String format,
+                 ClassLoader loader, boolean reload) throws IOException {
             // The below is a copy of the default implementation.
-            final String bundleName = toBundleName(aBaseName, aLocale);
+            final String bundleName = toBundleName(baseName, locale);
             final String resourceName = toResourceName(bundleName, "properties");
-            InputStream stream = null;
-            if (aReload) {
-                final URL url = aLoader.getResource(resourceName);
-                if (url != null) {
-                    final URLConnection connection = url.openConnection();
-                    if (connection != null) {
-                        connection.setUseCaches(false);
-                        stream = connection.getInputStream();
+            final URL url = loader.getResource(resourceName);
+            ResourceBundle resourceBundle = null;
+            if (url != null) {
+                final URLConnection connection = url.openConnection();
+                if (connection != null) {
+                    connection.setUseCaches(!reload);
+                    try (Reader streamReader = new InputStreamReader(connection.getInputStream(),
+                            StandardCharsets.UTF_8.name())) {
+                        // Only this line is changed to make it read property files as UTF-8.
+                        resourceBundle = new PropertyResourceBundle(streamReader);
                     }
                 }
             }
-            else {
-                stream = aLoader.getResourceAsStream(resourceName);
-            }
-            ResourceBundle bundle = null;
-            if (stream != null) {
-                final Reader streamReader = new InputStreamReader(stream, "UTF-8");
-                try {
-                    // Only this line is changed to make it to read properties files as UTF-8.
-                    bundle = new PropertyResourceBundle(streamReader);
-                }
-                finally {
-                    stream.close();
-                }
-            }
-            return bundle;
+            return resourceBundle;
         }
+
     }
+
 }

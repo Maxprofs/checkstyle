@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,35 +20,51 @@
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
 import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
+import static org.junit.Assert.assertArrayEquals;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class LocalFinalVariableNameCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/naming/localfinalvariablename";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final LocalFinalVariableNameCheck checkObj =
+            new LocalFinalVariableNameCheck();
+        assertArrayEquals(
+            "LocalFinalVariableNameCheck#getRequiredTokens should return empty array by default",
+            CommonUtil.EMPTY_INT_ARRAY, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalFinalVariableNameCheck.class);
+            createModuleConfig(LocalFinalVariableNameCheck.class);
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
         final String[] expected = {
             "123:19: " + getCheckMessage(MSG_INVALID_PATTERN, "CDE", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputLocalFinalVariableName.java"), expected);
     }
 
     @Test
     public void testSet()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalFinalVariableNameCheck.class);
+            createModuleConfig(LocalFinalVariableNameCheck.class);
         checkConfig.addAttribute("format", "[A-Z]+");
 
         final String pattern = "[A-Z]+";
@@ -56,27 +72,47 @@ public class LocalFinalVariableNameCheckTest
         final String[] expected = {
             "122:19: " + getCheckMessage(MSG_INVALID_PATTERN, "cde", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputLocalFinalVariableName.java"), expected);
     }
 
     @Test
     public void testInnerClass()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalFinalVariableNameCheck.class);
-        final String[] expected = {};
-        verify(checkConfig, getPath("InputInner.java"), expected);
+            createModuleConfig(LocalFinalVariableNameCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputLocalFinalVariableNameInnerClass.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        LocalFinalVariableNameCheck localFinalVariableNameCheckObj = new LocalFinalVariableNameCheck();
-        int[] actual = localFinalVariableNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final LocalFinalVariableNameCheck localFinalVariableNameCheckObj =
+            new LocalFinalVariableNameCheck();
+        final int[] actual = localFinalVariableNameCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.VARIABLE_DEF,
             TokenTypes.PARAMETER_DEF,
+            TokenTypes.RESOURCE,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
+
+    @Test
+    public void testTryWithResources() throws Exception {
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(LocalFinalVariableNameCheck.class);
+        checkConfig.addAttribute("format", "[A-Z]+");
+
+        final String pattern = "[A-Z]+";
+
+        final String[] expected = {
+            "23:30: " + getCheckMessage(MSG_INVALID_PATTERN, "br", pattern),
+            "33:29: " + getCheckMessage(MSG_INVALID_PATTERN, "br", pattern),
+            "53:22: " + getCheckMessage(MSG_INVALID_PATTERN, "zf", pattern),
+            "71:30: " + getCheckMessage(MSG_INVALID_PATTERN, "fis8859_1", pattern),
+            "73:32: " + getCheckMessage(MSG_INVALID_PATTERN, "isrutf8", pattern),
+        };
+        verify(checkConfig, getPath("InputLocalFinalVariableNameTryResources.java"), expected);
+    }
+
 }

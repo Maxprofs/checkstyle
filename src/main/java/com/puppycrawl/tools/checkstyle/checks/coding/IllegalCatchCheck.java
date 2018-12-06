@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,20 +19,25 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * Catching java.lang.Exception, java.lang.Error or java.lang.RuntimeException
  * is almost never acceptable.
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
- * @author <a href="mailto:IliaDubinin91@gmail.com">Ilja Dubinin</a>
  */
-public final class IllegalCatchCheck extends AbstractIllegalCheck {
+@StatelessCheck
+public final class IllegalCatchCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -40,39 +45,50 @@ public final class IllegalCatchCheck extends AbstractIllegalCheck {
      */
     public static final String MSG_KEY = "illegal.catch";
 
-    /** Creates new instance of the check. */
-    public IllegalCatchCheck() {
-        super("Exception", "Error", "RuntimeException", "Throwable", "java.lang.Error",
-                "java.lang.Exception", "java.lang.RuntimeException", "java.lang.Throwable");
+    /** Illegal class names. */
+    private final Set<String> illegalClassNames = Arrays.stream(new String[] {"Exception", "Error",
+        "RuntimeException", "Throwable", "java.lang.Error", "java.lang.Exception",
+        "java.lang.RuntimeException", "java.lang.Throwable", }).collect(Collectors.toSet());
+
+    /**
+     * Set the list of illegal classes.
+     *
+     * @param classNames
+     *            array of illegal exception classes
+     */
+    public void setIllegalClassNames(final String... classNames) {
+        illegalClassNames.clear();
+        illegalClassNames.addAll(
+                CheckUtil.parseClassNames(classNames));
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.LITERAL_CATCH};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
-    }
-
-    @Override
-    public int[] getAcceptableTokens() {
         return new int[] {TokenTypes.LITERAL_CATCH};
     }
 
     @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
     public void visitToken(DetailAST detailAST) {
-        final DetailAST paradef =
+        final DetailAST parameterDef =
             detailAST.findFirstToken(TokenTypes.PARAMETER_DEF);
         final DetailAST excTypeParent =
-                paradef.findFirstToken(TokenTypes.TYPE);
+                parameterDef.findFirstToken(TokenTypes.TYPE);
         final List<DetailAST> excTypes = getAllExceptionTypes(excTypeParent);
 
         for (DetailAST excType : excTypes) {
             final FullIdent ident = FullIdent.createFullIdent(excType);
 
-            if (isIllegalClassName(ident.getText())) {
+            if (illegalClassNames.contains(ident.getText())) {
                 log(detailAST, MSG_KEY, ident.getText());
             }
         }
@@ -84,7 +100,7 @@ public final class IllegalCatchCheck extends AbstractIllegalCheck {
      * @param parentToken - parent node for types (TYPE or BOR)
      * @return list, that contains all exception types in current catch
      */
-    public static List<DetailAST> getAllExceptionTypes(DetailAST parentToken) {
+    private static List<DetailAST> getAllExceptionTypes(DetailAST parentToken) {
         DetailAST currentNode = parentToken.getFirstChild();
         final List<DetailAST> exceptionTypes = new LinkedList<>();
         if (currentNode.getType() == TokenTypes.BOR) {
@@ -104,4 +120,5 @@ public final class IllegalCatchCheck extends AbstractIllegalCheck {
         }
         return exceptionTypes;
     }
+
 }

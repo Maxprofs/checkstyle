@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,52 +20,65 @@
 package com.puppycrawl.tools.checkstyle.checks.blocks;
 
 import static com.puppycrawl.tools.checkstyle.checks.blocks.AvoidNestedBlocksCheck.MSG_KEY_BLOCK_NESTED;
+import static org.junit.Assert.assertArrayEquals;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 public class AvoidNestedBlocksCheckTest
-        extends BaseCheckTestSupport {
+        extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/blocks/avoidnestedblocks";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final AvoidNestedBlocksCheck checkObj = new AvoidNestedBlocksCheck();
+        final int[] expected = {TokenTypes.SLIST};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testStrictSettings()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(AvoidNestedBlocksCheck.class);
+            createModuleConfig(AvoidNestedBlocksCheck.class);
         final String[] expected = {
             "22:9: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
             "44:17: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
             "50:17: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
             "58:17: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
         };
-        verify(checkConfig, getPath("InputNestedBlocks.java"), expected);
+        verify(checkConfig, getPath("InputAvoidNestedBlocksDefault.java"), expected);
     }
 
     @Test
     public void testAllowSwitchInCase()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(AvoidNestedBlocksCheck.class);
-        checkConfig.addAttribute("allowInSwitchCase", Boolean.TRUE.toString());
+            createModuleConfig(AvoidNestedBlocksCheck.class);
+        checkConfig.addAttribute("allowInSwitchCase", "true");
 
         final String[] expected = {
             "22:9: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
             "44:17: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
             "58:17: " + getCheckMessage(MSG_KEY_BLOCK_NESTED),
         };
-        verify(checkConfig, getPath("InputNestedBlocks.java"), expected);
+        verify(checkConfig, getPath("InputAvoidNestedBlocksDefault.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        AvoidNestedBlocksCheck constantNameCheckObj = new AvoidNestedBlocksCheck();
-        int[] actual = constantNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {TokenTypes.SLIST };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        final AvoidNestedBlocksCheck constantNameCheckObj = new AvoidNestedBlocksCheck();
+        final int[] actual = constantNameCheckObj.getAcceptableTokens();
+        final int[] expected = {TokenTypes.SLIST };
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
 
 }

@@ -3,48 +3,6 @@ package com.google.checkstyle.test.chapter7javadoc.rule713atclauses;
 class InputNonEmptyAtclauseDescriptionCheck
 {
 	/**
-	 * Some javadoc.
-	 * @param a Some javadoc.
-	 * @param b Some javadoc.
-	 */
-	public InputNonEmptyAtclauseDescriptionCheck(String a, int b)
-	{
-		
-	}
-	
-	/**
-	 * Some javadoc.
-	 * @param a Some javadoc.
-	 * @deprecated Some javadoc.
-	 */
-	public InputNonEmptyAtclauseDescriptionCheck(String a)
-	{
-		
-	}
-	
-	/**
-	 * Some javadoc.
-	 * @param a                     
-	 * @param b           
-	 * @param c     
-	 */
-	public InputNonEmptyAtclauseDescriptionCheck(String a, int b, double c)
-	{
-		
-	}
-	
-	/**
-	 * 
-	 * @param a  
-	 * @param e     
-	 * @deprecated     
-	 */
-	public InputNonEmptyAtclauseDescriptionCheck(String a, boolean e)
-	{
-		
-	}
-	
-	/**
 	 * Some javadoc
 	 * @param a Some javadoc
 	 * @param b Some javadoc
@@ -76,7 +34,7 @@ class InputNonEmptyAtclauseDescriptionCheck
 	 * @param a
 	 * @param b
 	 * @param c
-	 * @return
+	 * @deprecated
 	 * @throws Exception
 	 * @deprecated
 	 */
@@ -90,7 +48,7 @@ class InputNonEmptyAtclauseDescriptionCheck
 	 * @param a
 	 * @param b
 	 * @param c
-	 * @return
+	 * @deprecated
 	 * @throws Exception
 	 */
 	public int foo4(String a, int b, double c) throws Exception

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,8 +19,10 @@
 
 package com.puppycrawl.tools.checkstyle.checks.javadoc;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailNode;
 import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
 
 /**
  * Checks that the at-clause tag is followed by description .
@@ -29,20 +31,10 @@ import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
  * <pre>
  * &lt;module name=&quot;NonEmptyAtclauseDescription&quot;/&gt;
  * </pre>
- * <p>
- * To check non-empty at-clause description for tags {@code @throws},
- * {@code @deprecated}, use following configuration:
- * </p>
- * <pre>
- * &lt;module name=&quot;NonEmptyAtclauseDescription&quot;&gt;
- *     &lt;property name=&quot;target&quot; value=&quot;JAVADOC_TAG_THROWS_LITERAL,
- *     JAVADOC_TAG_DEPRECATED_LITERAL&quot;/&gt;
- * &lt;/module&gt;
- * </pre>
  *
- * @author maxvetrenko
  *
  */
+@StatelessCheck
 public class NonEmptyAtclauseDescriptionCheck extends AbstractJavadocCheck {
 
     /**
@@ -57,6 +49,7 @@ public class NonEmptyAtclauseDescriptionCheck extends AbstractJavadocCheck {
             JavadocTokenTypes.PARAM_LITERAL,
             JavadocTokenTypes.RETURN_LITERAL,
             JavadocTokenTypes.THROWS_LITERAL,
+            JavadocTokenTypes.EXCEPTION_LITERAL,
             JavadocTokenTypes.DEPRECATED_LITERAL,
         };
     }
@@ -75,7 +68,8 @@ public class NonEmptyAtclauseDescriptionCheck extends AbstractJavadocCheck {
      */
     private static boolean isEmptyTag(DetailNode tagNode) {
         final DetailNode tagDescription =
-                JavadocUtils.findFirstToken(tagNode, JavadocTokenTypes.DESCRIPTION);
+                JavadocUtil.findFirstToken(tagNode, JavadocTokenTypes.DESCRIPTION);
         return tagDescription == null;
     }
+
 }

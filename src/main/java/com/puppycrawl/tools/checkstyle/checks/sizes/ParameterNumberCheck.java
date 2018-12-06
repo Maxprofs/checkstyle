@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,12 @@
 
 package com.puppycrawl.tools.checkstyle.checks.sizes;
 
-import com.puppycrawl.tools.checkstyle.AnnotationUtility;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -60,10 +62,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *  }
  * }
  * </pre>
- * @author Oliver Burn
  */
+@StatelessCheck
 public class ParameterNumberCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -71,19 +73,19 @@ public class ParameterNumberCheck
      */
     public static final String MSG_KEY = "maxParam";
 
-    /** {@link Override Override} annotation name */
+    /** {@link Override Override} annotation name. */
     private static final String OVERRIDE = "Override";
 
-    /** canonical {@link Override Override} annotation name */
+    /** Canonical {@link Override Override} annotation name. */
     private static final String CANONICAL_OVERRIDE = "java.lang." + OVERRIDE;
 
-    /** default maximum number of allowed parameters */
+    /** Default maximum number of allowed parameters. */
     private static final int DEFAULT_MAX_PARAMETERS = 7;
 
-    /** the maximum number of allowed parameters */
+    /** The maximum number of allowed parameters. */
     private int max = DEFAULT_MAX_PARAMETERS;
 
-    /** ignore overridden methods */
+    /** Ignore overridden methods. */
     private boolean ignoreOverriddenMethods;
 
     /**
@@ -105,7 +107,7 @@ public class ParameterNumberCheck
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.METHOD_DEF, TokenTypes.CTOR_DEF};
+        return getAcceptableTokens();
     }
 
     @Override
@@ -114,12 +116,17 @@ public class ParameterNumberCheck
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
         final DetailAST params = ast.findFirstToken(TokenTypes.PARAMETERS);
         final int count = params.getChildCount(TokenTypes.PARAMETER_DEF);
-        if (count > max && !ignoreNumberOfParameters(ast)) {
+        if (count > max && !shouldIgnoreNumberOfParameters(ast)) {
             final DetailAST name = ast.findFirstToken(TokenTypes.IDENT);
-            log(name.getLineNo(), name.getColumnNo(), MSG_KEY, max, count);
+            log(name, MSG_KEY, max, count);
         }
     }
 
@@ -129,10 +136,11 @@ public class ParameterNumberCheck
      * @return true if this is overridden method and number of parameters should be ignored
      *         false otherwise
      */
-    private boolean ignoreNumberOfParameters(DetailAST ast) {
+    private boolean shouldIgnoreNumberOfParameters(DetailAST ast) {
         //if you override a method, you have no power over the number of parameters
         return ignoreOverriddenMethods
-                && (AnnotationUtility.containsAnnotation(ast, OVERRIDE)
-                || AnnotationUtility.containsAnnotation(ast, CANONICAL_OVERRIDE));
+                && (AnnotationUtil.containsAnnotation(ast, OVERRIDE)
+                || AnnotationUtil.containsAnnotation(ast, CANONICAL_OVERRIDE));
     }
+
 }

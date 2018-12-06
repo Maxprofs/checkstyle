@@ -1,32 +1,42 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter4formatting.rule487modifiers;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.checks.modifier.ModifierOrderCheck;
 
-public class ModifierOrderTest extends BaseCheckTestSupport{
-    
-    static ConfigurationBuilder builder;
-    
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
+public class ModifierOrderTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter4formatting/rule487modifiers";
     }
 
     @Test
-    public void modifierOrderTest() throws IOException, Exception {
-        
-        Class<ModifierOrderCheck> clazz = ModifierOrderCheck.class;
-        String msgMod = "mod.order";
-        String msgAnnotation = "annotation.order";
+    public void testModifierOrder() throws Exception {
+        final Class<ModifierOrderCheck> clazz = ModifierOrderCheck.class;
+        final String msgMod = "mod.order";
+        final String msgAnnotation = "annotation.order";
 
         final String[] expected = {
             "3:10: " + getCheckMessage(clazz, msgMod, "abstract"),
@@ -82,12 +92,14 @@ public class ModifierOrderTest extends BaseCheckTestSupport{
             "215:28: " + getCheckMessage(clazz, msgMod, "synchronized"),
             "217:37: " + getCheckMessage(clazz, msgMod, "protected"),
             "219:22: " + getCheckMessage(clazz, msgAnnotation, "@MyAnnotation2"),
+            "245:14: " + getCheckMessage(clazz, msgMod, "default"),
         };
-        
-        Configuration checkConfig = builder.getCheckConfig("ModifierOrder");
-        String filePath = builder.getFilePath("ModifierOrderInput");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+
+        final Configuration checkConfig = getModuleConfig("ModifierOrder");
+        final String filePath = getPath("InputModifierOrder.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
+
 }

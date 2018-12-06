@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,27 +21,26 @@ package com.puppycrawl.tools.checkstyle.filters;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
-import java.util.regex.PatternSyntaxException;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import com.puppycrawl.tools.checkstyle.TreeWalkerTest;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.LocalizedMessage;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.EqualsVerifierReport;
 import nl.jqno.equalsverifier.Warning;
 
-/** Tests SuppressElementFilter */
 public class SuppressElementTest {
+
     private SuppressElement filter;
 
     @Before
-    public void setUp()
-        throws PatternSyntaxException {
-        filter = new SuppressElement("Test");
-        filter.setChecks("Test");
+    public void setUp() {
+        filter = new SuppressElement("Test", "Test", null, null, null, null);
     }
 
     @Test
@@ -52,145 +51,193 @@ public class SuppressElementTest {
 
     @Test
     public void testDecideLocalizedMessage() {
-        LocalizedMessage message =
-            new LocalizedMessage(0, 0, "", "", null, null, this.getClass(), null);
+        final LocalizedMessage message =
+            new LocalizedMessage(1, 0, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
         //deny because there are matches on file and check names
         assertFalse("Names match", filter.accept(ev));
     }
 
     @Test
-    public void testDecideByLine() {
-        LocalizedMessage message =
-            new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+    public void testDecideByMessage() {
+        final LocalizedMessage message =
+            new LocalizedMessage(1, 0, "", "", null, null, getClass(), "Test");
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
+        final SuppressElement filter1 =
+                new SuppressElement(null, null, "Test", null, null, null);
+        final SuppressElement filter2 =
+                new SuppressElement(null, null, "Bad", null, null, null);
+        assertFalse("Message match", filter1.accept(ev));
+        assertTrue("Message not match", filter2.accept(ev));
+    }
+
+    @Test
+    public void testDecideByLine() {
+        final LocalizedMessage message =
+            new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
+        final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
+        final SuppressElement filter1 =
+                new SuppressElement("Test", "Test", null, null, "1-10", null);
+        final SuppressElement filter2 =
+                new SuppressElement("Test", "Test", null, null, "1-9, 11", null);
+        final SuppressElement filter3 =
+                new SuppressElement("Test", "Test", null, null, null, null);
         //deny because there are matches on file name, check name, and line
-        filter.setLines("1-10");
-        assertFalse("In range 1-10", filter.accept(ev));
-        filter.setLines("1-9, 11");
-        assertTrue("Not in 1-9, 11", filter.accept(ev));
-        filter.setLines(null);
-        assertFalse("none", filter.accept(ev));
+        assertFalse("In range 1-10", filter1.accept(ev));
+        assertTrue("Not in 1-9, 11", filter2.accept(ev));
+        assertFalse("none", filter3.accept(ev));
     }
 
     @Test
     public void testDecideByColumn() {
-        LocalizedMessage message =
-            new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+        final LocalizedMessage message =
+            new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
+        final SuppressElement filter1 =
+                new SuppressElement("Test", "Test", null, null, null, "1-10");
+        final SuppressElement filter2 =
+                new SuppressElement("Test", "Test", null, null, null, "1-9, 11");
+
         //deny because there are matches on file name, check name, and column
-        filter.setColumns("1-10");
-        assertFalse("In range 1-10", filter.accept(ev));
-        filter.setColumns("1-9, 11");
-        assertTrue("Not in 1-9, 1)", filter.accept(ev));
+        assertFalse("In range 1-10", filter1.accept(ev));
+        assertTrue("Not in 1-9, 1)", filter2.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_FileNameNull() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingFileNameNull() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, null, message);
-        assertTrue(filter.accept(ev));
+        assertTrue("Filter should accept valid event", filter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_MessageNull() {
+    public void testDecideByFileNameAndModuleMatchingMessageNull() {
         final AuditEvent ev = new AuditEvent(this, "ATest.java", null);
-        assertTrue(filter.accept(ev));
+        assertTrue("Filter should accept valid event", filter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_ModuleNull() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, "MyModule", this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingModuleNull() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, "MyModule", getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
-        filter.setModuleId(null);
-        assertFalse(filter.accept(ev));
+        assertFalse("Filter should not accept invalid event", filter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_ModuleEqual() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, "MyModule", this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingModuleEqual() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, "MyModule", getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
-        filter.setModuleId("MyModule");
-        assertFalse(filter.accept(ev));
+        final SuppressElement myFilter =
+                new SuppressElement("Test", "Test", null, "MyModule", null, null);
+
+        assertFalse("Filter should not accept invalid event", myFilter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_ModuleNotEqual() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, "TheirModule", this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingModuleNotEqual() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, "TheirModule", getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
-        filter.setModuleId("MyModule");
-        assertTrue(filter.accept(ev));
+        final SuppressElement myFilter =
+                new SuppressElement("Test", "Test", null, "MyModule", null, null);
+
+        assertTrue("Filter should accept valid event", myFilter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_RegExpNotMatch() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingRegExpNotMatch() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "T1est", message);
-        assertTrue(filter.accept(ev));
+        assertTrue("Filter should accept valid event", filter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_RegExpMatch() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingRegExpMatch() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "TestSUFFIX", message);
-        SuppressElement filterWithoutChecks = new SuppressElement("Test");
-        assertFalse(filterWithoutChecks.accept(ev));
+        final SuppressElement myFilter =
+                new SuppressElement("Test", null, null, null, null, null);
+        assertFalse("Filter should not accept invalid event", myFilter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_CheckRegExpNotMatch() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingCheckRegExpNotMatch() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
-        filter.setChecks("NON_EXISTING_CHECK");
-        assertTrue(filter.accept(ev));
+        final SuppressElement myFilter =
+                new SuppressElement("Test", "NON_EXISTENT_CHECK", null, "MyModule", null, null);
+        assertTrue("Filter should accept valid event", myFilter.accept(ev));
     }
 
     @Test
-    public void testDecideByFileNameAndModuleMatching_CheckRegExpMatch() {
-        LocalizedMessage message =
-                new LocalizedMessage(10, 10, "", "", null, null, this.getClass(), null);
+    public void testDecideByFileNameAndModuleMatchingCheckRegExpMatch() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
         final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
-        filter.setChecks(this.getClass().getCanonicalName());
-        assertFalse(filter.accept(ev));
+        final SuppressElement myFilter =
+                new SuppressElement("Test", getClass().getCanonicalName(), null, null, null, null);
+
+        assertFalse("Filter should not accept invalid event", myFilter.accept(ev));
     }
 
     @Test
-    public void testEquals() throws PatternSyntaxException {
-        final SuppressElement filter2 = new SuppressElement("Test");
-        filter2.setChecks("Test");
-        assertEquals("filter, filter2", filter, filter2);
-        final SuppressElement filter3 = new SuppressElement("Test");
-        filter3.setChecks("Test3");
-        assertFalse("filter, filter3", filter.equals(filter3));
-        filter.setColumns("1-10");
-        assertFalse("filter, filter2", filter.equals(filter2));
-        filter2.setColumns("1-10");
-        assertEquals("filter, filter2", filter, filter2);
-        filter.setColumns(null);
-        assertFalse("filter, filter2", filter.equals(filter2));
-        filter2.setColumns(null);
-        filter.setLines("3,4");
-        assertFalse("filter, filter2", filter.equals(filter2));
-        filter2.setLines("3,4");
-        assertEquals("filter, filter2", filter, filter2);
-        filter.setColumns("1-10");
-        assertFalse("filter, filter2", filter.equals(filter2));
-        filter2.setColumns("1-10");
-        assertEquals("filter, filter2", filter, filter2);
+    public void testDecideByFileNameAndSourceNameCheckRegExpNotMatch() {
+        final LocalizedMessage message =
+                new LocalizedMessage(10, 10, "", "", null, null, getClass(), null);
+        final AuditEvent ev = new AuditEvent(this, "ATest.java", message);
+        final SuppressElement myFilter =
+                new SuppressElement("Test", TreeWalkerTest.class.getCanonicalName(),
+                        null, null, null, null);
+
+        assertTrue("Filter should not accept invalid event", myFilter.accept(ev));
+    }
+
+    @Test
+    public void testEquals() {
+        // filterBased is used instead of filter field only to satisfy IntelliJ IDEA Inspection
+        // Inspection "Arguments to assertEquals() in wrong order "
+        final SuppressElement filterBased =
+                new SuppressElement("Test", "Test", null, null, null, null);
+
+        final SuppressElement filter2 =
+                new SuppressElement("Test", "Test", null, null, null, null);
+        assertEquals("filter, filter2", filterBased, filter2);
+        final SuppressElement filter3 =
+                new SuppressElement("Test", "Test3", null, null, null, null);
+        assertNotEquals("filter, filter3", filterBased, filter3);
+        final SuppressElement filterBased1 =
+                new SuppressElement("Test", "Test", null, null, null, "1-10");
+
+        assertNotEquals("filter, filter2", filterBased1, filter2);
+        final SuppressElement filter22 =
+                new SuppressElement("Test", "Test", null, null, null, "1-10");
+        assertEquals("filter, filter2", filterBased1, filter22);
+        assertNotEquals("filter, filter2", filterBased1, filter2);
+        final SuppressElement filterBased2 =
+                new SuppressElement("Test", "Test", null, null, "3,4", null);
+        assertNotEquals("filter, filter2", filterBased2, filter2);
+        final SuppressElement filter23 =
+                new SuppressElement("Test", "Test", null, null, "3,4", null);
+        assertEquals("filter, filter2", filterBased2, filter23);
+        assertNotEquals("filter, filter2", filterBased2, filter2);
+        assertEquals("filter, filter2", filterBased2, filter23);
     }
 
     @Test
     public void testEqualsAndHashCode() {
-        EqualsVerifier.forClass(SuppressElement.class)
+        final EqualsVerifierReport ev = EqualsVerifier.forClass(SuppressElement.class)
                 .usingGetClass()
+                .withIgnoredFields("fileRegexp", "checkRegexp", "messageRegexp", "columnFilter",
+                        "lineFilter")
                 .suppress(Warning.NONFINAL_FIELDS)
-                .verify();
+                .report();
+        assertEquals("Error: " + ev.getMessage(), EqualsVerifierReport.SUCCESS, ev);
     }
+
 }

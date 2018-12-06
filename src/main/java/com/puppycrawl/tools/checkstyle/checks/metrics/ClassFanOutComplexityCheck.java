@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -26,8 +26,6 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * of this has been shown to indicate the amount of maintenance required
  * in functional programs (on a file basis) at least.
  *
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
- * @author o_sukhodolsky
  */
 public final class ClassFanOutComplexityCheck extends AbstractClassCouplingCheck {
 
@@ -37,7 +35,7 @@ public final class ClassFanOutComplexityCheck extends AbstractClassCouplingCheck
      */
     public static final String MSG_KEY = "classFanOutComplexity";
 
-    /** default value of max value. */
+    /** Default value of max value. */
     private static final int DEFAULT_MAX = 20;
 
     /** Creates new instance of this check. */
@@ -49,7 +47,11 @@ public final class ClassFanOutComplexityCheck extends AbstractClassCouplingCheck
     public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.PACKAGE_DEF,
+            TokenTypes.IMPORT,
             TokenTypes.CLASS_DEF,
+            TokenTypes.EXTENDS_CLAUSE,
+            TokenTypes.IMPLEMENTS_CLAUSE,
+            TokenTypes.ANNOTATION,
             TokenTypes.INTERFACE_DEF,
             TokenTypes.ENUM_DEF,
             TokenTypes.TYPE,
@@ -61,20 +63,14 @@ public final class ClassFanOutComplexityCheck extends AbstractClassCouplingCheck
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {
-            TokenTypes.PACKAGE_DEF,
-            TokenTypes.CLASS_DEF,
-            TokenTypes.INTERFACE_DEF,
-            TokenTypes.ENUM_DEF,
-            TokenTypes.TYPE,
-            TokenTypes.LITERAL_NEW,
-            TokenTypes.LITERAL_THROWS,
-            TokenTypes.ANNOTATION_DEF,
-        };
+        return getRequiredTokens();
     }
 
+    // -@cs[SimpleAccessorNameNotation] Override methods from base class.
+    // Issue: https://github.com/sevntu-checkstyle/sevntu.checkstyle/issues/166
     @Override
     protected String getLogMessageId() {
         return MSG_KEY;
     }
+
 }

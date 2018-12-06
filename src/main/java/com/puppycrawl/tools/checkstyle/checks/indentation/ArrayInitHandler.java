@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,15 +25,15 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for array initialization blocks.
  *
- * @author jrichard
  */
 public class ArrayInitHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
-     * astract syntax tree, and parent handler.
+     * abstract syntax tree, and parent handler.
      *
      * @param indentCheck   the indentation check
-     * @param ast           the astract syntax tree
+     * @param ast           the abstract syntax tree
      * @param parent        the parent handler
      */
     public ArrayInitHandler(IndentationCheck indentCheck,
@@ -42,48 +42,45 @@ public class ArrayInitHandler extends BlockParentHandler {
     }
 
     @Override
-    protected IndentLevel getLevelImpl() {
+    protected IndentLevel getIndentImpl() {
         final DetailAST parentAST = getMainAst().getParent();
         final int type = parentAST.getType();
+        final IndentLevel indentLevel;
         if (type == TokenTypes.LITERAL_NEW || type == TokenTypes.ASSIGN) {
             // note: assumes new or assignment is line to align with
-            return new IndentLevel(getLineStart(parentAST));
+            indentLevel = new IndentLevel(getLineStart(parentAST));
         }
         else {
             // at this point getParent() is instance of BlockParentHandler
-            return ((BlockParentHandler) getParent()).getChildrenExpectedLevel();
+            indentLevel = ((BlockParentHandler) getParent()).getChildrenExpectedIndent();
         }
+        return indentLevel;
     }
 
     @Override
-    protected DetailAST getToplevelAST() {
+    protected DetailAST getTopLevelAst() {
         return null;
     }
 
     @Override
-    protected DetailAST getLCurly() {
+    protected DetailAST getLeftCurly() {
         return getMainAst();
     }
 
     @Override
-    protected IndentLevel curlyLevel() {
-        final IndentLevel level = new IndentLevel(getLevel(), getBraceAdjustment());
+    protected IndentLevel curlyIndent() {
+        final IndentLevel level = new IndentLevel(getIndent(), getBraceAdjustment());
         level.addAcceptedIndent(level.getLastIndentLevel() + getLineWrappingIndentation());
         return level;
     }
 
     @Override
-    protected DetailAST getRCurly() {
+    protected DetailAST getRightCurly() {
         return getMainAst().findFirstToken(TokenTypes.RCURLY);
     }
 
     @Override
-    protected boolean rcurlyMustStart() {
-        return false;
-    }
-
-    @Override
-    protected boolean childrenMayNest() {
+    protected boolean canChildrenBeNested() {
         return true;
     }
 
@@ -93,15 +90,15 @@ public class ArrayInitHandler extends BlockParentHandler {
     }
 
     @Override
-    protected IndentLevel getChildrenExpectedLevel() {
+    protected IndentLevel getChildrenExpectedIndent() {
         final IndentLevel expectedIndent =
-            new IndentLevel(getLevel(), getIndentCheck().getArrayInitIndent(),
+            new IndentLevel(getIndent(), getIndentCheck().getArrayInitIndent(),
                     getIndentCheck().getLineWrappingIndentation());
 
         final int firstLine = getFirstLine(Integer.MAX_VALUE, getListChild());
-        final int lcurlyPos = expandedTabsColumnNo(getLCurly());
+        final int lcurlyPos = expandedTabsColumnNo(getLeftCurly());
         final int firstChildPos =
-            getNextFirstNonblankOnLineAfter(firstLine, lcurlyPos);
+            getNextFirstNonBlankOnLineAfter(firstLine, lcurlyPos);
         if (firstChildPos >= 0) {
             expectedIndent.addAcceptedIndent(firstChildPos);
             expectedIndent.addAcceptedIndent(lcurlyPos + getLineWrappingIndentation());
@@ -110,6 +107,10 @@ public class ArrayInitHandler extends BlockParentHandler {
     }
 
     /**
+     * Returns column number of first non-blank char after
+     * specified column on specified line or -1 if
+     * such char doesn't exist.
+     *
      * @param lineNo   number of line on which we search
      * @param columnNo number of column after which we search
      *
@@ -117,7 +118,7 @@ public class ArrayInitHandler extends BlockParentHandler {
      *         specified column on specified line or -1 if
      *         such char doesn't exist.
      */
-    private int getNextFirstNonblankOnLineAfter(int lineNo, int columnNo) {
+    private int getNextFirstNonBlankOnLineAfter(int lineNo, int columnNo) {
         int realColumnNo = columnNo + 1;
         final String line = getIndentCheck().getLines()[lineNo - 1];
         final int lineLength = line.length();
@@ -126,7 +127,10 @@ public class ArrayInitHandler extends BlockParentHandler {
             realColumnNo++;
         }
 
-        return realColumnNo == lineLength ? -1 : realColumnNo;
+        if (realColumnNo == lineLength) {
+            realColumnNo = -1;
+        }
+        return realColumnNo;
     }
 
     /**
@@ -137,4 +141,5 @@ public class ArrayInitHandler extends BlockParentHandler {
     private int getLineWrappingIndentation() {
         return getIndentCheck().getLineWrappingIndentation();
     }
+
 }

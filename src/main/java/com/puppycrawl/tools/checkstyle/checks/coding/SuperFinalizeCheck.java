@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,8 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+
 /**
  * <p>
  * Checks that an overriding finalize() method invokes super.finalize().
@@ -26,8 +28,8 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
  * </p>
  * <p>
  * Reference:<a
- * href="http://www.oracle.com/webfolder/technetwork/tutorials/obe/java/gc01/index.html">
- * Cleaning up unused objects</a>.
+ * href="https://javarevisited.blogspot.com/2012/03/finalize-method-in-java-tutorial.html">
+ * 10 points on finalize method in Java</a>.
  * </p>
  * <p>
  * An example of how to configure the check is:
@@ -35,11 +37,13 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
  * <pre>
  * &lt;module name="SuperFinalize"/&gt;
  * </pre>
- * @author Rick Giles
  */
+@StatelessCheck
 public class SuperFinalizeCheck extends AbstractSuperCheck {
+
     @Override
     protected String getMethodName() {
         return "finalize";
     }
+
 }

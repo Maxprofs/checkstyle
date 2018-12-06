@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -29,9 +29,11 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </p>
  *
  * <p>This class extends {@link AbstractNameCheck}</p>
- *
- * @author Travis Schneeberger
+ * @deprecated Checkstyle will not support abstract checks anymore. Use
+ *             {@link AbstractNameCheck} instead.
+ * @noinspection AbstractClassNeverImplemented
  */
+@Deprecated
 public abstract class AbstractTypeParameterNameCheck
     extends AbstractNameCheck {
 
@@ -42,6 +44,15 @@ public abstract class AbstractTypeParameterNameCheck
     protected AbstractTypeParameterNameCheck(String format) {
         super(format);
     }
+
+    /**
+     * This method must be overridden to specify the
+     * location of the type parameter to check.
+     *
+     * @return {@code TokenTypes.CLASS_DEF }
+     *     or {@code TokenTypes.METHOD_DEF }
+     */
+    protected abstract int getLocation();
 
     @Override
     public final int[] getDefaultTokens() {
@@ -64,12 +75,4 @@ public abstract class AbstractTypeParameterNameCheck
         return location.getType() == getLocation();
     }
 
-    /**
-     * This method must be overriden to specify the
-     * location of the type parameter to check.
-     *
-     * @return {@code TokenTypes.CLASS_DEF }
-     * or {@code TokenTypes.METHOD_DEF }
-     */
-    protected abstract int getLocation();
 }

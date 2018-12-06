@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,11 +19,12 @@
 
 package com.puppycrawl.tools.checkstyle.checks.modifier;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.collect.Lists;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -31,7 +32,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <p>
  * Checks that the order of modifiers conforms to the suggestions in the
  * <a
- * href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html">
+ * href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html">
  * Java Language specification, sections 8.1.1, 8.3.1 and 8.4.3</a>.
  * The correct order is:</p>
 
@@ -41,6 +42,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
   <li><span class="code">private</span></li>
   <li><span class="code">abstract</span></li>
+  <li><span class="code">default</span></li>
   <li><span class="code">static</span></li>
   <li><span class="code">final</span></li>
   <li><span class="code">transient</span></li>
@@ -62,10 +64,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <pre>
  * &lt;module name="ModifierOrder"/&gt;
  * </pre>
- * @author Lars Kühne
  */
+@StatelessCheck
 public class ModifierOrderCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -84,23 +86,28 @@ public class ModifierOrderCheck
      * 8.3.1 and 8.4.3 of the JLS.
      */
     private static final String[] JLS_ORDER = {
-        "public", "protected", "private", "abstract", "static", "final",
-        "transient", "volatile", "synchronized", "native", "strictfp", "default",
+        "public", "protected", "private", "abstract", "default", "static",
+        "final", "transient", "volatile", "synchronized", "native", "strictfp",
     };
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.MODIFIERS};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.MODIFIERS};
     }
 
     @Override
     public void visitToken(DetailAST ast) {
-        final List<DetailAST> mods = Lists.newArrayList();
+        final List<DetailAST> mods = new ArrayList<>();
         DetailAST modifier = ast.getFirstChild();
         while (modifier != null) {
             mods.add(modifier);
@@ -108,18 +115,17 @@ public class ModifierOrderCheck
         }
 
         if (!mods.isEmpty()) {
-            final DetailAST error = checkOrderSuggestedByJLS(mods);
+            final DetailAST error = checkOrderSuggestedByJls(mods);
             if (error != null) {
                 if (error.getType() == TokenTypes.ANNOTATION) {
-                    log(error.getLineNo(), error.getColumnNo(),
+                    log(error,
                             MSG_ANNOTATION_ORDER,
                              error.getFirstChild().getText()
                              + error.getFirstChild().getNextSibling()
                                 .getText());
                 }
                 else {
-                    log(error.getLineNo(), error.getColumnNo(),
-                            MSG_MODIFIER_ORDER, error.getText());
+                    log(error, MSG_MODIFIER_ORDER, error.getText());
                 }
             }
         }
@@ -131,48 +137,87 @@ public class ModifierOrderCheck
      *
      * @param modifiers list of modifier AST tokens
      * @return null if the order is correct, otherwise returns the offending
-     * *       modifier AST.
+     *     modifier AST.
      */
-    static DetailAST checkOrderSuggestedByJLS(List<DetailAST> modifiers) {
-        final Iterator<DetailAST> it = modifiers.iterator();
+    private static DetailAST checkOrderSuggestedByJls(List<DetailAST> modifiers) {
+        final Iterator<DetailAST> iterator = modifiers.iterator();
 
         //Speed past all initial annotations
-        DetailAST modifier;
-        do {
-            modifier = it.next();
-        }
-        while (it.hasNext() && modifier.getType() == TokenTypes.ANNOTATION);
+        DetailAST modifier = skipAnnotations(iterator);
+
+        DetailAST offendingModifier = null;
 
         //All modifiers are annotations, no problem
-        if (modifier.getType() == TokenTypes.ANNOTATION) {
-            return null;
+        if (modifier.getType() != TokenTypes.ANNOTATION) {
+            int index = 0;
+
+            while (modifier != null
+                    && offendingModifier == null) {
+                if (modifier.getType() == TokenTypes.ANNOTATION) {
+                    if (!isAnnotationOnType(modifier)) {
+                        //Annotation not at start of modifiers, bad
+                        offendingModifier = modifier;
+                    }
+                    break;
+                }
+
+                while (index < JLS_ORDER.length
+                       && !JLS_ORDER[index].equals(modifier.getText())) {
+                    index++;
+                }
+
+                if (index == JLS_ORDER.length) {
+                    //Current modifier is out of JLS order
+                    offendingModifier = modifier;
+                }
+                else if (iterator.hasNext()) {
+                    modifier = iterator.next();
+                }
+                else {
+                    //Reached end of modifiers without problem
+                    modifier = null;
+                }
+            }
         }
+        return offendingModifier;
+    }
 
-        int i = 0;
-        while (modifier != null) {
-            if (modifier.getType() == TokenTypes.ANNOTATION) {
-                //Annotation not at start of modifiers, bad
-                return modifier;
-            }
-
-            while (i < JLS_ORDER.length
-                   && !JLS_ORDER[i].equals(modifier.getText())) {
-                i++;
-            }
-
-            if (i == JLS_ORDER.length) {
-                //Current modifier is out of JLS order
-                return modifier;
-            }
-            else if (it.hasNext()) {
-                modifier = it.next();
-            }
-            else {
-                //Reached end of modifiers without problem
-                modifier = null;
-            }
-        }
-
+    /**
+     * Skip all annotations in modifier block.
+     * @param modifierIterator iterator for collection of modifiers
+     * @return modifier next to last annotation
+     */
+    private static DetailAST skipAnnotations(Iterator<DetailAST> modifierIterator) {
+        DetailAST modifier;
+        do {
+            modifier = modifierIterator.next();
+        } while (modifierIterator.hasNext() && modifier.getType() == TokenTypes.ANNOTATION);
         return modifier;
     }
+
+    /**
+     * Checks whether annotation on type takes place.
+     * @param modifier modifier token.
+     * @return true if annotation on type takes place.
+     */
+    private static boolean isAnnotationOnType(DetailAST modifier) {
+        boolean annotationOnType = false;
+        final DetailAST modifiers = modifier.getParent();
+        final DetailAST definition = modifiers.getParent();
+        final int definitionType = definition.getType();
+        if (definitionType == TokenTypes.VARIABLE_DEF
+                || definitionType == TokenTypes.PARAMETER_DEF
+                || definitionType == TokenTypes.CTOR_DEF) {
+            annotationOnType = true;
+        }
+        else if (definitionType == TokenTypes.METHOD_DEF) {
+            final DetailAST typeToken = definition.findFirstToken(TokenTypes.TYPE);
+            final int methodReturnType = typeToken.getLastChild().getType();
+            if (methodReturnType != TokenTypes.LITERAL_VOID) {
+                annotationOnType = true;
+            }
+        }
+        return annotationOnType;
+    }
+
 }

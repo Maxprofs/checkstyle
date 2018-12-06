@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,75 +20,96 @@
 package com.puppycrawl.tools.checkstyle.checks.metrics;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Base class for coupling calculation.
  *
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
- * @author o_sukhodolsky
  */
-public abstract class AbstractClassCouplingCheck extends Check {
+@FileStatefulCheck
+public abstract class AbstractClassCouplingCheck extends AbstractCheck {
+
+    /** A package separator - "." */
+    private static final String DOT = ".";
+
     /** Class names to ignore. */
-    private static final Set<String> DEFAULT_EXCLUDED_CLASSES =
-                ImmutableSet.<String>builder()
-                // primitives
-                .add("boolean", "byte", "char", "double", "float", "int")
-                .add("long", "short", "void")
-                // wrappers
-                .add("Boolean", "Byte", "Character", "Double", "Float")
-                .add("Integer", "Long", "Short", "Void")
-                // java.lang.*
-                .add("Object", "Class")
-                .add("String", "StringBuffer", "StringBuilder")
-                // Exceptions
-                .add("ArrayIndexOutOfBoundsException", "Exception")
-                .add("RuntimeException", "IllegalArgumentException")
-                .add("IllegalStateException", "IndexOutOfBoundsException")
-                .add("NullPointerException", "Throwable", "SecurityException")
-                .add("UnsupportedOperationException")
-                // java.util.*
-                .add("List", "ArrayList", "Deque", "Queue", "LinkedList")
-                .add("Set", "HashSet", "SortedSet", "TreeSet")
-                .add("Map", "HashMap", "SortedMap", "TreeMap")
-                .build();
+    private static final Set<String> DEFAULT_EXCLUDED_CLASSES = Collections.unmodifiableSet(
+        Arrays.stream(new String[] {
+            // primitives
+            "boolean", "byte", "char", "double", "float", "int",
+            "long", "short", "void",
+            // wrappers
+            "Boolean", "Byte", "Character", "Double", "Float",
+            "Integer", "Long", "Short", "Void",
+            // java.lang.*
+            "Object", "Class",
+            "String", "StringBuffer", "StringBuilder",
+            // Exceptions
+            "ArrayIndexOutOfBoundsException", "Exception",
+            "RuntimeException", "IllegalArgumentException",
+            "IllegalStateException", "IndexOutOfBoundsException",
+            "NullPointerException", "Throwable", "SecurityException",
+            "UnsupportedOperationException",
+            // java.util.*
+            "List", "ArrayList", "Deque", "Queue", "LinkedList",
+            "Set", "HashSet", "SortedSet", "TreeSet",
+            "Map", "HashMap", "SortedMap", "TreeMap",
+            "Override", "Deprecated", "SafeVarargs", "SuppressWarnings", "FunctionalInterface",
+        }).collect(Collectors.toSet()));
+
+    /** Package names to ignore. */
+    private static final Set<String> DEFAULT_EXCLUDED_PACKAGES = Collections.emptySet();
+
+    /** User-configured regular expressions to ignore classes. */
+    private final List<Pattern> excludeClassesRegexps = new ArrayList<>();
+
     /** User-configured class names to ignore. */
     private Set<String> excludedClasses = DEFAULT_EXCLUDED_CLASSES;
+    /** User-configured package names to ignore. */
+    private Set<String> excludedPackages = DEFAULT_EXCLUDED_PACKAGES;
     /** Allowed complexity. */
     private int max;
-    /** package of the file we check. */
-    private String packageName;
 
-    /** Stack of contexts. */
-    private final Deque<Context> contextStack = new ArrayDeque<>();
-    /** Current context. */
-    private Context context = new Context("", 0, 0);
+    /** Current file context. */
+    private FileContext fileContext;
 
     /**
      * Creates new instance of the check.
      * @param defaultMax default value for allowed complexity.
      */
     protected AbstractClassCouplingCheck(int defaultMax) {
-        setMax(defaultMax);
+        max = defaultMax;
+        excludeClassesRegexps.add(CommonUtil.createPattern("^$"));
     }
+
+    /**
+     * Returns message key we use for log violations.
+     * @return message key we use for log violations.
+     */
+    protected abstract String getLogMessageId();
 
     @Override
     public final int[] getDefaultTokens() {
         return getRequiredTokens();
-    }
-
-    /** @return allowed complexity. */
-    public final int getMax() {
-        return max;
     }
 
     /**
@@ -104,16 +125,43 @@ public abstract class AbstractClassCouplingCheck extends Check {
      * @param excludedClasses the list of classes to ignore.
      */
     public final void setExcludedClasses(String... excludedClasses) {
-        this.excludedClasses = ImmutableSet.copyOf(excludedClasses);
+        this.excludedClasses =
+            Collections.unmodifiableSet(Arrays.stream(excludedClasses).collect(Collectors.toSet()));
+    }
+
+    /**
+     * Sets user-excluded regular expression of classes to ignore.
+     * @param from array representing regular expressions of classes to ignore.
+     */
+    public void setExcludeClassesRegexps(String... from) {
+        excludeClassesRegexps.addAll(Arrays.stream(from.clone())
+                .map(CommonUtil::createPattern)
+                .collect(Collectors.toSet()));
+    }
+
+    /**
+     * Sets user-excluded packages to ignore. All excluded packages should end with a period,
+     * so it also appends a dot to a package name.
+     * @param excludedPackages the list of packages to ignore.
+     */
+    public final void setExcludedPackages(String... excludedPackages) {
+        final List<String> invalidIdentifiers = Arrays.stream(excludedPackages)
+            .filter(packageName -> !CommonUtil.isName(packageName))
+            .collect(Collectors.toList());
+        if (!invalidIdentifiers.isEmpty()) {
+            throw new IllegalArgumentException(
+                "the following values are not valid identifiers: "
+                    + invalidIdentifiers.stream().collect(Collectors.joining(", ", "[", "]")));
+        }
+
+        this.excludedPackages = Collections.unmodifiableSet(
+            Arrays.stream(excludedPackages).collect(Collectors.toSet()));
     }
 
     @Override
     public final void beginTree(DetailAST ast) {
-        packageName = "";
+        fileContext = new FileContext();
     }
-
-    /** @return message key we use for log violations. */
-    protected abstract String getLogMessageId();
 
     @Override
     public void visitToken(DetailAST ast) {
@@ -121,20 +169,28 @@ public abstract class AbstractClassCouplingCheck extends Check {
             case TokenTypes.PACKAGE_DEF:
                 visitPackageDef(ast);
                 break;
+            case TokenTypes.IMPORT:
+                fileContext.registerImport(ast);
+                break;
             case TokenTypes.CLASS_DEF:
             case TokenTypes.INTERFACE_DEF:
             case TokenTypes.ANNOTATION_DEF:
             case TokenTypes.ENUM_DEF:
                 visitClassDef(ast);
                 break;
+            case TokenTypes.EXTENDS_CLAUSE:
+            case TokenTypes.IMPLEMENTS_CLAUSE:
             case TokenTypes.TYPE:
-                context.visitType(ast);
+                fileContext.visitType(ast);
                 break;
             case TokenTypes.LITERAL_NEW:
-                context.visitLiteralNew(ast);
+                fileContext.visitLiteralNew(ast);
                 break;
             case TokenTypes.LITERAL_THROWS:
-                context.visitLiteralThrows(ast);
+                fileContext.visitLiteralThrows(ast);
+                break;
+            case TokenTypes.ANNOTATION:
+                fileContext.visitAnnotationType(ast);
                 break;
             default:
                 throw new IllegalArgumentException("Unknown type: " + ast);
@@ -160,9 +216,8 @@ public abstract class AbstractClassCouplingCheck extends Check {
      * @param pkg package definition.
      */
     private void visitPackageDef(DetailAST pkg) {
-        final FullIdent ident = FullIdent.createFullIdent(pkg.getLastChild()
-                .getPreviousSibling());
-        packageName = ident.getText();
+        final FullIdent ident = FullIdent.createFullIdent(pkg.getLastChild().getPreviousSibling());
+        fileContext.setPackageName(ident.getText());
     }
 
     /**
@@ -170,50 +225,154 @@ public abstract class AbstractClassCouplingCheck extends Check {
      * @param classDef class definition node.
      */
     private void visitClassDef(DetailAST classDef) {
-        contextStack.push(context);
-        final String className =
-            classDef.findFirstToken(TokenTypes.IDENT).getText();
-        context = new Context(className,
-                               classDef.getLineNo(),
-                               classDef.getColumnNo());
+        final String className = classDef.findFirstToken(TokenTypes.IDENT).getText();
+        fileContext.createNewClassContext(className, classDef);
     }
 
     /** Restores previous context. */
     private void leaveClassDef() {
-        context.checkCoupling();
-        context = contextStack.pop();
+        fileContext.checkCurrentClassAndRestorePrevious();
     }
 
     /**
-     * Incapsulates information about class coupling.
-     *
-     * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
-     * @author o_sukhodolsky
+     * Encapsulates information about classes coupling inside single file.
+     * @noinspection ThisEscapedInObjectConstruction
      */
-    private class Context {
+    private class FileContext {
+
+        /** A map of (imported class name -> class name with package) pairs. */
+        private final Map<String, String> importedClassPackage = new HashMap<>();
+
+        /** Stack of class contexts. */
+        private final Deque<ClassContext> classesContexts = new ArrayDeque<>();
+
+        /** Current file package. */
+        private String packageName = "";
+
+        /** Current context. */
+        private ClassContext classContext = new ClassContext(this, "", null);
+
+        /**
+         * Retrieves current file package name.
+         * @return Package name.
+         */
+        public String getPackageName() {
+            return packageName;
+        }
+
+        /**
+         * Sets current context package name.
+         * @param packageName Package name to be set.
+         */
+        public void setPackageName(String packageName) {
+            this.packageName = packageName;
+        }
+
+        /**
+         * Registers given import. This allows us to track imported classes.
+         * @param imp import definition.
+         */
+        public void registerImport(DetailAST imp) {
+            final FullIdent ident = FullIdent.createFullIdent(
+                imp.getLastChild().getPreviousSibling());
+            final String fullName = ident.getText();
+            if (fullName.charAt(fullName.length() - 1) != '*') {
+                final int lastDot = fullName.lastIndexOf(DOT);
+                importedClassPackage.put(fullName.substring(lastDot + 1), fullName);
+            }
+        }
+
+        /**
+         * Retrieves class name with packages. Uses previously registered imports to
+         * get the full class name.
+         * @param className Class name to be retrieved.
+         * @return Class name with package name, if found, {@link Optional#empty()} otherwise.
+         */
+        public Optional<String> getClassNameWithPackage(String className) {
+            return Optional.ofNullable(importedClassPackage.get(className));
+        }
+
+        /**
+         * Creates new inner class context with given name and location.
+         * @param className The class name.
+         * @param ast The class ast.
+         */
+        public void createNewClassContext(String className, DetailAST ast) {
+            classesContexts.push(classContext);
+            classContext = new ClassContext(this, className, ast);
+        }
+
+        /** Restores previous context. */
+        public void checkCurrentClassAndRestorePrevious() {
+            classContext.checkCoupling();
+            classContext = classesContexts.pop();
+        }
+
+        /**
+         * Visits type token for the current class context.
+         * @param ast TYPE token.
+         */
+        public void visitType(DetailAST ast) {
+            classContext.visitType(ast);
+        }
+
+        /**
+         * Visits NEW token for the current class context.
+         * @param ast NEW token.
+         */
+        public void visitLiteralNew(DetailAST ast) {
+            classContext.visitLiteralNew(ast);
+        }
+
+        /**
+         * Visits THROWS token for the current class context.
+         * @param ast THROWS token.
+         */
+        public void visitLiteralThrows(DetailAST ast) {
+            classContext.visitLiteralThrows(ast);
+        }
+
+        /**
+         * Visit ANNOTATION literal and get its type to referenced classes of context.
+         * @param annotationAST Annotation ast.
+         */
+        private void visitAnnotationType(DetailAST annotationAST) {
+            final DetailAST children = annotationAST.getFirstChild();
+            final DetailAST type = children.getNextSibling();
+            classContext.addReferencedClassName(type.getText());
+        }
+
+    }
+
+    /**
+     * Encapsulates information about class coupling.
+     *
+     */
+    private class ClassContext {
+
+        /** Parent file context. */
+        private final FileContext parentContext;
         /**
          * Set of referenced classes.
          * Sorted by name for predictable error messages in unit tests.
          */
-        private final Set<String> referencedClassNames = Sets.newTreeSet();
+        private final Set<String> referencedClassNames = new TreeSet<>();
         /** Own class name. */
         private final String className;
         /* Location of own class. (Used to log violations) */
-        /** Line number of class definition. */
-        private final int lineNo;
-        /** Column number of class definition. */
-        private final int columnNo;
+        /** AST of class definition. */
+        private final DetailAST classAst;
 
         /**
          * Create new context associated with given class.
+         * @param parentContext Parent file context.
          * @param className name of the given class.
-         * @param lineNo line of class definition.
-         * @param columnNo column of class definition.
+         * @param ast ast of class definition.
          */
-        public Context(String className, int lineNo, int columnNo) {
+        ClassContext(FileContext parentContext, String className, DetailAST ast) {
+            this.parentContext = parentContext;
             this.className = className;
-            this.lineNo = lineNo;
-            this.columnNo = columnNo;
+            classAst = ast;
         }
 
         /**
@@ -235,8 +394,8 @@ public abstract class AbstractClassCouplingCheck extends Check {
          * @param ast type to process.
          */
         public void visitType(DetailAST ast) {
-            final String fullTypeName = CheckUtils.createFullType(ast).getText();
-            context.addReferencedClassName(fullTypeName);
+            final String fullTypeName = CheckUtil.createFullType(ast).getText();
+            addReferencedClassName(fullTypeName);
         }
 
         /**
@@ -244,7 +403,7 @@ public abstract class AbstractClassCouplingCheck extends Check {
          * @param ast NEW to process.
          */
         public void visitLiteralNew(DetailAST ast) {
-            context.addReferencedClassName(ast.getFirstChild());
+            addReferencedClassName(ast.getFirstChild());
         }
 
         /**
@@ -269,11 +428,11 @@ public abstract class AbstractClassCouplingCheck extends Check {
         /** Checks if coupling less than allowed or not. */
         public void checkCoupling() {
             referencedClassNames.remove(className);
-            referencedClassNames.remove(packageName + "." + className);
+            referencedClassNames.remove(parentContext.getPackageName() + DOT + className);
 
             if (referencedClassNames.size() > max) {
-                log(lineNo, columnNo, getLogMessageId(),
-                        referencedClassNames.size(), getMax(),
+                log(classAst, getLogMessageId(),
+                        referencedClassNames.size(), max,
                         referencedClassNames.toString());
             }
         }
@@ -284,8 +443,40 @@ public abstract class AbstractClassCouplingCheck extends Check {
          * @return true if we should count this class.
          */
         private boolean isSignificant(String candidateClassName) {
-            return !excludedClasses.contains(candidateClassName)
-                    && !candidateClassName.startsWith("java.lang.");
+            boolean result = !excludedClasses.contains(candidateClassName)
+                && !isFromExcludedPackage(candidateClassName);
+            if (result) {
+                for (Pattern pattern : excludeClassesRegexps) {
+                    if (pattern.matcher(candidateClassName).matches()) {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+            return result;
         }
+
+        /**
+         * Checks if given class should be ignored as it belongs to excluded package.
+         * @param candidateClassName class to check
+         * @return true if we should not count this class.
+         */
+        private boolean isFromExcludedPackage(String candidateClassName) {
+            String classNameWithPackage = candidateClassName;
+            if (!candidateClassName.contains(DOT)) {
+                classNameWithPackage = parentContext.getClassNameWithPackage(candidateClassName)
+                    .orElse("");
+            }
+            boolean isFromExcludedPackage = false;
+            if (classNameWithPackage.contains(DOT)) {
+                final int lastDotIndex = classNameWithPackage.lastIndexOf(DOT);
+                final String packageName = classNameWithPackage.substring(0, lastDotIndex);
+                isFromExcludedPackage = packageName.startsWith("java.lang")
+                    || excludedPackages.contains(packageName);
+            }
+            return isFromExcludedPackage;
+        }
+
     }
+
 }

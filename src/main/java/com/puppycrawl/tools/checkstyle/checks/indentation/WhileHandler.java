@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for while loops.
  *
- * @author jrichard
  */
 public class WhileHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -47,7 +47,7 @@ public class WhileHandler extends BlockParentHandler {
     private void checkCondExpr() {
         final DetailAST condAst = getMainAst().findFirstToken(TokenTypes.EXPR);
         final IndentLevel expected =
-            new IndentLevel(getLevel(), getBasicOffset());
+            new IndentLevel(getIndent(), getBasicOffset());
         checkExpressionSubtree(condAst, expected, false, false);
     }
 
@@ -56,4 +56,5 @@ public class WhileHandler extends BlockParentHandler {
         checkCondExpr();
         super.checkIndentation();
     }
+
 }

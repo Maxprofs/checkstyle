@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,71 +20,81 @@
 package com.puppycrawl.tools.checkstyle.filters;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.LocalizedMessage;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
-/** Tests SeverityMatchFilter */
 public class SeverityMatchFilterTest {
+
     private final SeverityMatchFilter filter = new SeverityMatchFilter();
 
     @Test
     public void testDefault() {
         final AuditEvent ev = new AuditEvent(this, "Test.java");
         assertFalse("no message", filter.accept(ev));
-        SeverityLevel level = SeverityLevel.ERROR;
-        LocalizedMessage message =
-            new LocalizedMessage(0, 0, "", "", null,
-                level, null, this.getClass(), null);
-        final AuditEvent ev2 = new AuditEvent(this, "ATest.java", message);
-        assertTrue("level:" + level, filter.accept(ev2));
-        level = SeverityLevel.INFO;
-        message = new LocalizedMessage(0, 0, "", "", null, level, null, this
-                .getClass(), null);
-        final AuditEvent ev3 = new AuditEvent(this, "ATest.java", message);
-        assertFalse("level:" + level, filter.accept(ev3));
+        final SeverityLevel errorLevel = SeverityLevel.ERROR;
+        final LocalizedMessage errorMessage =
+            new LocalizedMessage(1, 0, "", "", null,
+                errorLevel, null, getClass(), null);
+        final AuditEvent ev2 = new AuditEvent(this, "ATest.java", errorMessage);
+        assertTrue("level:" + errorLevel, filter.accept(ev2));
+        final SeverityLevel infoLevel = SeverityLevel.INFO;
+        final LocalizedMessage infoMessage =
+                new LocalizedMessage(1, 0, "", "", null, infoLevel, null, getClass(), null);
+        final AuditEvent ev3 = new AuditEvent(this, "ATest.java", infoMessage);
+        assertFalse("level:" + infoLevel, filter.accept(ev3));
     }
 
     @Test
     public void testSeverity() {
-        filter.setSeverity("info");
+        filter.setSeverity(SeverityLevel.INFO);
         final AuditEvent ev = new AuditEvent(this, "Test.java");
         // event with no message has severity level INFO
         assertTrue("no message", filter.accept(ev));
-        SeverityLevel level = SeverityLevel.ERROR;
-        LocalizedMessage message =
-            new LocalizedMessage(0, 0, "", "", null,
-                level, null, this.getClass(), null);
-        final AuditEvent ev2 = new AuditEvent(this, "ATest.java", message);
-        assertFalse("level:" + level, filter.accept(ev2));
-        level = SeverityLevel.INFO;
-        message = new LocalizedMessage(0, 0, "", "", null, level, null, this
-                .getClass(), null);
-        final AuditEvent ev3 = new AuditEvent(this, "ATest.java", message);
-        assertTrue("level:" + level, filter.accept(ev3));
+        final SeverityLevel errorLevel = SeverityLevel.ERROR;
+        final LocalizedMessage errorMessage =
+            new LocalizedMessage(1, 0, "", "", null,
+                errorLevel, null, getClass(), null);
+        final AuditEvent ev2 = new AuditEvent(this, "ATest.java", errorMessage);
+        assertFalse("level:" + errorLevel, filter.accept(ev2));
+        final SeverityLevel infoLevel = SeverityLevel.INFO;
+        final LocalizedMessage infoMessage =
+                new LocalizedMessage(1, 0, "", "", null, infoLevel, null, getClass(), null);
+        final AuditEvent ev3 = new AuditEvent(this, "ATest.java", infoMessage);
+        assertTrue("level:" + infoLevel, filter.accept(ev3));
     }
 
     @Test
     public void testAcceptOnMatch() {
-        filter.setSeverity("info");
+        filter.setSeverity(SeverityLevel.INFO);
         filter.setAcceptOnMatch(false);
         final AuditEvent ev = new AuditEvent(this, "Test.java");
         // event with no message has severity level INFO
         assertFalse("no message", filter.accept(ev));
-        SeverityLevel level = SeverityLevel.ERROR;
-        LocalizedMessage message =
-            new LocalizedMessage(0, 0, "", "", null,
-                level, null, this.getClass(), null);
-        final AuditEvent ev2 = new AuditEvent(this, "ATest.java", message);
-        assertTrue("level:" + level, filter.accept(ev2));
-        level = SeverityLevel.INFO;
-        message = new LocalizedMessage(0, 0, "", "", null, level, null, this
-                .getClass(), null);
-        final AuditEvent ev3 = new AuditEvent(this, "ATest.java", message);
-        assertFalse("level:" + level, filter.accept(ev3));
+        final SeverityLevel errorLevel = SeverityLevel.ERROR;
+        final LocalizedMessage errorMessage =
+            new LocalizedMessage(1, 0, "", "", null,
+                errorLevel, null, getClass(), null);
+        final AuditEvent ev2 = new AuditEvent(this, "ATest.java", errorMessage);
+        assertTrue("level:" + errorLevel, filter.accept(ev2));
+        final SeverityLevel infoLevel = SeverityLevel.INFO;
+        final LocalizedMessage infoMessage = new LocalizedMessage(1, 0, "", "", null, infoLevel,
+            null, getClass(), null);
+        final AuditEvent ev3 = new AuditEvent(this, "ATest.java", infoMessage);
+        assertFalse("level:" + infoLevel, filter.accept(ev3));
     }
+
+    @Test
+    public void testConfigure() throws CheckstyleException {
+        filter.configure(new DefaultConfiguration("test"));
+        assertNotNull("object exists", filter);
+    }
+
 }

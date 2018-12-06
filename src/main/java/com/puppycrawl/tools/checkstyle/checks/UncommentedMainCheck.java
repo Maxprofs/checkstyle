@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks;
 
+import java.util.Optional;
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -36,11 +37,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * &lt;module name=&quot;UncommentedMain&quot;/&gt;
  * </pre>
  *
- * @author Michael Yui
- * @author o_sukhodolsky
  */
+@FileStatefulCheck
 public class UncommentedMainCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -48,48 +48,40 @@ public class UncommentedMainCheck
      */
     public static final String MSG_KEY = "uncommented.main";
 
-    /** the pattern to exclude classes from the check */
-    private String excludedClasses = "^$";
-    /** compiled regexp to exclude classes from check */
-    private Pattern excludedClassesPattern =
-        Utils.createPattern(excludedClasses);
-    /** current class name */
+    /** Compiled regexp to exclude classes from check. */
+    private Pattern excludedClasses = Pattern.compile("^$");
+    /** Current class name. */
     private String currentClass;
-    /** current package */
+    /** Current package. */
     private FullIdent packageName;
-    /** class definition depth */
+    /** Class definition depth. */
     private int classDepth;
 
     /**
      * Set the excluded classes pattern.
-     * @param excludedClasses a {@code String} value
+     * @param excludedClasses a pattern
      */
-    public void setExcludedClasses(String excludedClasses) {
+    public void setExcludedClasses(Pattern excludedClasses) {
         this.excludedClasses = excludedClasses;
-        excludedClassesPattern = Utils.createPattern(excludedClasses);
-    }
-
-    @Override
-    public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.METHOD_DEF,
-            TokenTypes.CLASS_DEF,
-            TokenTypes.PACKAGE_DEF,
-        };
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.METHOD_DEF,
             TokenTypes.CLASS_DEF,
             TokenTypes.PACKAGE_DEF,
         };
-    }
-
-    @Override
-    public int[] getRequiredTokens() {
-        return getDefaultTokens();
     }
 
     @Override
@@ -102,16 +94,12 @@ public class UncommentedMainCheck
     @Override
     public void leaveToken(DetailAST ast) {
         if (ast.getType() == TokenTypes.CLASS_DEF) {
-            if (classDepth == 1) {
-                currentClass = null;
-            }
             classDepth--;
         }
     }
 
     @Override
     public void visitToken(DetailAST ast) {
-
         switch (ast.getType()) {
             case TokenTypes.PACKAGE_DEF:
                 visitPackageDef(ast);
@@ -156,26 +144,23 @@ public class UncommentedMainCheck
      * @param method method definition node
      */
     private void visitMethodDef(DetailAST method) {
-        if (classDepth != 1) {
-            // method in inner class or in interface definition
-            return;
-        }
-
-        if (checkClassName()
-            && checkName(method)
-            && checkModifiers(method)
-            && checkType(method)
-            && checkParams(method)) {
+        if (classDepth == 1
+                // method not in inner class or in interface definition
+                && checkClassName()
+                && checkName(method)
+                && checkModifiers(method)
+                && checkType(method)
+                && checkParams(method)) {
             log(method.getLineNo(), MSG_KEY);
         }
     }
 
     /**
-     * Checks that current class is not excluded
+     * Checks that current class is not excluded.
      * @return true if check passed, false otherwise
      */
     private boolean checkClassName() {
-        return !excludedClassesPattern.matcher(currentClass).find();
+        return !excludedClasses.matcher(currentClass).find();
     }
 
     /**
@@ -197,8 +182,8 @@ public class UncommentedMainCheck
         final DetailAST modifiers =
             method.findFirstToken(TokenTypes.MODIFIERS);
 
-        return modifiers.branchContains(TokenTypes.LITERAL_PUBLIC)
-            && modifiers.branchContains(TokenTypes.LITERAL_STATIC);
+        return modifiers.findFirstToken(TokenTypes.LITERAL_PUBLIC) != null
+            && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null;
     }
 
     /**
@@ -213,27 +198,40 @@ public class UncommentedMainCheck
     }
 
     /**
-     * Checks that method has only {@code String[]} param
+     * Checks that method has only {@code String[]} or only {@code String...} param.
      * @param method the METHOD_DEF node
      * @return true if check passed, false otherwise
      */
     private static boolean checkParams(DetailAST method) {
+        boolean checkPassed = false;
         final DetailAST params = method.findFirstToken(TokenTypes.PARAMETERS);
-        if (params.getChildCount() != 1) {
-            return false;
-        }
-        final DetailAST paratype = params.getFirstChild()
-            .findFirstToken(TokenTypes.TYPE);
-        final DetailAST arrayDecl =
-            paratype.findFirstToken(TokenTypes.ARRAY_DECLARATOR);
-        if (arrayDecl == null) {
-            return false;
-        }
 
-        final DetailAST arrayType = arrayDecl.getFirstChild();
+        if (params.getChildCount() == 1) {
+            final DetailAST parameterType = params.getFirstChild().findFirstToken(TokenTypes.TYPE);
+            final Optional<DetailAST> arrayDecl = Optional.ofNullable(
+                parameterType.findFirstToken(TokenTypes.ARRAY_DECLARATOR));
+            final Optional<DetailAST> varargs = Optional.ofNullable(
+                params.getFirstChild().findFirstToken(TokenTypes.ELLIPSIS));
 
-        final FullIdent type = FullIdent.createFullIdent(arrayType);
-        return "String".equals(type.getText())
-                || "java.lang.String".equals(type.getText());
+            if (arrayDecl.isPresent()) {
+                checkPassed = isStringType(arrayDecl.get().getFirstChild());
+            }
+            else if (varargs.isPresent()) {
+                checkPassed = isStringType(parameterType.getFirstChild());
+            }
+        }
+        return checkPassed;
     }
+
+    /**
+     * Whether the type is java.lang.String.
+     * @param typeAst the type to check.
+     * @return true, if the type is java.lang.String.
+     */
+    private static boolean isStringType(DetailAST typeAst) {
+        final FullIdent type = FullIdent.createFullIdent(typeAst);
+        return "String".equals(type.getText())
+            || "java.lang.String".equals(type.getText());
+    }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,18 +22,20 @@ package com.puppycrawl.tools.checkstyle;
 /**
  * Resolves properties in module configurations.
  *
- * The {@link ConfigurationLoader} uses a PropertyResolver to
+ * <p>The {@link ConfigurationLoader} uses a PropertyResolver to
  * resolve the values of external properties like {@code ${basename}}
  * that occur in the configuration file.
  *
- * @author lkuehne
  * @see ConfigurationLoader
  */
+@FunctionalInterface
 public interface PropertyResolver {
+
     /**
      * Resolves a property name to it's value.
      * @param name the name of the property.
      * @return the value that is associated with {@code propertyName}.
      */
     String resolve(String name);
+
 }

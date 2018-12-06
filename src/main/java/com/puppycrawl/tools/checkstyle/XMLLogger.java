@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,77 +23,101 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.util.ResourceBundle;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AuditListener;
 import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Simple XML logger.
  * It outputs everything in UTF-8 (default XML encoding is UTF-8) in case
- * we want to localize error messages or simply that filenames are
+ * we want to localize error messages or simply that file names are
  * localized and takes care about escaping as well.
 
- * @author <a href="mailto:stephane.bailliez@wanadoo.fr">Stephane Bailliez</a>
  */
+// -@cs[AbbreviationAsWordInName] We can not change it as,
+// check's name is part of API (used in configurations).
 public class XMLLogger
     extends AutomaticBean
     implements AuditListener {
-    /** decimal radix */
+
+    /** Decimal radix. */
     private static final int BASE_10 = 10;
 
-    /** hex radix */
+    /** Hex radix. */
     private static final int BASE_16 = 16;
 
-    /** some known entities to detect */
+    /** Some known entities to detect. */
     private static final String[] ENTITIES = {"gt", "amp", "lt", "apos",
                                               "quot", };
 
-    /** close output stream in auditFinished */
+    /** Close output stream in auditFinished. */
     private final boolean closeStream;
 
-    /** helper writer that allows easy encoding and printing */
-    private PrintWriter writer;
+    /** The writer lock object. */
+    private final Object writerLock = new Object();
+
+    /** Holds all messages for the given file. */
+    private final Map<String, FileMessages> fileMessages =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Helper writer that allows easy encoding and printing.
+     */
+    private final PrintWriter writer;
 
     /**
      * Creates a new {@code XMLLogger} instance.
      * Sets the output to a defined stream.
-     * @param os the stream to write logs to.
+     * @param outputStream the stream to write logs to.
      * @param closeStream close oS in auditFinished
-     * @throws UnsupportedEncodingException is UTF-8 is not supported
+     * @deprecated in order to fulfill demands of BooleanParameter IDEA check.
+     * @noinspection BooleanParameter
      */
-    public XMLLogger(OutputStream os, boolean closeStream) throws UnsupportedEncodingException {
-        setOutputStream(os);
+    @Deprecated
+    public XMLLogger(OutputStream outputStream, boolean closeStream) {
+        writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
         this.closeStream = closeStream;
     }
 
     /**
-     * sets the OutputStream
-     * @param oS the OutputStream to use
-     * @throws UnsupportedEncodingException is UTF-8 is not supported
-     **/
-    private void setOutputStream(OutputStream oS) throws UnsupportedEncodingException {
-        final OutputStreamWriter osw = new OutputStreamWriter(oS, "UTF-8");
-        writer = new PrintWriter(osw);
+     * Creates a new {@code XMLLogger} instance.
+     * Sets the output to a defined stream.
+     * @param outputStream the stream to write logs to.
+     * @param outputStreamOptions if {@code CLOSE} stream should be closed in auditFinished()
+     */
+    public XMLLogger(OutputStream outputStream, OutputStreamOptions outputStreamOptions) {
+        writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+        if (outputStreamOptions == null) {
+            throw new IllegalArgumentException("Parameter outputStreamOptions can not be null");
+        }
+        closeStream = outputStreamOptions == OutputStreamOptions.CLOSE;
     }
 
     @Override
-    public void auditStarted(AuditEvent evt) {
+    protected void finishLocalSetup() {
+        // No code by default
+    }
+
+    @Override
+    public void auditStarted(AuditEvent event) {
         writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 
-        final ResourceBundle compilationProperties =
-            ResourceBundle.getBundle("checkstylecompilation");
-        final String version =
-            compilationProperties.getString("checkstyle.compile.version");
+        final String version = XMLLogger.class.getPackage().getImplementationVersion();
 
         writer.println("<checkstyle version=\"" + version + "\">");
     }
 
     @Override
-    public void auditFinished(AuditEvent evt) {
+    public void auditFinished(AuditEvent event) {
         writer.println("</checkstyle>");
         if (closeStream) {
             writer.close();
@@ -104,45 +128,125 @@ public class XMLLogger
     }
 
     @Override
-    public void fileStarted(AuditEvent evt) {
-        writer.println("<file name=\"" + encode(evt.getFileName()) + "\">");
+    public void fileStarted(AuditEvent event) {
+        fileMessages.put(event.getFileName(), new FileMessages());
     }
 
     @Override
-    public void fileFinished(AuditEvent evt) {
+    public void fileFinished(AuditEvent event) {
+        final String fileName = event.getFileName();
+        final FileMessages messages = fileMessages.get(fileName);
+
+        synchronized (writerLock) {
+            writeFileMessages(fileName, messages);
+        }
+
+        fileMessages.remove(fileName);
+    }
+
+    /**
+     * Prints the file section with all file errors and exceptions.
+     * @param fileName The file name, as should be printed in the opening file tag.
+     * @param messages The file messages.
+     */
+    private void writeFileMessages(String fileName, FileMessages messages) {
+        writeFileOpeningTag(fileName);
+        if (messages != null) {
+            for (AuditEvent errorEvent : messages.getErrors()) {
+                writeFileError(errorEvent);
+            }
+            for (Throwable exception : messages.getExceptions()) {
+                writeException(exception);
+            }
+        }
+        writeFileClosingTag();
+    }
+
+    /**
+     * Prints the "file" opening tag with the given filename.
+     * @param fileName The filename to output.
+     */
+    private void writeFileOpeningTag(String fileName) {
+        writer.println("<file name=\"" + encode(fileName) + "\">");
+    }
+
+    /**
+     * Prints the "file" closing tag.
+     */
+    private void writeFileClosingTag() {
         writer.println("</file>");
     }
 
     @Override
-    public void addError(AuditEvent evt) {
-        if (evt.getSeverityLevel() != SeverityLevel.IGNORE) {
-            writer.print("<error" + " line=\"" + evt.getLine() + "\"");
-            if (evt.getColumn() > 0) {
-                writer.print(" column=\"" + evt.getColumn() + "\"");
+    public void addError(AuditEvent event) {
+        if (event.getSeverityLevel() != SeverityLevel.IGNORE) {
+            final String fileName = event.getFileName();
+            if (fileName == null || !fileMessages.containsKey(fileName)) {
+                synchronized (writerLock) {
+                    writeFileError(event);
+                }
             }
-            writer.print(" severity=\""
-                + evt.getSeverityLevel().getName()
-                + "\"");
-            writer.print(" message=\""
-                + encode(evt.getMessage())
-                + "\"");
-            writer.println(" source=\""
-                + encode(evt.getSourceName())
-                + "\"/>");
+            else {
+                final FileMessages messages = fileMessages.get(fileName);
+                messages.addError(event);
+            }
         }
     }
 
+    /**
+     * Outputs the given event to the writer.
+     * @param event An event to print.
+     */
+    private void writeFileError(AuditEvent event) {
+        writer.print("<error" + " line=\"" + event.getLine() + "\"");
+        if (event.getColumn() > 0) {
+            writer.print(" column=\"" + event.getColumn() + "\"");
+        }
+        writer.print(" severity=\""
+                + event.getSeverityLevel().getName()
+                + "\"");
+        writer.print(" message=\""
+                + encode(event.getMessage())
+                + "\"");
+        writer.print(" source=\"");
+        if (event.getModuleId() == null) {
+            writer.print(encode(event.getSourceName()));
+        }
+        else {
+            writer.print(encode(event.getModuleId()));
+        }
+        writer.println("\"/>");
+    }
+
     @Override
-    public void addException(AuditEvent evt, Throwable throwable) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw);
-        pw.println("<exception>");
-        pw.println("<![CDATA[");
-        throwable.printStackTrace(pw);
-        pw.println("]]>");
-        pw.println("</exception>");
-        pw.flush();
-        writer.println(encode(sw.toString()));
+    public void addException(AuditEvent event, Throwable throwable) {
+        final String fileName = event.getFileName();
+        if (fileName == null || !fileMessages.containsKey(fileName)) {
+            synchronized (writerLock) {
+                writeException(throwable);
+            }
+        }
+        else {
+            final FileMessages messages = fileMessages.get(fileName);
+            messages.addException(throwable);
+        }
+    }
+
+    /**
+     * Writes the exception event to the print writer.
+     * @param throwable The
+     */
+    private void writeException(Throwable throwable) {
+        writer.println("<exception>");
+        writer.println("<![CDATA[");
+
+        final StringWriter stringWriter = new StringWriter();
+        final PrintWriter printer = new PrintWriter(stringWriter);
+        throwable.printStackTrace(printer);
+        writer.println(encode(stringWriter.toString()));
+
+        writer.println("]]>");
+        writer.println("</exception>");
     }
 
     /**
@@ -151,10 +255,10 @@ public class XMLLogger
      * @return the escaped value if necessary.
      */
     public static String encode(String value) {
-        final StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder(256);
         for (int i = 0; i < value.length(); i++) {
-            final char c = value.charAt(i);
-            switch (c) {
+            final char chr = value.charAt(i);
+            switch (chr) {
                 case '<':
                     sb.append("&lt;");
                     break;
@@ -168,17 +272,24 @@ public class XMLLogger
                     sb.append("&quot;");
                     break;
                 case '&':
-                    final int nextSemi = value.indexOf(';', i);
-                    if (nextSemi < 0
-                        || !isReference(value.substring(i, nextSemi + 1))) {
-                        sb.append("&amp;");
-                    }
-                    else {
-                        sb.append('&');
-                    }
+                    sb.append("&amp;");
+                    break;
+                case '\r':
+                    break;
+                case '\n':
+                    sb.append("&#10;");
                     break;
                 default:
-                    sb.append(c);
+                    if (Character.isISOControl(chr)) {
+                        // true escape characters need '&' before but it also requires XML 1.1
+                        // until https://github.com/checkstyle/checkstyle/issues/5168
+                        sb.append("#x");
+                        sb.append(Integer.toHexString(chr));
+                        sb.append(';');
+                    }
+                    else {
+                        sb.append(chr);
+                    }
                     break;
             }
         }
@@ -186,16 +297,20 @@ public class XMLLogger
     }
 
     /**
+     * Finds whether the given argument is character or entity reference.
      * @param ent the possible entity to look for.
      * @return whether the given argument a character or entity reference
      */
     public static boolean isReference(String ent) {
-        if (ent.charAt(0) != '&' || !Utils.endsWithChar(ent, ';')) {
-            return false;
-        }
+        boolean reference = false;
 
-        if (ent.charAt(1) == '#') {
-            int prefixLength = 2; // "&#"
+        if (ent.charAt(0) != '&' || !CommonUtil.endsWithChar(ent, ';')) {
+            reference = false;
+        }
+        else if (ent.charAt(1) == '#') {
+            // prefix is "&#"
+            int prefixLength = 2;
+
             int radix = BASE_10;
             if (ent.charAt(2) == 'x') {
                 prefixLength++;
@@ -204,19 +319,67 @@ public class XMLLogger
             try {
                 Integer.parseInt(
                     ent.substring(prefixLength, ent.length() - 1), radix);
-                return true;
+                reference = true;
             }
             catch (final NumberFormatException ignored) {
-                return false;
+                reference = false;
             }
+        }
+        else {
+            final String name = ent.substring(1, ent.length() - 1);
+            for (String element : ENTITIES) {
+                if (name.equals(element)) {
+                    reference = true;
+                    break;
+                }
+            }
+        }
+        return reference;
+    }
+
+    /**
+     * The registered file messages.
+     */
+    private static class FileMessages {
+
+        /** The file error events. */
+        private final List<AuditEvent> errors = Collections.synchronizedList(new ArrayList<>());
+
+        /** The file exceptions. */
+        private final List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<>());
+
+        /**
+         * Returns the file error events.
+         * @return the file error events.
+         */
+        public List<AuditEvent> getErrors() {
+            return Collections.unmodifiableList(errors);
         }
 
-        final String name = ent.substring(1, ent.length() - 1);
-        for (String element : ENTITIES) {
-            if (name.equals(element)) {
-                return true;
-            }
+        /**
+         * Adds the given error event to the messages.
+         * @param event the error event.
+         */
+        public void addError(AuditEvent event) {
+            errors.add(event);
         }
-        return false;
+
+        /**
+         * Returns the file exceptions.
+         * @return the file exceptions.
+         */
+        public List<Throwable> getExceptions() {
+            return Collections.unmodifiableList(exceptions);
+        }
+
+        /**
+         * Adds the given exception to the messages.
+         * @param throwable the file exception
+         */
+        public void addException(Throwable throwable) {
+            exceptions.add(throwable);
+        }
+
     }
+
 }

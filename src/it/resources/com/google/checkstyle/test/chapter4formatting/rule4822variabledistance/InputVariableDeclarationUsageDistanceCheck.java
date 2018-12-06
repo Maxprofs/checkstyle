@@ -88,7 +88,7 @@ public class InputVariableDeclarationUsageDistanceCheck {
 
 		String ar[] = { "1", "2" };
 		for (String st : ar) {
-			System.out.println(st);
+			System.identityHashCode(st);
 		}
 	}
 
@@ -257,15 +257,17 @@ public class InputVariableDeclarationUsageDistanceCheck {
 	}
 
 	public int[] getSelectedIndices() {
-		int[] selected = new int[5];
+		int[] sel = new int[5];
 		String model = "";
 		int a = 0;
 		a++;
 		for (int index = 0; index < 5; ++index) {
-			selected[index] = Integer.parseInt(model.valueOf(a)); // DECLARATION OF VARIABLE 'selected' SHOULD BE HERE (distance = 2)
-																						// DECLARATION OF VARIABLE 'model' SHOULD BE HERE (distance = 2)
+			sel[index] = Integer.parseInt(model.valueOf(a)); // DECLARATION OF VARIABLE 'sel'
+			                                                 // SHOULD BE HERE (distance = 2)
+			                                                 // DECLARATION OF VARIABLE 'model'
+			                                                 // SHOULD BE HERE (distance = 2)
 		}
-		return selected;
+		return sel;
 	}
 
 	public void testMethod15() {
@@ -330,7 +332,8 @@ public class InputVariableDeclarationUsageDistanceCheck {
 	    result.setMnemonic(level.toString().charAt(0));
 	    result.addActionListener(new ActionListener() {
 	      public void actionPerformed(ActionEvent e) {
-	        showLogLevelColorChangeDialog(result, logLevel); // DECLARATION OF VARIABLE 'logLevel' SHOULD BE HERE (distance = 2)
+	        showLogLevelColorChangeDialog(result, logLevel); // DECLARATION OF VARIABLE 'logLevel'
+			                                                 // SHOULD BE HERE (distance = 2)
 	      }
 	    });
 
@@ -363,29 +366,30 @@ public class InputVariableDeclarationUsageDistanceCheck {
     }
 	
 	public void testFinal() {
-		AuthUpdateTask authUpdateTask = null;
+		AuthUpdateTask task = null;
 		final long intervalMs = 30 * 60000L;
 		Object authCheckUrl = null, authInfo = null;
-        authUpdateTask = new AuthUpdateTask(authCheckUrl, authInfo, new IAuthListener() {
+        task = new AuthUpdateTask(authCheckUrl, authInfo, new IAuthListener() {
             @Override
             public void authTokenChanged(String cookie, String token) {
                 fireAuthTokenChanged(cookie, token);
             }
         });
 
-        Timer authUpdateTimer = new Timer("Auth Guard", true);
-        authUpdateTimer.schedule(authUpdateTask, intervalMs / 2, intervalMs); // DECLARATION OF VARIABLE 'intervalMs' SHOULD BE HERE (distance = 2)
+        Timer timer = new Timer("Auth Guard", true);
+        timer.schedule(task, intervalMs / 2, intervalMs); // DECLARATION OF VARIABLE 'intervalMs'
+		                                                  // SHOULD BE HERE (distance = 2)
 	}
 	
 	public void testForCycle() {
 		int filterCount = 0;
 		for (int i = 0; i < 10; i++, filterCount++) {
 			int abc = 0;
-			System.out.println(abc);
+			System.identityHashCode(abc);
 
 			for (int j = 0; j < 10; j++) {
 				abc = filterCount;
-				System.out.println(abc);
+				System.identityHashCode(abc);
 			}
 		}
 	}
@@ -408,7 +412,7 @@ public class InputVariableDeclarationUsageDistanceCheck {
     {
         int mm = Integer.parseInt("2");
         long timeNow = 0;
-        Calendar cal = Calendar.getInstance();
+        Calendar cal = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
         cal.setTimeInMillis(timeNow);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
@@ -417,7 +421,7 @@ public class InputVariableDeclarationUsageDistanceCheck {
     }
     
     public void testIssue32_3(MyObject[] objects) {
-        Calendar cal = Calendar.getInstance();
+        Calendar cal = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
         for(int i=0; i<objects.length; i++) {
             objects[i].setEnabled(true);
             objects[i].setColor(0x121212);
@@ -482,7 +486,7 @@ public class InputVariableDeclarationUsageDistanceCheck {
         options.addBindFile(null);
         options.addBindFile(null);
         options.addBindFile(null);
-        System.out.println("message");
+        System.identityHashCode("message");
         myOption.setArgName("abc"); // distance=7
     }
     
@@ -504,15 +508,15 @@ public class InputVariableDeclarationUsageDistanceCheck {
         int count = 0;
         String[] files = {};
 
-        System.out.println("Data archivation started");
+        System.identityHashCode("Data archival started");
         files.notify();
-        System.out.println("sss");
+        System.identityHashCode("sss");
 
         if (files == null || files.length == 0) {
-            System.out.println("No files on a remote site");
+            System.identityHashCode("No files on a remote site");
         }
         else {
-            System.out.println("Files on remote site: " + files.length);
+            System.identityHashCode("Files on remote site: " + files.length);
 
             for (String ftpFile : files) {
                 if (files.length == 0) {
@@ -523,7 +527,7 @@ public class InputVariableDeclarationUsageDistanceCheck {
             }
         }
 
-        System.out.println();
+        System.lineSeparator();
 
         return count;
     }

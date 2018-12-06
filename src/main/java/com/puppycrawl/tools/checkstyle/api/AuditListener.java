@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -31,44 +31,45 @@ import java.util.EventListener;
  *   fileFinished )*
  * auditFinished
  * </pre>
- * @author <a href="mailto:stephane.bailliez@wanadoo.fr">Stephane Bailliez</a>
  */
 public interface AuditListener
     extends EventListener {
+
     /**
      * Notify that the audit is about to start.
-     * @param evt the event details
+     * @param event the event details
      */
-    void auditStarted(AuditEvent evt);
+    void auditStarted(AuditEvent event);
 
     /**
      * Notify that the audit is finished.
-     * @param evt the event details
+     * @param event the event details
      */
-    void auditFinished(AuditEvent evt);
+    void auditFinished(AuditEvent event);
 
     /**
      * Notify that audit is about to start on a specific file.
-     * @param evt the event details
+     * @param event the event details
      */
-    void fileStarted(AuditEvent evt);
+    void fileStarted(AuditEvent event);
 
     /**
      * Notify that audit is finished on a specific file.
-     * @param evt the event details
+     * @param event the event details
      */
-    void fileFinished(AuditEvent evt);
+    void fileFinished(AuditEvent event);
 
     /**
      * Notify that an audit error was discovered on a specific file.
-     * @param evt the event details
+     * @param event the event details
      */
-    void addError(AuditEvent evt);
+    void addError(AuditEvent event);
 
     /**
      * Notify that an exception happened while performing audit.
-     * @param evt the event details
+     * @param event the event details
      * @param throwable details of the exception
      */
-    void addException(AuditEvent evt, Throwable throwable);
+    void addException(AuditEvent event, Throwable throwable);
+
 }

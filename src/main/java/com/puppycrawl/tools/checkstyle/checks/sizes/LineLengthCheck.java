@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,9 +21,10 @@ package com.puppycrawl.tools.checkstyle.checks.sizes;
 
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Checks for long lines.
@@ -35,9 +36,8 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
  * </p>
  *
  * <p>
- * Note: Support for the special handling of imports in CheckStyle Version 2
- * has been dropped as it is a special case of regexp: The user can set
- * the ignorePattern to "^import" and achieve the same effect.
+ * Package statements and import statements (lines matching pattern
+ * {@code ^(package|import) .*}), and are not verified by this check.
  * </p>
  * <p>
  * The default maximum allowable line length is 80 characters. To change the
@@ -71,9 +71,9 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
  * &lt;/module&gt;
  * </pre>
  *
- * @author Lars Kühne
  */
-public class LineLengthCheck extends Check {
+@StatelessCheck
+public class LineLengthCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -81,37 +81,42 @@ public class LineLengthCheck extends Check {
      */
     public static final String MSG_KEY = "maxLineLen";
 
-    /** default maximum number of columns in a line */
+    /** Default maximum number of columns in a line. */
     private static final int DEFAULT_MAX_COLUMNS = 80;
 
-    /** the maximum number of columns in a line */
+    /** Patterns matching package, import, and import static statements. */
+    private static final Pattern IGNORE_PATTERN = Pattern.compile("^(package|import) .*");
+
+    /** The maximum number of columns in a line. */
     private int max = DEFAULT_MAX_COLUMNS;
 
-    /** the regexp when long lines are ignored */
-    private Pattern ignorePattern;
-
-    /**
-     * Creates a new {@code LineLengthCheck} instance.
-     */
-    public LineLengthCheck() {
-        setIgnorePattern("^$");
-    }
+    /** The regexp when long lines are ignored. */
+    private Pattern ignorePattern = Pattern.compile("^$");
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[0];
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
     public void beginTree(DetailAST rootAST) {
         final String[] lines = getLines();
         for (int i = 0; i < lines.length; i++) {
-
             final String line = lines[i];
-            final int realLength = Utils.lengthExpandedTabs(
+            final int realLength = CommonUtil.lengthExpandedTabs(
                 line, line.length(), getTabWidth());
 
-            if (realLength > max
+            if (realLength > max && !IGNORE_PATTERN.matcher(line).find()
                 && !ignorePattern.matcher(line).find()) {
                 log(i + 1, MSG_KEY, max, realLength);
             }
@@ -119,6 +124,7 @@ public class LineLengthCheck extends Check {
     }
 
     /**
+     * Sets the maximum length of a line.
      * @param length the maximum length of a line
      */
     public void setMax(int length) {
@@ -127,9 +133,10 @@ public class LineLengthCheck extends Check {
 
     /**
      * Set the ignore pattern.
-     * @param format a {@code String} value
+     * @param pattern a pattern.
      */
-    public final void setIgnorePattern(String format) {
-        ignorePattern = Utils.createPattern(format);
+    public final void setIgnorePattern(Pattern pattern) {
+        ignorePattern = pattern;
     }
+
 }

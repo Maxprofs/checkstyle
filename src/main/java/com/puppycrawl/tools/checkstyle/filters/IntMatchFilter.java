@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,17 +21,17 @@ package com.puppycrawl.tools.checkstyle.filters;
 
 /**
  * This filter accepts a matching Integer.
- * @author Rick Giles
  */
 class IntMatchFilter implements IntFilter {
-    /** the matching Integer */
+
+    /** The matching Integer. */
     private final int matchValue;
 
     /**
      * Constructs a MatchFilter for an int.
      * @param matchValue the matching int.
      */
-    public IntMatchFilter(int matchValue) {
+    IntMatchFilter(int matchValue) {
         this.matchValue = matchValue;
     }
 
@@ -46,16 +46,17 @@ class IntMatchFilter implements IntFilter {
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return Integer.valueOf(matchValue).hashCode();
     }
 
     @Override
-    public boolean equals(Object object) {
+    public final boolean equals(Object object) {
         if (object instanceof IntMatchFilter) {
             final IntMatchFilter other = (IntMatchFilter) object;
             return matchValue == other.matchValue;
         }
         return false;
     }
+
 }

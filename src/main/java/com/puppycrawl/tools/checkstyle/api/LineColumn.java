@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,58 +24,69 @@ import java.util.Objects;
 /**
  * Immutable line and column numbers.
  *
- * @author Martin von Gagern
  */
 public class LineColumn implements Comparable<LineColumn> {
 
-    /** The one-based line number */
+    /** The one-based line number. */
     private final int line;
 
-    /** The zero-based column number */
-    private final int col;
+    /** The zero-based column number. */
+    private final int column;
 
     /**
      * Constructs a new pair of line and column numbers.
      * @param line the one-based line number
-     * @param col the zero-based column number
+     * @param column the zero-based column number
      */
-    public LineColumn(int line, int col) {
+    public LineColumn(int line, int column) {
         this.line = line;
-        this.col = col;
+        this.column = column;
     }
 
-    /** @return the one-based line number */
+    /**
+     * Gets the one-based line number.
+     * @return the one-based line number
+     */
     public int getLine() {
         return line;
     }
 
-    /** @return the zero-based column number */
+    /**
+     * Gets the zero-based column number.
+     * @return the zero-based column number
+     */
     public int getColumn() {
-        return col;
+        return column;
     }
 
     @Override
     public int compareTo(LineColumn lineColumn) {
-        return getLine() != lineColumn.getLine()
-            ? Integer.compare(getLine(), lineColumn.getLine())
-            : Integer.compare(getColumn(), lineColumn.getColumn());
+        final int result;
+        if (line == lineColumn.line) {
+            result = Integer.compare(column, lineColumn.column);
+        }
+        else {
+            result = Integer.compare(line, lineColumn.line);
+        }
+        return result;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object other) {
+        if (this == other) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (other == null || getClass() != other.getClass()) {
             return false;
         }
-        final LineColumn lineColumn = (LineColumn) o;
+        final LineColumn lineColumn = (LineColumn) other;
         return Objects.equals(line, lineColumn.line)
-                && Objects.equals(col, lineColumn.col);
+                && Objects.equals(column, lineColumn.column);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(line, col);
+        return Objects.hash(line, column);
     }
+
 }

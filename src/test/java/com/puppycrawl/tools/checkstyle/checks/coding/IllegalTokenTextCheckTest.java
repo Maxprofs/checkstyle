@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,35 +21,46 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import static com.puppycrawl.tools.checkstyle.checks.coding.IllegalTokenTextCheck.MSG_KEY;
 
-import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.internal.utils.TestUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
 
 public class IllegalTokenTextCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/illegaltokentext";
+    }
+
     @Test
     public void testCaseSensitive()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenTextCheck.class);
+            createModuleConfig(IllegalTokenTextCheck.class);
         checkConfig.addAttribute("tokens", "STRING_LITERAL");
         checkConfig.addAttribute("format", "a href");
         checkConfig.addAttribute("ignoreCase", "false");
         final String[] expected = {
             "24:28: " + getCheckMessage(MSG_KEY, "a href"),
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputIllegalTokenTextTokens.java"), expected);
     }
 
     @Test
     public void testCaseInSensitive()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenTextCheck.class);
+            createModuleConfig(IllegalTokenTextCheck.class);
         checkConfig.addAttribute("tokens", "STRING_LITERAL");
         checkConfig.addAttribute("format", "a href");
         checkConfig.addAttribute("ignoreCase", "true");
@@ -57,30 +68,29 @@ public class IllegalTokenTextCheckTest
             "24:28: " + getCheckMessage(MSG_KEY, "a href"),
             "25:32: " + getCheckMessage(MSG_KEY, "a href"),
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputIllegalTokenTextTokens.java"), expected);
     }
 
     @Test
     public void testCustomMessage()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenTextCheck.class);
+            createModuleConfig(IllegalTokenTextCheck.class);
         checkConfig.addAttribute("tokens", "STRING_LITERAL");
         checkConfig.addAttribute("format", "a href");
 
-        String customMessage = "My custom message";
-        checkConfig.addAttribute("message", customMessage);
+        checkConfig.addAttribute("message", "My custom message");
         final String[] expected = {
-            "24:28: " + MessageFormat.format(customMessage, "a href"),
+            "24:28: " + "My custom message",
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputIllegalTokenTextTokens.java"), expected);
     }
 
     @Test
     public void testNullCustomMessage()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenTextCheck.class);
+            createModuleConfig(IllegalTokenTextCheck.class);
         checkConfig.addAttribute("tokens", "STRING_LITERAL");
         checkConfig.addAttribute("format", "a href");
 
@@ -88,14 +98,70 @@ public class IllegalTokenTextCheckTest
         final String[] expected = {
             "24:28: " + getCheckMessage(MSG_KEY, "a href"),
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputIllegalTokenTextTokens.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        IllegalTokenTextCheck check = new IllegalTokenTextCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final IllegalTokenTextCheck check = new IllegalTokenTextCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
+        Assert.assertTrue("Comments are also TokenType token", check.isCommentNodesRequired());
     }
+
+    @Test
+    public void testCommentToken()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalTokenTextCheck.class);
+        checkConfig.addAttribute("tokens", "COMMENT_CONTENT");
+        checkConfig.addAttribute("format", "a href");
+
+        checkConfig.addAttribute("message", null);
+        final String[] expected = {
+            "35:28: " + getCheckMessage(MSG_KEY, "a href"),
+        };
+        verify(checkConfig, getPath("InputIllegalTokenTextTokens.java"), expected);
+    }
+
+    @Test
+    public void testOrderOfProperties() throws Exception {
+        // pure class must be used as configuration doesn't guarantee order of
+        // attributes
+        final IllegalTokenTextCheck check = new IllegalTokenTextCheck();
+        check.setFormat("test");
+        check.setIgnoreCase(true);
+        final Pattern actual = (Pattern) TestUtil.getClassDeclaredField(
+                IllegalTokenTextCheck.class, "format").get(check);
+        Assert.assertEquals("should match", Pattern.CASE_INSENSITIVE, actual.flags());
+        Assert.assertEquals("should match", "test", actual.pattern());
+    }
+
+    @Test
+    public void testAcceptableTokensMakeSense() {
+        final int expectedTokenTypesTotalNumber = 169;
+        Assert.assertEquals("Total number of TokenTypes has changed, acceptable tokens in"
+                + " IllegalTokenTextCheck need to be reconsidered.",
+            expectedTokenTypesTotalNumber, TokenUtil.getTokenTypesTotalNumber());
+
+        final IllegalTokenTextCheck check = new IllegalTokenTextCheck();
+        final int[] allowedTokens = check.getAcceptableTokens();
+        final List<Integer> tokenTypesWithMutableText = Arrays.asList(
+            TokenTypes.NUM_DOUBLE,
+            TokenTypes.NUM_FLOAT,
+            TokenTypes.NUM_INT,
+            TokenTypes.NUM_LONG,
+            TokenTypes.IDENT,
+            TokenTypes.COMMENT_CONTENT,
+            TokenTypes.STRING_LITERAL,
+            TokenTypes.CHAR_LITERAL
+        );
+        for (int tokenType : allowedTokens) {
+            Assert.assertTrue(TokenUtil.getTokenName(tokenType) + " should not be allowed"
+                + " in this check as its text is a constant (IllegalTokenCheck should be used for"
+                + " such cases).", tokenTypesWithMutableText.contains(tokenType));
+        }
+    }
+
 }

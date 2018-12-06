@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,6 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for a list of statements.
  *
- * @author jrichard
  */
 public class SlistHandler extends BlockParentHandler {
 
@@ -68,7 +67,7 @@ public class SlistHandler extends BlockParentHandler {
     }
 
     @Override
-    public IndentLevel suggestedChildLevel(AbstractExpressionHandler child) {
+    public IndentLevel getSuggestedChildIndent(AbstractExpressionHandler child) {
         // this is:
         //  switch (var) {
         //     case 3: {
@@ -78,14 +77,18 @@ public class SlistHandler extends BlockParentHandler {
         //  ... the case SLIST is followed by a user-created SLIST and
         //  preceded by a switch
 
+        final IndentLevel result;
         // if our parent is a block handler we want to be transparent
         if (getParent() instanceof BlockParentHandler
                 && !(getParent() instanceof SlistHandler)
-            || getParent() instanceof CaseHandler
-                && child instanceof SlistHandler) {
-            return getParent().suggestedChildLevel(child);
+            || child instanceof SlistHandler
+                && getParent() instanceof CaseHandler) {
+            result = getParent().getSuggestedChildIndent(child);
         }
-        return super.suggestedChildLevel(child);
+        else {
+            result = super.getSuggestedChildIndent(child);
+        }
+        return result;
     }
 
     @Override
@@ -94,17 +97,17 @@ public class SlistHandler extends BlockParentHandler {
     }
 
     @Override
-    protected DetailAST getLCurly() {
+    protected DetailAST getLeftCurly() {
         return getMainAst();
     }
 
     @Override
-    protected DetailAST getRCurly() {
+    protected DetailAST getRightCurly() {
         return getMainAst().findFirstToken(TokenTypes.RCURLY);
     }
 
     @Override
-    protected DetailAST getToplevelAST() {
+    protected DetailAST getTopLevelAst() {
         return null;
     }
 
@@ -122,10 +125,9 @@ public class SlistHandler extends BlockParentHandler {
     public void checkIndentation() {
         // only need to check this if parent is not
         // an if, else, while, do, ctor, method
-        if (hasBlockParent() || isSameLineCaseGroup()) {
-            return;
+        if (!hasBlockParent() && !isSameLineCaseGroup()) {
+            super.checkIndentation();
         }
-        super.checkIndentation();
     }
 
     /**
@@ -137,4 +139,5 @@ public class SlistHandler extends BlockParentHandler {
         return parentNode.getType() == TokenTypes.CASE_GROUP
             && getMainAst().getLineNo() == parentNode.getLineNo();
     }
+
 }

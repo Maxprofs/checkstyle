@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,12 +19,17 @@
 
 package com.puppycrawl.tools.checkstyle.checks;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableSet;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Check that method/constructor/catch/foreach parameters are final.
@@ -35,8 +40,8 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <p>
  * Check has an option <b>ignorePrimitiveTypes</b> which allows ignoring lack of
  * final modifier at
- * <a href="http://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">
- *  primitive datatype</a> parameter. Default value <b>false</b>.
+ * <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">
+ *  primitive data type</a> parameter. Default value <b>false</b>.
  * </p>
  * E.g.:
  * <p>
@@ -45,12 +50,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * }
  * </p>
  *
- * @author lkuehne
- * @author o_sukhodolsky
- * @author Michael Studman
- * @author <a href="mailto:nesterenko-aleksey@list.ru">Aleksey Nesterenko</a>
  */
-public class FinalParametersCheck extends Check {
+@StatelessCheck
+public class FinalParametersCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -60,10 +62,11 @@ public class FinalParametersCheck extends Check {
 
     /**
      * Contains
-     * <a href="http://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">
+     * <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">
      * primitive datatypes</a>.
      */
-    private final Set<Integer> primitiveDataTypes = ImmutableSet.of(
+    private final Set<Integer> primitiveDataTypes = Collections.unmodifiableSet(
+        Arrays.stream(new Integer[] {
             TokenTypes.LITERAL_BYTE,
             TokenTypes.LITERAL_SHORT,
             TokenTypes.LITERAL_INT,
@@ -71,7 +74,8 @@ public class FinalParametersCheck extends Check {
             TokenTypes.LITERAL_FLOAT,
             TokenTypes.LITERAL_DOUBLE,
             TokenTypes.LITERAL_BOOLEAN,
-            TokenTypes.LITERAL_CHAR);
+            TokenTypes.LITERAL_CHAR, })
+        .collect(Collectors.toSet()));
 
     /**
      * Option to ignore primitive types as params.
@@ -105,21 +109,24 @@ public class FinalParametersCheck extends Check {
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
         // don't flag interfaces
         final DetailAST container = ast.getParent().getParent();
-        if (container.getType() == TokenTypes.INTERFACE_DEF) {
-            return;
-        }
-
-        if (ast.getType() == TokenTypes.LITERAL_CATCH) {
-            visitCatch(ast);
-        }
-        else if (ast.getType() == TokenTypes.FOR_EACH_CLAUSE) {
-            visitForEachClause(ast);
-        }
-        else {
-            visitMethod(ast);
+        if (container.getType() != TokenTypes.INTERFACE_DEF) {
+            if (ast.getType() == TokenTypes.LITERAL_CATCH) {
+                visitCatch(ast);
+            }
+            else if (ast.getType() == TokenTypes.FOR_EACH_CLAUSE) {
+                visitForEachClause(ast);
+            }
+            else {
+                visitMethod(ast);
+            }
         }
     }
 
@@ -128,28 +135,26 @@ public class FinalParametersCheck extends Check {
      * @param method method or ctor to check.
      */
     private void visitMethod(final DetailAST method) {
-        // exit on fast lane if there is nothing to check here
-        if (!method.branchContains(TokenTypes.PARAMETER_DEF)) {
-            return;
-        }
-
-        // ignore abstract method
         final DetailAST modifiers =
             method.findFirstToken(TokenTypes.MODIFIERS);
-        if (modifiers.branchContains(TokenTypes.ABSTRACT)) {
-            return;
-        }
+        // exit on fast lane if there is nothing to check here
 
-        // we can now be sure that there is at least one parameter
-        final DetailAST parameters =
-            method.findFirstToken(TokenTypes.PARAMETERS);
-        DetailAST child = parameters.getFirstChild();
-        while (child != null) {
-            // childs are PARAMETER_DEF and COMMA
-            if (child.getType() == TokenTypes.PARAMETER_DEF) {
-                checkParam(child);
+        if (method.findFirstToken(TokenTypes.PARAMETERS)
+                .findFirstToken(TokenTypes.PARAMETER_DEF) != null
+                // ignore abstract and native methods
+                && modifiers.findFirstToken(TokenTypes.ABSTRACT) == null
+                && modifiers.findFirstToken(TokenTypes.LITERAL_NATIVE) == null) {
+            // we can now be sure that there is at least one parameter
+            final DetailAST parameters =
+                method.findFirstToken(TokenTypes.PARAMETERS);
+            DetailAST child = parameters.getFirstChild();
+            while (child != null) {
+                // children are PARAMETER_DEF and COMMA
+                if (child.getType() == TokenTypes.PARAMETER_DEF) {
+                    checkParam(child);
+                }
+                child = child.getNextSibling();
             }
-            child = child.getNextSibling();
         }
     }
 
@@ -174,10 +179,12 @@ public class FinalParametersCheck extends Check {
      * @param param parameter to check.
      */
     private void checkParam(final DetailAST param) {
-        if (!param.branchContains(TokenTypes.FINAL) && !isIgnoredParam(param)) {
+        if (param.findFirstToken(TokenTypes.MODIFIERS).findFirstToken(TokenTypes.FINAL) == null
+                && !isIgnoredParam(param)
+                && !CheckUtil.isReceiverParameter(param)) {
             final DetailAST paramName = param.findFirstToken(TokenTypes.IDENT);
-            final DetailAST firstNode = CheckUtils.getFirstNode(param);
-            log(firstNode.getLineNo(), firstNode.getColumnNo(),
+            final DetailAST firstNode = CheckUtil.getFirstNode(param);
+            log(firstNode,
                 MSG_KEY, paramName.getText());
         }
     }
@@ -198,4 +205,5 @@ public class FinalParametersCheck extends Check {
         }
         return result;
     }
+
 }

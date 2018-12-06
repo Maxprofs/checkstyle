@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,16 +19,18 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * Restricts nested if-else blocks to a specified depth (default = 1).
  *
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
  */
-public final class NestedIfDepthCheck extends AbstractNestedDepthCheck {
+@FileStatefulCheck
+public final class NestedIfDepthCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -36,35 +38,53 @@ public final class NestedIfDepthCheck extends AbstractNestedDepthCheck {
      */
     public static final String MSG_KEY = "nested.if.depth";
 
-    /** default allowed nesting depth. */
-    private static final int DEFAULT_MAX = 1;
+    /** Maximum allowed nesting depth. */
+    private int max = 1;
+    /** Current nesting depth. */
+    private int depth;
 
-    /** Creates new check instance with default allowed nesting depth. */
-    public NestedIfDepthCheck() {
-        super(DEFAULT_MAX);
+    /**
+     * Setter for maximum allowed nesting depth.
+     * @param max maximum allowed nesting depth.
+     */
+    public void setMax(int max) {
+        this.max = max;
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.LITERAL_IF};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.LITERAL_IF};
     }
 
     @Override
+    public void beginTree(DetailAST rootAST) {
+        depth = 0;
+    }
+
+    @Override
     public void visitToken(DetailAST literalIf) {
-        if (!CheckUtils.isElseIf(literalIf)) {
-            nestIn(literalIf, MSG_KEY);
+        if (!CheckUtil.isElseIf(literalIf)) {
+            if (depth > max) {
+                log(literalIf, MSG_KEY, depth, max);
+            }
+            ++depth;
         }
     }
 
     @Override
     public void leaveToken(DetailAST literalIf) {
-        if (!CheckUtils.isElseIf(literalIf)) {
-            nestOut();
+        if (!CheckUtil.isElseIf(literalIf)) {
+            --depth;
         }
     }
 

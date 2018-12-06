@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,19 +20,18 @@
 package com.puppycrawl.tools.checkstyle.checks.indentation;
 
 import java.util.SortedMap;
-
-import com.google.common.collect.Maps;
+import java.util.TreeMap;
 
 /**
  * Represents a set of lines.
  *
- * @author jrichard
  */
 public class LineSet {
+
     /**
      * Maps line numbers to their start column.
      */
-    private final SortedMap<Integer, Integer> lines = Maps.newTreeMap();
+    private final SortedMap<Integer, Integer> lines = new TreeMap<>();
 
     /**
      * Get the starting column for a given line number.
@@ -94,6 +93,7 @@ public class LineSet {
 
     @Override
     public String toString() {
-        return "LineSet[firstLine=" + firstLine() + ", lastLine=" + lastLine() + "]";
+        return "LineSet[firstLine=" + lines.firstKey() + ", lastLine=" + lines.lastKey() + "]";
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,20 +19,20 @@
 
 package com.puppycrawl.tools.checkstyle;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.puppycrawl.tools.checkstyle.api.Context;
 
 /**
  * A default implementation of the Context interface.
- * @author lkuehne
  */
 public final class DefaultContext implements Context {
-    /** stores the context entries */
-    private final Map<String, Object> entries = Maps.newHashMap();
+
+    /** Stores the context entries. */
+    private final Map<String, Object> entries = new HashMap<>();
 
     @Override
     public Object get(String key) {
@@ -40,8 +40,8 @@ public final class DefaultContext implements Context {
     }
 
     @Override
-    public ImmutableCollection<String> getAttributeNames() {
-        return ImmutableList.copyOf(entries.keySet());
+    public Collection<String> getAttributeNames() {
+        return new HashSet<>(entries.keySet());
     }
 
     /**
@@ -52,4 +52,5 @@ public final class DefaultContext implements Context {
     public void add(String key, Object value) {
         entries.put(key, value);
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,44 +23,61 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.DetailNode;
 import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
 
 /**
  * <p>
- * Checks the order of at-clauses.
+ * Checks the order of
+ * <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javadoc.html#CHDBEFIF">
+ * javadoc block-tags or javadoc tags</a>.
+ * </p>
+ * <p>
+ * Note: Google used the term "at-clauses" for block tags in their guide till 2017-02-28.
  * </p>
  *
- * <p>
- * The check allows to configure itself by using the following properties:
- * </p>
  * <ul>
  * <li>
- * target - allows to specify targets to check at-clauses.
+ * Property {@code violateExecutionOnNonTightHtml} - If turned on, will print violations if the
+ * Javadoc being examined by this check violates the tight html rules defined at
+ * <a href="writingjavadocchecks.html#Tight-HTML_rules">Tight-HTML Rules</a>.
+ * Default value is {@code false}.
  * </li>
  * <li>
- * tagOrder - allows to specify the order by tags.
+ * Property {@code target} - Specify the list of targets to check at-clauses. Default value is
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#CLASS_DEF">CLASS_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#INTERFACE_DEF">INTERFACE_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#ENUM_DEF">ENUM_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#METHOD_DEF">METHOD_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#CTOR_DEF">CTOR_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#VARIABLE_DEF">VARIABLE_DEF</a>.
+ * </li>
+ * <li>
+ * Property {@code tagOrder} - Specify the order by tags. Default value is
+ * {@code @author, @version, @param, @return, @throws, @exception, @see, @since, @serial, @serialField, @serialData, @deprecated}.
  * </li>
  * </ul>
  * <p>
- * Default configuration:
+ * Default configuration
  * </p>
  * <pre>
- * &lt;module name=&quot;AtclauseOrderCheck&quot;&gt;
- *     &lt;property name=&quot;tagOrder&quot; value=&quot;&#64;author, &#64;version, &#64;param,
- *     &#64;return, &#64;throws, &#64;exception, &#64;see, &#64;since, &#64;serial,
- *     &#64;serialField, &#64;serialData, &#64;deprecated&quot;/&gt;
- *     &lt;property name=&quot;target&quot; value=&quot;CLASS_DEF, INTERFACE_DEF, ENUM_DEF,
- *     METHOD_DEF, CTOR_DEF, VARIABLE_DEF&quot;/&gt;
+ * &lt;module name=&quot;AtclauseOrder&quot;&gt;
+ *   &lt;property name=&quot;tagOrder&quot; value=&quot;&#64;author, &#64;version, &#64;param,
+ *   &#64;return, &#64;throws, &#64;exception, &#64;see, &#64;since, &#64;serial,
+ *   &#64;serialField, &#64;serialData, &#64;deprecated&quot;/&gt;
+ *   &lt;property name=&quot;target&quot; value=&quot;CLASS_DEF, INTERFACE_DEF, ENUM_DEF,
+ *   METHOD_DEF, CTOR_DEF, VARIABLE_DEF&quot;/&gt;
  * &lt;/module&gt;
  * </pre>
  *
- * @author max
- *
+ * @since 6.0
  */
+@StatelessCheck
 public class AtclauseOrderCheck extends AbstractJavadocCheck {
 
     /**
@@ -82,7 +99,7 @@ public class AtclauseOrderCheck extends AbstractJavadocCheck {
     };
 
     /**
-     * Default target of checking atclauses.
+     * Specify the list of targets to check at-clauses.
      */
     private List<Integer> target = Arrays.asList(
         TokenTypes.CLASS_DEF,
@@ -94,32 +111,30 @@ public class AtclauseOrderCheck extends AbstractJavadocCheck {
     );
 
     /**
-     * Order of atclauses.
+     * Specify the order by tags.
      */
     private List<String> tagOrder = Arrays.asList(DEFAULT_ORDER);
 
     /**
-     * Sets custom targets.
-     * @param target user's targets.
+     * Setter to specify the list of targets to check at-clauses.
+     * @param targets user's targets.
      */
-    public void setTarget(String target) {
+    public void setTarget(String... targets) {
         final List<Integer> customTarget = new ArrayList<>();
-        final String[] sTarget = target.split(",");
-        for (String aSTarget : sTarget) {
-            customTarget.add(Utils.getTokenId(aSTarget.trim()));
+        for (String temp : targets) {
+            customTarget.add(TokenUtil.getTokenId(temp.trim()));
         }
-        this.target = customTarget;
+        target = customTarget;
     }
 
     /**
-     * Sets custom order of atclauses.
-     * @param order user's order.
+     * Setter to specify the order by tags.
+     * @param orders user's orders.
      */
-    public void setTagOrder(String order) {
+    public void setTagOrder(String... orders) {
         final List<String> customOrder = new ArrayList<>();
-        final String[] sOrder = order.split(",");
-        for (String aSOrder : sOrder) {
-            customOrder.add(aSOrder.trim());
+        for (String order : orders) {
+            customOrder.add(order.trim());
         }
         tagOrder = customOrder;
     }
@@ -129,6 +144,11 @@ public class AtclauseOrderCheck extends AbstractJavadocCheck {
         return new int[] {
             JavadocTokenTypes.JAVADOC,
         };
+    }
+
+    @Override
+    public int[] getRequiredJavadocTokens() {
+        return getAcceptableJavadocTokens();
     }
 
     @Override
@@ -145,18 +165,21 @@ public class AtclauseOrderCheck extends AbstractJavadocCheck {
      * @param javadoc Javadoc root node.
      */
     private void checkOrderInTagSection(DetailNode javadoc) {
-        int indexOrderOfPreviousTag = 0;
+        int maxIndexOfPreviousTag = 0;
 
         for (DetailNode node : javadoc.getChildren()) {
             if (node.getType() == JavadocTokenTypes.JAVADOC_TAG) {
-                final String tagText = JavadocUtils.getFirstChild(node).getText();
-                final int indexOrderOfCurrentTag = tagOrder.indexOf(tagText);
+                final String tagText = JavadocUtil.getFirstChild(node).getText();
+                final int indexOfCurrentTag = tagOrder.indexOf(tagText);
 
-                if (tagOrder.contains(tagText)
-                        && indexOrderOfCurrentTag < indexOrderOfPreviousTag) {
-                    log(node.getLineNumber(), MSG_KEY, tagOrder.toString());
+                if (indexOfCurrentTag != -1) {
+                    if (indexOfCurrentTag < maxIndexOfPreviousTag) {
+                        log(node.getLineNumber(), MSG_KEY, tagOrder.toString());
+                    }
+                    else {
+                        maxIndexOfPreviousTag = indexOfCurrentTag;
+                    }
                 }
-                indexOrderOfPreviousTag = indexOrderOfCurrentTag;
             }
         }
     }
@@ -167,14 +190,12 @@ public class AtclauseOrderCheck extends AbstractJavadocCheck {
      * @return parent type.
      */
     private static int getParentType(DetailAST commentBlock) {
-        int type = 0;
         final DetailAST parentNode = commentBlock.getParent();
-        if (parentNode != null) {
-            type = parentNode.getType();
-            if (type == TokenTypes.TYPE || type == TokenTypes.MODIFIERS) {
-                type = parentNode.getParent().getType();
-            }
+        int type = parentNode.getType();
+        if (type == TokenTypes.TYPE || type == TokenTypes.MODIFIERS) {
+            type = parentNode.getParent().getType();
         }
         return type;
     }
+
 }

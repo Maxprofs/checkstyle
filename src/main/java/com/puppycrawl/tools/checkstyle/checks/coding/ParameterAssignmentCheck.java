@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,12 +22,14 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * <p>
@@ -41,9 +43,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * ensure that parameters are never assigned would give
  * the best of both worlds.
  * </p>
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
  */
-public final class ParameterAssignmentCheck extends Check {
+@FileStatefulCheck
+public final class ParameterAssignmentCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -53,40 +55,16 @@ public final class ParameterAssignmentCheck extends Check {
 
     /** Stack of methods' parameters. */
     private final Deque<Set<String>> parameterNamesStack = new ArrayDeque<>();
-    /** Current set of perameters. */
+    /** Current set of parameters. */
     private Set<String> parameterNames;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.CTOR_DEF,
-            TokenTypes.METHOD_DEF,
-            TokenTypes.ASSIGN,
-            TokenTypes.PLUS_ASSIGN,
-            TokenTypes.MINUS_ASSIGN,
-            TokenTypes.STAR_ASSIGN,
-            TokenTypes.DIV_ASSIGN,
-            TokenTypes.MOD_ASSIGN,
-            TokenTypes.SR_ASSIGN,
-            TokenTypes.BSR_ASSIGN,
-            TokenTypes.SL_ASSIGN,
-            TokenTypes.BAND_ASSIGN,
-            TokenTypes.BXOR_ASSIGN,
-            TokenTypes.BOR_ASSIGN,
-            TokenTypes.INC,
-            TokenTypes.POST_INC,
-            TokenTypes.DEC,
-            TokenTypes.POST_DEC,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
-    }
-
-    @Override
-    public int[] getAcceptableTokens() {
         return new int[] {
             TokenTypes.CTOR_DEF,
             TokenTypes.METHOD_DEF,
@@ -107,6 +85,11 @@ public final class ParameterAssignmentCheck extends Check {
             TokenTypes.DEC,
             TokenTypes.POST_DEC,
         };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
     }
 
     @Override
@@ -179,7 +162,7 @@ public final class ParameterAssignmentCheck extends Check {
     }
 
     /**
-     * Ckecks if this is assignments of parameter.
+     * Checks if this is assignments of parameter.
      * @param ast assignment to check.
      */
     private void visitAssign(DetailAST ast) {
@@ -205,8 +188,7 @@ public final class ParameterAssignmentCheck extends Check {
             if (identAST != null
                 && identAST.getType() == TokenTypes.IDENT
                 && parameterNames.contains(identAST.getText())) {
-                log(ast.getLineNo(), ast.getColumnNo(),
-                    MSG_KEY, identAST.getText());
+                log(ast, MSG_KEY, identAST.getText());
             }
         }
     }
@@ -217,7 +199,7 @@ public final class ParameterAssignmentCheck extends Check {
      */
     private void visitMethodDef(DetailAST ast) {
         parameterNamesStack.push(parameterNames);
-        parameterNames = Sets.newHashSet();
+        parameterNames = new HashSet<>();
 
         visitMethodParameters(ast.findFirstToken(TokenTypes.PARAMETERS));
     }
@@ -235,13 +217,15 @@ public final class ParameterAssignmentCheck extends Check {
         DetailAST parameterDefAST =
             ast.findFirstToken(TokenTypes.PARAMETER_DEF);
 
-        for (; parameterDefAST != null;
-             parameterDefAST = parameterDefAST.getNextSibling()) {
-            if (parameterDefAST.getType() == TokenTypes.PARAMETER_DEF) {
+        while (parameterDefAST != null) {
+            if (parameterDefAST.getType() == TokenTypes.PARAMETER_DEF
+                    && !CheckUtil.isReceiverParameter(parameterDefAST)) {
                 final DetailAST param =
                     parameterDefAST.findFirstToken(TokenTypes.IDENT);
                 parameterNames.add(param.getText());
             }
+            parameterDefAST = parameterDefAST.getNextSibling();
         }
     }
+
 }

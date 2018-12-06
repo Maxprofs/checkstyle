@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,17 +20,15 @@
 package com.puppycrawl.tools.checkstyle.api;
 
 import java.io.File;
-import java.util.List;
 import java.util.SortedSet;
 
 /**
  * Interface for Checking a set of files for some criteria.
  *
- * @author lkuehne
- * @author oliver
  */
 public interface FileSetCheck
     extends Configurable, Contextualizable {
+
     /**
      * Sets the MessageDispatcher that is used to dispatch error
      * messages to AuditListeners during processing.
@@ -68,10 +66,11 @@ public interface FileSetCheck
      * </p>
      *
      * @param file the file to be processed
-     * @param lines an immutable list of the contents of the file.
+     * @param fileText the contents of the file.
      * @return the sorted set of messages to be logged.
+     * @throws CheckstyleException if error condition within Checkstyle occurs
      */
-    SortedSet<LocalizedMessage> process(File file, List<String> lines);
+    SortedSet<LocalizedMessage> process(File file, FileText fileText) throws CheckstyleException;
 
     /**
      * Called when all the files have been processed. This is the time to
@@ -79,4 +78,5 @@ public interface FileSetCheck
      * method, the implementation is responsible for the logging of messages.
      */
     void finishProcessing();
+
 }

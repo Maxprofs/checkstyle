@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,66 +24,70 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.NestedForDepthCheck.
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-/**
- * The unit-test for the <code>NestedForDepthCheck</code>-checkstyle enhancement.
- * @see com.puppycrawl.tools.checkstyle.checks.coding.NestedForDepthCheck
- */
-public class NestedForDepthCheckTest extends BaseCheckTestSupport {
+public class NestedForDepthCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/nestedfordepth";
+    }
+
     /**
      * Call the check allowing 2 layers of nested for-statements. This
      * means the top-level for can contain up to 2 levels of nested for
-     * statements. As the testinput has 4 layers of for-statements below
+     * statements. As the test input has 4 layers of for-statements below
      * the top-level for statement, this must cause 2 error-messages.
      *
      * @throws Exception necessary to fulfill JUnit's
-     * interface-requirements for test-methods
+     *     interface-requirements for test-methods.
      */
     @Test
     public void testNestedTooDeep() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(NestedForDepthCheck.class);
+            createModuleConfig(NestedForDepthCheck.class);
         checkConfig.addAttribute("max", "2");
 
         final String[] expected = {
             "43:11: " + getCheckMessage(MSG_KEY, 3, 2),
             "44:13: " + getCheckMessage(MSG_KEY, 4, 2),
+            "47:13: " + getCheckMessage(MSG_KEY, 4, 2),
         };
 
-        verify(checkConfig, getPath("coding/InputNestedForDepth.java"),
+        verify(checkConfig, getPath("InputNestedForDepth.java"),
                expected);
     }
 
     /**
      * Call the check allowing 4 layers of nested for-statements. This
      * means the top-level for can contain up to 4 levels of nested for
-     * statements. As the testinput has 4 layers of for-statements below
+     * statements. As the test input has 4 layers of for-statements below
      * the top-level for statement, this must not cause an
      * error-message.
      *
      * @throws Exception necessary to fulfill JUnit's
-     * interface-requirements for test-methods
+     *     interface-requirements for test-methods.
      */
     @Test
     public void testNestedOk() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(NestedForDepthCheck.class);
+            createModuleConfig(NestedForDepthCheck.class);
         checkConfig.addAttribute("max", "4");
 
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("coding/InputNestedForDepth.java"),
+        verify(checkConfig, getPath("InputNestedForDepth.java"),
                expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        NestedForDepthCheck check = new NestedForDepthCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final NestedForDepthCheck check = new NestedForDepthCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

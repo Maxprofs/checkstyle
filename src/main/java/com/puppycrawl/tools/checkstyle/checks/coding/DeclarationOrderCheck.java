@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,20 +21,22 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 
-import com.puppycrawl.tools.checkstyle.ScopeUtils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.Scope;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
 
 /**
- * <p>
  * Checks that the parts of a class or interface declaration
  * appear in the order suggested by the
- * <a
- * href="http://www.oracle.com/technetwork/java/javase/documentation/codeconventions-141855.html#1852"
- * >Code Conventions for the Java Programming Language</a>.
+ * <a href=
+ * "https://www.oracle.com/technetwork/java/javase/documentation/codeconventions-141855.html#1852">
+ * Code Conventions for the Java Programming Language</a>.
  *
  *
  * <ol>
@@ -48,72 +50,71 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <li> Methods </li>
  * </ol>
  *
- * <p>
- * Available options:
+ * <p>ATTENTION: the check skips class fields which have
+ * <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.3.3">
+ * forward references </a> from validation due to the fact that we have Checkstyle's limitations
+ * to clearly detect user intention of fields location and grouping. For example,
+ * <pre>{@code
+ *      public class A {
+ *          private double x = 1.0;
+ *          private double y = 2.0;
+ *          public double slope = x / y; // will be skipped from validation due to forward reference
+ *      }
+ * }</pre>
+ *
+ * <p>Available options:
  * <ul>
  * <li>ignoreModifiers</li>
  * <li>ignoreConstructors</li>
- * <li>ignoreMethods</li>
  * </ul>
  *
- * <p>
- * Purpose of <b>ignore*</b> option is to ignore related violations,
+ * <p>Purpose of <b>ignore*</b> option is to ignore related violations,
  * however it still impacts on other class members.
  *
- * <p>
- * For example:
- * <pre><code>
+ * <p>For example:
+ * <pre>{@code
  *     class K {
  *         int a;
  *         void m(){}
  *         K(){}  &lt;-- "Constructor definition in wrong order"
  *         int b; &lt;-- "Instance variable definition in wrong order"
  *     }
- * </code></pre>
+ * }</pre>
  *
- * <p>
- * With <b>ignoreConstructors</b> option:
- * <pre><code>
+ * <p>With <b>ignoreConstructors</b> option:
+ * <pre>{@code
  *     class K {
  *         int a;
  *         void m(){}
  *         K(){}
  *         int b; &lt;-- "Instance variable definition in wrong order"
  *     }
- * </code></pre>
+ * }</pre>
  *
- * <p>
- * With <b>ignoreConstructors</b> option and without a method definition in a source class:
- * <pre><code>
+ * <p>With <b>ignoreConstructors</b> option and without a method definition in a source class:
+ * <pre>{@code
  *     class K {
  *         int a;
  *         K(){}
  *         int b; &lt;-- "Instance variable definition in wrong order"
  *     }
- * </code></pre>
+ * }</pre>
  *
- * <p>
- * An example of how to configure the check is:
+ * <p>An example of how to configure the check is:
  *
  * <pre>
  * &lt;module name="DeclarationOrder"/&gt;
  * </pre>
  *
- * @author r_auckenthaler
  */
-public class DeclarationOrderCheck extends Check {
+@FileStatefulCheck
+public class DeclarationOrderCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
     public static final String MSG_CONSTRUCTOR = "declaration.order.constructor";
-
-    /**
-     * A key is pointing to the warning message text in "messages.properties"
-     * file.
-     */
-    public static final String MSG_METHOD = "declaration.order.method";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -133,49 +134,57 @@ public class DeclarationOrderCheck extends Check {
      */
     public static final String MSG_ACCESS = "declaration.order.access";
 
-    /** State for the VARIABLE_DEF */
+    /** State for the VARIABLE_DEF. */
     private static final int STATE_STATIC_VARIABLE_DEF = 1;
 
-    /** State for the VARIABLE_DEF */
+    /** State for the VARIABLE_DEF. */
     private static final int STATE_INSTANCE_VARIABLE_DEF = 2;
 
-    /** State for the CTOR_DEF */
+    /** State for the CTOR_DEF. */
     private static final int STATE_CTOR_DEF = 3;
 
-    /** State for the METHOD_DEF */
+    /** State for the METHOD_DEF. */
     private static final int STATE_METHOD_DEF = 4;
 
     /**
      * List of Declaration States. This is necessary due to
-     * inner classes that have their own state
+     * inner classes that have their own state.
      */
-    private final Deque<ScopeState> scopeStates = new ArrayDeque<>();
+    private Deque<ScopeState> scopeStates;
+
+    /** Set of all class field names.*/
+    private Set<String> classFieldNames;
 
     /** If true, ignores the check to constructors. */
     private boolean ignoreConstructors;
-    /** If true, ignore the check to methods. */
-    private boolean ignoreMethods;
     /** If true, ignore the check to modifiers (fields, ...). */
     private boolean ignoreModifiers;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.CTOR_DEF,
-            TokenTypes.METHOD_DEF,
-            TokenTypes.MODIFIERS,
-            TokenTypes.OBJBLOCK,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.CTOR_DEF,
             TokenTypes.METHOD_DEF,
             TokenTypes.MODIFIERS,
             TokenTypes.OBJBLOCK,
+            TokenTypes.VARIABLE_DEF,
         };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        scopeStates = new ArrayDeque<>();
+        classFieldNames = new HashSet<>();
     }
 
     @Override
@@ -186,45 +195,40 @@ public class DeclarationOrderCheck extends Check {
             case TokenTypes.OBJBLOCK:
                 scopeStates.push(new ScopeState());
                 break;
-
-            case TokenTypes.CTOR_DEF:
-                if (parentType != TokenTypes.OBJBLOCK) {
-                    return;
-                }
-
-                processConstructor(ast);
-                break;
-
-            case TokenTypes.METHOD_DEF:
-
-                if (parentType != TokenTypes.OBJBLOCK) {
-                    return;
-                }
-
-                processMethod(ast);
-                break;
-
             case TokenTypes.MODIFIERS:
-                if (parentType != TokenTypes.VARIABLE_DEF
-                        || ast.getParent().getParent().getType()
-                        != TokenTypes.OBJBLOCK) {
-                    return;
+                if (parentType == TokenTypes.VARIABLE_DEF
+                    && ast.getParent().getParent().getType() == TokenTypes.OBJBLOCK) {
+                    processModifiers(ast);
                 }
-
-                processModifiers(ast);
                 break;
-
+            case TokenTypes.CTOR_DEF:
+                if (parentType == TokenTypes.OBJBLOCK) {
+                    processConstructor(ast);
+                }
+                break;
+            case TokenTypes.METHOD_DEF:
+                if (parentType == TokenTypes.OBJBLOCK) {
+                    final ScopeState state = scopeStates.peek();
+                    // nothing can be bigger than method's state
+                    state.currentScopeState = STATE_METHOD_DEF;
+                }
+                break;
+            case TokenTypes.VARIABLE_DEF:
+                if (ScopeUtil.isClassFieldDef(ast)) {
+                    final DetailAST fieldDef = ast.findFirstToken(TokenTypes.IDENT);
+                    classFieldNames.add(fieldDef.getText());
+                }
+                break;
             default:
                 break;
         }
     }
 
     /**
-     * process constructor
-     * @param ast constructor AST
+     * Processes constructor.
+     * @param ast constructor AST.
      */
     private void processConstructor(DetailAST ast) {
-
         final ScopeState state = scopeStates.peek();
         if (state.currentScopeState > STATE_CTOR_DEF) {
             if (!ignoreConstructors) {
@@ -237,59 +241,117 @@ public class DeclarationOrderCheck extends Check {
     }
 
     /**
-     * process Method Token
-     * @param ast ,ethod token AST
+     * Processes modifiers.
+     * @param ast ast of Modifiers.
      */
-    private void processMethod(DetailAST ast) {
-
+    private void processModifiers(DetailAST ast) {
         final ScopeState state = scopeStates.peek();
-        if (state.currentScopeState > STATE_METHOD_DEF) {
-            if (!ignoreMethods) {
-                log(ast, MSG_METHOD);
-            }
-        }
-        else {
-            state.currentScopeState = STATE_METHOD_DEF;
-        }
+        final boolean isStateValid = processModifiersState(ast, state);
+        processModifiersSubState(ast, state, isStateValid);
     }
 
     /**
-     * process modifiers
-     * @param ast ast of Modifiers
+     * Process if given modifiers are appropriate in given state
+     * ({@code STATE_STATIC_VARIABLE_DEF}, {@code STATE_INSTANCE_VARIABLE_DEF},
+     * ({@code STATE_CTOR_DEF}, {@code STATE_METHOD_DEF}), if it is
+     * it updates states where appropriate or logs violation.
+     * @param modifierAst modifiers to process
+     * @param state current state
+     * @return true if modifierAst is valid in given state, false otherwise
      */
-    private void processModifiers(DetailAST ast) {
-
-        final ScopeState state = scopeStates.peek();
-        if (ast.findFirstToken(TokenTypes.LITERAL_STATIC) != null) {
-            if (state.currentScopeState > STATE_STATIC_VARIABLE_DEF) {
-                if (!ignoreModifiers
-                    || state.currentScopeState > STATE_INSTANCE_VARIABLE_DEF) {
-                    log(ast, MSG_STATIC);
-                }
-            }
-            else {
-                state.currentScopeState = STATE_STATIC_VARIABLE_DEF;
-            }
-        }
-        else {
+    private boolean processModifiersState(DetailAST modifierAst, ScopeState state) {
+        boolean isStateValid = true;
+        if (modifierAst.findFirstToken(TokenTypes.LITERAL_STATIC) == null) {
             if (state.currentScopeState > STATE_INSTANCE_VARIABLE_DEF) {
-                log(ast, MSG_INSTANCE);
+                isStateValid = false;
+                log(modifierAst, MSG_INSTANCE);
             }
             else if (state.currentScopeState == STATE_STATIC_VARIABLE_DEF) {
                 state.declarationAccess = Scope.PUBLIC;
                 state.currentScopeState = STATE_INSTANCE_VARIABLE_DEF;
             }
         }
+        else {
+            if (state.currentScopeState > STATE_STATIC_VARIABLE_DEF) {
+                if (!ignoreModifiers
+                        || state.currentScopeState > STATE_INSTANCE_VARIABLE_DEF) {
+                    isStateValid = false;
+                    log(modifierAst, MSG_STATIC);
+                }
+            }
+            else {
+                state.currentScopeState = STATE_STATIC_VARIABLE_DEF;
+            }
+        }
+        return isStateValid;
+    }
 
-        final Scope access = ScopeUtils.getScopeFromMods(ast);
+    /**
+     * Checks if given modifiers are valid in substate of given
+     * state({@code Scope}), if it is it updates substate or else it
+     * logs violation.
+     * @param modifiersAst modifiers to process
+     * @param state current state
+     * @param isStateValid is main state for given modifiers is valid
+     */
+    private void processModifiersSubState(DetailAST modifiersAst, ScopeState state,
+                                          boolean isStateValid) {
+        final Scope access = ScopeUtil.getScopeFromMods(modifiersAst);
         if (state.declarationAccess.compareTo(access) > 0) {
-            if (!ignoreModifiers) {
-                log(ast, MSG_ACCESS);
+            if (isStateValid
+                    && !ignoreModifiers
+                    && !isForwardReference(modifiersAst.getParent())) {
+                log(modifiersAst, MSG_ACCESS);
             }
         }
         else {
             state.declarationAccess = access;
         }
+    }
+
+    /**
+     * Checks whether an identifier references a field which has been already defined in class.
+     * @param fieldDef a field definition.
+     * @return true if an identifier references a field which has been already defined in class.
+     */
+    private boolean isForwardReference(DetailAST fieldDef) {
+        final DetailAST exprStartIdent = fieldDef.findFirstToken(TokenTypes.IDENT);
+        final Set<DetailAST> exprIdents = getAllTokensOfType(exprStartIdent, TokenTypes.IDENT);
+        boolean forwardReference = false;
+        for (DetailAST ident : exprIdents) {
+            if (classFieldNames.contains(ident.getText())) {
+                forwardReference = true;
+                break;
+            }
+        }
+        return forwardReference;
+    }
+
+    /**
+     * Collects all tokens of specific type starting with the current ast node.
+     * @param ast ast node.
+     * @param tokenType token type.
+     * @return a set of all tokens of specific type starting with the current ast node.
+     */
+    private static Set<DetailAST> getAllTokensOfType(DetailAST ast, int tokenType) {
+        DetailAST vertex = ast;
+        final Set<DetailAST> result = new HashSet<>();
+        final Deque<DetailAST> stack = new ArrayDeque<>();
+        while (vertex != null || !stack.isEmpty()) {
+            if (!stack.isEmpty()) {
+                vertex = stack.pop();
+            }
+            while (vertex != null) {
+                if (vertex.getType() == tokenType && !vertex.equals(ast)) {
+                    result.add(vertex);
+                }
+                if (vertex.getNextSibling() != null) {
+                    stack.push(vertex.getNextSibling());
+                }
+                vertex = vertex.getFirstChild();
+            }
+        }
+        return result;
     }
 
     @Override
@@ -308,14 +370,6 @@ public class DeclarationOrderCheck extends Check {
     }
 
     /**
-     * Sets whether to ignore methods.
-     * @param ignoreMethods whether to ignore methods.
-     */
-    public void setIgnoreMethods(boolean ignoreMethods) {
-        this.ignoreMethods = ignoreMethods;
-    }
-
-    /**
      * Sets whether to ignore modifiers.
      * @param ignoreModifiers whether to ignore modifiers.
      */
@@ -324,13 +378,16 @@ public class DeclarationOrderCheck extends Check {
     }
 
     /**
-     * private class to encapsulate the state
+     * Private class to encapsulate the state.
      */
     private static class ScopeState {
-        /** The state the check is in */
+
+        /** The state the check is in. */
         private int currentScopeState = STATE_STATIC_VARIABLE_DEF;
 
-        /** The sub-state the check is in */
+        /** The sub-state the check is in. */
         private Scope declarationAccess = Scope.PUBLIC;
+
     }
+
 }

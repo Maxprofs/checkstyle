@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,63 +20,77 @@
 package com.puppycrawl.tools.checkstyle.checks.metrics;
 
 import static com.puppycrawl.tools.checkstyle.checks.metrics.BooleanExpressionComplexityCheck.MSG_KEY;
-
-import java.io.File;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
 import antlr.CommonHiddenStreamToken;
-
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class BooleanExpressionComplexityCheckTest extends BaseCheckTestSupport {
+public class BooleanExpressionComplexityCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/metrics/booleanexpressioncomplexity";
+    }
+
     @Test
     public void test() throws Exception {
-        DefaultConfiguration checkConfig =
-            createCheckConfig(BooleanExpressionComplexityCheck.class);
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(BooleanExpressionComplexityCheck.class);
 
-        String[] expected = {
+        final String[] expected = {
             "13:9: " + getCheckMessage(MSG_KEY, 4, 3),
-            "32:9: " + getCheckMessage(MSG_KEY, 6, 3),
-            "38:34: " + getCheckMessage(MSG_KEY, 4, 3),
-            "40:34: " + getCheckMessage(MSG_KEY, 4, 3),
+            "29:87: " + getCheckMessage(MSG_KEY, 4, 3),
+            "39:9: " + getCheckMessage(MSG_KEY, 6, 3),
+            "45:34: " + getCheckMessage(MSG_KEY, 4, 3),
+            "47:34: " + getCheckMessage(MSG_KEY, 4, 3),
         };
 
-        verify(checkConfig, getPath("metrics" + File.separator + "BooleanExpressionComplexityCheckTestInput.java"), expected);
+        verify(checkConfig, getPath("InputBooleanExpressionComplexity.java"), expected);
     }
 
     @Test
     public void testNoBitwise() throws Exception {
-        DefaultConfiguration checkConfig =
-            createCheckConfig(BooleanExpressionComplexityCheck.class);
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(BooleanExpressionComplexityCheck.class);
         checkConfig.addAttribute("max", "5");
         checkConfig.addAttribute("tokens", "BXOR,LAND,LOR");
 
-        String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("metrics" + File.separator + "BooleanExpressionComplexityCheckTestInput.java"), expected);
+        verify(checkConfig, getPath("InputBooleanExpressionComplexity.java"), expected);
     }
 
     @Test
-    public void testNPE() throws Exception {
-        DefaultConfiguration checkConfig =
-            createCheckConfig(BooleanExpressionComplexityCheck.class);
+    public void testNullPointerException() throws Exception {
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(BooleanExpressionComplexityCheck.class);
 
-        String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("metrics" + File.separator + "InputBooleanExpressionComplexityNPE.java"), expected);
+        verify(checkConfig, getPath("InputBooleanExpressionComplexityNPE.java"), expected);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testWrongToken() {
-        BooleanExpressionComplexityCheck booleanExpressionComplexityCheckObj = new BooleanExpressionComplexityCheck();
-        DetailAST ast = new DetailAST();
+        final BooleanExpressionComplexityCheck booleanExpressionComplexityCheckObj =
+            new BooleanExpressionComplexityCheck();
+        final DetailAST ast = new DetailAST();
         ast.initialize(new CommonHiddenStreamToken(TokenTypes.INTERFACE_DEF, "interface"));
-        booleanExpressionComplexityCheckObj.visitToken(ast);
+        try {
+            booleanExpressionComplexityCheckObj.visitToken(ast);
+            fail("exception expected");
+        }
+        catch (IllegalArgumentException ex) {
+            assertEquals("Invalid exception message",
+                "Unknown type: interface[0x-1]", ex.getMessage());
+        }
     }
+
 }

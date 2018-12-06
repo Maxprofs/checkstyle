@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,12 +25,11 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for synchronized statements.
  *
- * @author liscju piotr.listkiewicz@gmail.com
  */
 public class SynchronizedHandler extends BlockParentHandler {
 
     /**
-     * Determine that "synchronized" token used as modifier of method
+     * Determine that "synchronized" token used as modifier of method.
      */
     private final boolean methodModifier;
 
@@ -53,26 +52,24 @@ public class SynchronizedHandler extends BlockParentHandler {
         if (!methodModifier) {
             super.checkIndentation();
             checkSynchronizedExpr();
-            final LineWrappingHandler lineWrap =
-                    new LineWrappingHandler(getIndentCheck(), getMainAst(),
-                            getSynchronizedStatementRightParen(getMainAst()));
-            lineWrap.checkIndentation();
+            checkWrappingIndentation(getMainAst(),
+                    getSynchronizedStatementRightParen(getMainAst()));
         }
     }
 
     /**
-     * Check identation of expression we synchronized on
+     * Check indentation of expression we synchronized on.
      */
     private void checkSynchronizedExpr() {
         final DetailAST syncAst = getMainAst().findFirstToken(TokenTypes.LPAREN)
                 .getNextSibling();
         final IndentLevel expected =
-                new IndentLevel(getLevel(), getBasicOffset());
+                new IndentLevel(getIndent(), getBasicOffset());
         checkExpressionSubtree(syncAst, expected, false, false);
     }
 
     /**
-     * Checks if given synchronized is modifier of method*
+     * Checks if given synchronized is modifier of method.
      * @param ast synchronized(TokenTypes.LITERAL_SYNCHRONIZED) to check
      * @return true if synchronized only modifies method
      */
@@ -88,4 +85,5 @@ public class SynchronizedHandler extends BlockParentHandler {
     private static DetailAST getSynchronizedStatementRightParen(DetailAST syncStatementAST) {
         return syncStatementAST.findFirstToken(TokenTypes.RPAREN);
     }
+
 }

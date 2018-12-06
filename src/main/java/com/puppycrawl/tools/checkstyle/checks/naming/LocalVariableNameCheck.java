@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,19 +21,31 @@ package com.puppycrawl.tools.checkstyle.checks.naming;
 
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.ScopeUtils;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
 
 /**
  * <p>
- * Checks that local, non-final variable names conform to a format specified
+ * Checks that local, non-{@code final} variable names conform to a format specified
  * by the format property. A catch parameter is considered to be
- * a local variable. The format is a
- * {@link Pattern regular expression}
- * and defaults to
- * <strong>^[a-z][a-zA-Z0-9]*$</strong>.
+ * a local variable.
  * </p>
+ * <ul>
+ * <li>
+ * Property {@code format} - Specifies valid identifiers. Default value is
+ * {@code "^[a-z][a-zA-Z0-9]*$"}.
+ * </li>
+ * <li>
+ * Property {@code allowOneCharVarInForLoop} - Allow one character variable name in
+ * <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/for.html">initialization expressions</a>
+ * in FOR loop. For example:
+ * <pre>
+ * for (int i = 1; i &lt; 10; i++) {}
+ * </pre>
+ * Default value is {@code false}.
+ * </li>
+ * </ul>
  * <p>
  * An example of how to configure the check is:
  * </p>
@@ -46,7 +58,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </p>
  * <pre>
  * &lt;module name="LocalVariableName"&gt;
- *    &lt;property name="format" value="^[a-z](_?[a-zA-Z0-9]+)*$"/&gt;
+ *   &lt;property name="format" value="^[a-z](_?[a-zA-Z0-9]+)*$"/&gt;
  * &lt;/module&gt;
  * </pre>
  * <p>
@@ -57,27 +69,31 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * for(int i = 1; i &lt; 10; i++) {}
  * </pre>
  * <p>
- * An example of how to configure the check to allow one char variable name in
- * <a href="http://docs.oracle.com/javase/tutorial/java/nutsandbolts/for.html">
+ * An example of how to configure the check to allow one character variable name in
+ * <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/for.html">
  * initialization expressions</a> in FOR loop:
  * </p>
  * <pre>
  * &lt;module name="LocalVariableName"&gt;
- *    &lt;property name="allowOneCharVarInForLoop" value="true"/&gt;
+ *   &lt;property name="allowOneCharVarInForLoop" value="true"/&gt;
  * &lt;/module&gt;
  * </pre>
- * <p>
  *
- * @author Rick Giles
- * @author maxvetrenko
+ * @since 3.0
  */
 public class LocalVariableNameCheck
     extends AbstractNameCheck {
+
     /** Regexp for one-char loop variables. */
     private static final Pattern SINGLE_CHAR = Pattern.compile("^[a-z]$");
 
     /**
-     * Allow one character name for initialization expression in FOR loop.
+     * Allow one character variable name in
+     * <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/for.html">initialization expressions</a>
+     * in FOR loop. For example:
+     * <pre>
+     * for (int i = 1; i &lt; 10; i++) {}
+     * </pre>
      */
     private boolean allowOneCharVarInForLoop;
 
@@ -86,37 +102,50 @@ public class LocalVariableNameCheck
         super("^[a-z][a-zA-Z0-9]*$");
     }
 
+    /**
+     * Setter to allow one character variable name in
+     * <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/for.html">initialization expressions</a>
+     * in FOR loop. For example:
+     * <pre>
+     * for (int i = 1; i &lt; 10; i++) {}
+     * </pre>
+     *
+     * @param allow Flag for allowing or not one character name in FOR loop.
+     */
     public final void setAllowOneCharVarInForLoop(boolean allow) {
         allowOneCharVarInForLoop = allow;
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.VARIABLE_DEF,
-            TokenTypes.PARAMETER_DEF,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.VARIABLE_DEF,
-            TokenTypes.PARAMETER_DEF,
         };
     }
 
     @Override
     protected final boolean mustCheckName(DetailAST ast) {
+        final boolean result;
         if (allowOneCharVarInForLoop && isForLoopVariable(ast)) {
-            final String variableName =
-                    ast.findFirstToken(TokenTypes.IDENT).getText();
-            return !SINGLE_CHAR.matcher(variableName).find();
+            final String variableName = ast.findFirstToken(TokenTypes.IDENT).getText();
+            result = !SINGLE_CHAR.matcher(variableName).find();
         }
-        final DetailAST modifiersAST =
-            ast.findFirstToken(TokenTypes.MODIFIERS);
-        final boolean isFinal = modifiersAST.branchContains(TokenTypes.FINAL);
-        return !isFinal && ScopeUtils.isLocalVariableDef(ast);
+        else {
+            final DetailAST modifiersAST = ast.findFirstToken(TokenTypes.MODIFIERS);
+            final boolean isFinal = modifiersAST.findFirstToken(TokenTypes.FINAL) != null;
+            result = !isFinal && ScopeUtil.isLocalVariableDef(ast);
+        }
+        return result;
     }
 
     /**
@@ -129,4 +158,5 @@ public class LocalVariableNameCheck
         return parentType == TokenTypes.FOR_INIT
                 || parentType == TokenTypes.FOR_EACH_CLAUSE;
     }
+
 }

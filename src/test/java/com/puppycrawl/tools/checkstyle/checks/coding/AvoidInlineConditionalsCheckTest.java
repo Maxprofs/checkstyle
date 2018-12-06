@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,29 +24,36 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.AvoidInlineCondition
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 
 public class AvoidInlineConditionalsCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/avoidinlineconditionals";
+    }
+
     @Test
-    public void testIt()
-        throws Exception {
+    public void testDefault()
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(AvoidInlineConditionalsCheck.class);
+            createModuleConfig(AvoidInlineConditionalsCheck.class);
         final String[] expected = {
-            "97:29: " + getCheckMessage(MSG_KEY),
-            "98:20: " + getCheckMessage(MSG_KEY),
-            "150:34: " + getCheckMessage(MSG_KEY),
+            "32:29: " + getCheckMessage(MSG_KEY),
+            "33:20: " + getCheckMessage(MSG_KEY),
+            "46:34: " + getCheckMessage(MSG_KEY),
         };
-        verify(checkConfig, getPath("InputWhitespace.java"), expected);
+        verify(checkConfig, getPath("InputAvoidInlineConditionals.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        AvoidInlineConditionalsCheck check = new AvoidInlineConditionalsCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final AvoidInlineConditionalsCheck check = new AvoidInlineConditionalsCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

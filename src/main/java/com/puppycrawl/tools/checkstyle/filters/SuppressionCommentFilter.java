@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@
 package com.puppycrawl.tools.checkstyle.filters;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -28,16 +29,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.commons.beanutils.ConversionException;
-
-import com.google.common.collect.Lists;
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.TreeWalkerAuditEvent;
+import com.puppycrawl.tools.checkstyle.TreeWalkerFilter;
 import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
-import com.puppycrawl.tools.checkstyle.api.Filter;
 import com.puppycrawl.tools.checkstyle.api.TextBlock;
-import com.puppycrawl.tools.checkstyle.checks.FileContentsHolder;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -52,96 +49,96 @@ import com.puppycrawl.tools.checkstyle.checks.FileContentsHolder;
  * This is sometimes superior to a separate suppressions file, which
  * must be kept up-to-date as the source file is edited.
  * </p>
- * <p>
- * Usage:
- * This check only works in conjunction with the FileContentsHolder module
- * since that module makes the suppression comments in the .java
- * files available <i>sub rosa</i>.
- * </p>
- * @author Mike McMahon
- * @author Rick Giles
- * @see FileContentsHolder
  */
 public class SuppressionCommentFilter
     extends AutomaticBean
-    implements Filter {
+    implements TreeWalkerFilter {
+
+    /**
+     * Enum to be used for switching checkstyle reporting for tags.
+     */
+    public enum TagType {
+
+        /**
+         * Switch reporting on.
+         */
+        ON,
+        /**
+         * Switch reporting off.
+         */
+        OFF,
+
+    }
 
     /** Turns checkstyle reporting off. */
-    private static final String DEFAULT_OFF_FORMAT = "CHECKSTYLE\\:OFF";
+    private static final String DEFAULT_OFF_FORMAT = "CHECKSTYLE:OFF";
 
     /** Turns checkstyle reporting on. */
-    private static final String DEFAULT_ON_FORMAT = "CHECKSTYLE\\:ON";
+    private static final String DEFAULT_ON_FORMAT = "CHECKSTYLE:ON";
 
-    /** Control all checks */
+    /** Control all checks. */
     private static final String DEFAULT_CHECK_FORMAT = ".*";
+
+    /** Tagged comments. */
+    private final List<Tag> tags = new ArrayList<>();
 
     /** Whether to look in comments of the C type. */
     private boolean checkC = true;
 
     /** Whether to look in comments of the C++ type. */
+    // -@cs[AbbreviationAsWordInName] we can not change it as,
+    // Check property is a part of API (used in configurations)
     private boolean checkCPP = true;
 
     /** Parsed comment regexp that turns checkstyle reporting off. */
-    private Pattern offRegexp;
+    private Pattern offCommentFormat = Pattern.compile(DEFAULT_OFF_FORMAT);
 
     /** Parsed comment regexp that turns checkstyle reporting on. */
-    private Pattern onRegexp;
+    private Pattern onCommentFormat = Pattern.compile(DEFAULT_ON_FORMAT);
 
     /** The check format to suppress. */
-    private String checkFormat;
+    private String checkFormat = DEFAULT_CHECK_FORMAT;
 
     /** The message format to suppress. */
     private String messageFormat;
-
-    /** Tagged comments */
-    private final List<Tag> tags = Lists.newArrayList();
 
     /**
      * References the current FileContents for this filter.
      * Since this is a weak reference to the FileContents, the FileContents
      * can be reclaimed as soon as the strong references in TreeWalker
-     * and FileContentsHolder are reassigned to the next FileContents,
-     * at which time filtering for the current FileContents is finished.
+     * are reassigned to the next FileContents, at which time filtering for
+     * the current FileContents is finished.
      */
     private WeakReference<FileContents> fileContentsReference = new WeakReference<>(null);
 
     /**
-     * Constructs a SuppressionCoontFilter.
-     * Initializes comment on, comment off, and check formats
-     * to defaults.
-     */
-    public SuppressionCommentFilter() {
-        setOnCommentFormat(DEFAULT_ON_FORMAT);
-        setOffCommentFormat(DEFAULT_OFF_FORMAT);
-        setCheckFormat(DEFAULT_CHECK_FORMAT);
-    }
-
-    /**
      * Set the format for a comment that turns off reporting.
-     * @param format a {@code String} value.
-     * @throws ConversionException if unable to create Pattern object.
+     * @param pattern a pattern.
      */
-    public final void setOffCommentFormat(String format) {
-        offRegexp = Utils.createPattern(format);
+    public final void setOffCommentFormat(Pattern pattern) {
+        offCommentFormat = pattern;
     }
 
     /**
      * Set the format for a comment that turns on reporting.
-     * @param format a {@code String} value
-     * @throws ConversionException if unable to create Pattern object.
+     * @param pattern a pattern.
      */
-    public final void setOnCommentFormat(String format) {
-        onRegexp = Utils.createPattern(format);
+    public final void setOnCommentFormat(Pattern pattern) {
+        onCommentFormat = pattern;
     }
 
-    /** @return the FileContents for this filter. */
-    public FileContents getFileContents() {
+    /**
+     * Returns FileContents for this filter.
+     * @return the FileContents for this filter.
+     */
+    private FileContents getFileContents() {
         return fileContentsReference.get();
     }
 
     /**
      * Set the FileContents for this filter.
      * @param fileContents the FileContents for this filter.
+     * @noinspection WeakerAccess
      */
     public void setFileContents(FileContents fileContents) {
         fileContentsReference = new WeakReference<>(fileContents);
@@ -165,10 +162,12 @@ public class SuppressionCommentFilter
 
     /**
      * Set whether to look in C++ comments.
-     * @param checkCPP {@code true} if C++ comments are checked.
+     * @param checkCpp {@code true} if C++ comments are checked.
      */
-    public void setCheckCPP(boolean checkCPP) {
-        this.checkCPP = checkCPP;
+    // -@cs[AbbreviationAsWordInName] We can not change it as,
+    // check's property is a part of API (used in configurations).
+    public void setCheckCPP(boolean checkCpp) {
+        checkCPP = checkCpp;
     }
 
     /**
@@ -180,33 +179,36 @@ public class SuppressionCommentFilter
     }
 
     @Override
-    public boolean accept(AuditEvent event) {
-        if (event.getLocalizedMessage() == null) {
-            return true;        // A special event.
-        }
+    protected void finishLocalSetup() {
+        // No code by default
+    }
 
-        // Lazy update. If the first event for the current file, update file
-        // contents and tag suppressions
-        final FileContents currentContents = FileContentsHolder.getContents();
-        if (currentContents == null) {
-            // we have no contents, so we can not filter.
-            return true;
+    @Override
+    public boolean accept(TreeWalkerAuditEvent event) {
+        boolean accepted = true;
+
+        if (event.getLocalizedMessage() != null) {
+            // Lazy update. If the first event for the current file, update file
+            // contents and tag suppressions
+            final FileContents currentContents = event.getFileContents();
+
+            if (getFileContents() != currentContents) {
+                setFileContents(currentContents);
+                tagSuppressions();
+            }
+            final Tag matchTag = findNearestMatch(event);
+            accepted = matchTag == null || matchTag.getTagType() == TagType.ON;
         }
-        if (getFileContents() != currentContents) {
-            setFileContents(currentContents);
-            tagSuppressions();
-        }
-        final Tag matchTag = findNearestMatch(event);
-        return matchTag == null || matchTag.isOn();
+        return accepted;
     }
 
     /**
      * Finds the nearest comment text tag that matches an audit event.
      * The nearest tag is before the line and column of the event.
-     * @param event the {@code AuditEvent} to match.
+     * @param event the {@code TreeWalkerAuditEvent} to match.
      * @return The {@code Tag} nearest event.
      */
-    private Tag findNearestMatch(AuditEvent event) {
+    private Tag findNearestMatch(TreeWalkerAuditEvent event) {
         Tag result = null;
         for (Tag tag : tags) {
             if (tag.getLine() > event.getLine()
@@ -229,14 +231,12 @@ public class SuppressionCommentFilter
         tags.clear();
         final FileContents contents = getFileContents();
         if (checkCPP) {
-            tagSuppressions(contents.getCppComments().values());
+            tagSuppressions(contents.getSingleLineComments().values());
         }
         if (checkC) {
-            final Collection<List<TextBlock>> cCoonts = contents
-                    .getCComments().values();
-            for (List<TextBlock> eleont : cCoonts) {
-                tagSuppressions(eleont);
-            }
+            final Collection<List<TextBlock>> cComments = contents
+                    .getBlockComments().values();
+            cComments.forEach(this::tagSuppressions);
         }
         Collections.sort(tags);
     }
@@ -265,14 +265,14 @@ public class SuppressionCommentFilter
      * @param column the column number of text.
      */
     private void tagCommentLine(String text, int line, int column) {
-        final Matcher offMatcher = offRegexp.matcher(text);
+        final Matcher offMatcher = offCommentFormat.matcher(text);
         if (offMatcher.find()) {
-            addTag(offMatcher.group(0), line, column, false);
+            addTag(offMatcher.group(0), line, column, TagType.OFF);
         }
         else {
-            final Matcher onMatcher = onRegexp.matcher(text);
+            final Matcher onMatcher = onCommentFormat.matcher(text);
             if (onMatcher.find()) {
-                addTag(onMatcher.group(0), line, column, true);
+                addTag(onMatcher.group(0), line, column, TagType.ON);
             }
         }
     }
@@ -282,20 +282,20 @@ public class SuppressionCommentFilter
      * @param text the text of the tag.
      * @param line the line number of the tag.
      * @param column the column number of the tag.
-     * @param on {@code true} if the tag turns checkstyle reporting on.
+     * @param reportingOn {@code true} if the tag turns checkstyle reporting on.
      */
-    private void addTag(String text, int line, int column, boolean on) {
-        final Tag tag = new Tag(line, column, text, on, this);
+    private void addTag(String text, int line, int column, TagType reportingOn) {
+        final Tag tag = new Tag(line, column, text, reportingOn, this);
         tags.add(tag);
     }
 
     /**
      * A Tag holds a suppression comment and its location, and determines
-     * whether the supression turns checkstyle reporting on or off.
-     * @author Rick Giles
+     * whether the suppression turns checkstyle reporting on or off.
      */
     public static class Tag
         implements Comparable<Tag> {
+
         /** The text of the tag. */
         private final String text;
 
@@ -306,71 +306,71 @@ public class SuppressionCommentFilter
         private final int column;
 
         /** Determines whether the suppression turns checkstyle reporting on. */
-        private final boolean on;
+        private final TagType tagType;
 
         /** The parsed check regexp, expanded for the text of this tag. */
         private final Pattern tagCheckRegexp;
 
         /** The parsed message regexp, expanded for the text of this tag. */
-        private Pattern tagMessageRegexp;
+        private final Pattern tagMessageRegexp;
 
         /**
          * Constructs a tag.
          * @param line the line number.
          * @param column the column number.
          * @param text the text of the suppression.
-         * @param on {@code true} if the tag turns checkstyle reporting.
+         * @param tagType {@code ON} if the tag turns checkstyle reporting.
          * @param filter the {@code SuppressionCommentFilter} with the context
-         * @throws ConversionException if unable to parse expanded text.
-         * on.
+         * @throws IllegalArgumentException if unable to parse expanded text.
          */
-        public Tag(int line, int column, String text, boolean on, SuppressionCommentFilter filter) {
+        public Tag(int line, int column, String text, TagType tagType,
+                   SuppressionCommentFilter filter) {
             this.line = line;
             this.column = column;
             this.text = text;
-            this.on = on;
+            this.tagType = tagType;
 
             //Expand regexp for check and message
             //Does not intern Patterns with Utils.getPattern()
             String format = "";
             try {
-                if (on) {
-                    format =
-                        expandFromCoont(text, filter.checkFormat, filter.onRegexp);
+                if (this.tagType == TagType.ON) {
+                    format = CommonUtil.fillTemplateWithStringsByRegexp(
+                            filter.checkFormat, text, filter.onCommentFormat);
                     tagCheckRegexp = Pattern.compile(format);
-                    if (filter.messageFormat != null) {
-                        format =
-                            expandFromCoont(text, filter.messageFormat, filter.onRegexp);
+                    if (filter.messageFormat == null) {
+                        tagMessageRegexp = null;
+                    }
+                    else {
+                        format = CommonUtil.fillTemplateWithStringsByRegexp(
+                                filter.messageFormat, text, filter.onCommentFormat);
                         tagMessageRegexp = Pattern.compile(format);
                     }
                 }
                 else {
-                    format =
-                        expandFromCoont(text, filter.checkFormat, filter.offRegexp);
+                    format = CommonUtil.fillTemplateWithStringsByRegexp(
+                            filter.checkFormat, text, filter.offCommentFormat);
                     tagCheckRegexp = Pattern.compile(format);
-                    if (filter.messageFormat != null) {
-                        format =
-                            expandFromCoont(
-                                text,
-                                filter.messageFormat,
-                                filter.offRegexp);
+                    if (filter.messageFormat == null) {
+                        tagMessageRegexp = null;
+                    }
+                    else {
+                        format = CommonUtil.fillTemplateWithStringsByRegexp(
+                                filter.messageFormat, text, filter.offCommentFormat);
                         tagMessageRegexp = Pattern.compile(format);
                     }
                 }
             }
-            catch (final PatternSyntaxException e) {
-                throw new ConversionException(
-                    "unable to parse expanded comment " + format,
-                    e);
+            catch (final PatternSyntaxException ex) {
+                throw new IllegalArgumentException(
+                    "unable to parse expanded comment " + format, ex);
             }
         }
 
-        /** @return the text of the tag. */
-        public String getText() {
-            return text;
-        }
-
-        /** @return the line number of the tag in the source file. */
+        /**
+         * Returns line number of the tag in the source file.
+         * @return the line number of the tag in the source file.
+         */
         public int getLine() {
             return line;
         }
@@ -388,10 +388,10 @@ public class SuppressionCommentFilter
         /**
          * Determines whether the suppression turns checkstyle reporting on or
          * off.
-         * @return {@code true}if the suppression turns reporting on.
+         * @return {@code ON} if the suppression turns reporting on.
          */
-        public boolean isOn() {
-            return on;
+        public TagType getTagType() {
+            return tagType;
         }
 
         /**
@@ -399,86 +399,83 @@ public class SuppressionCommentFilter
          * with the position of another tag.
          * @param object the tag to compare with this one.
          * @return a negative number if this tag is before the other tag,
-         * 0 if they are at the same position, and a positive number if this
-         * tag is after the other tag.
+         *     0 if they are at the same position, and a positive number if this
+         *     tag is after the other tag.
          */
         @Override
         public int compareTo(Tag object) {
+            final int result;
             if (line == object.line) {
-                return Integer.compare(column, object.column);
+                result = Integer.compare(column, object.column);
             }
-
-            return Integer.compare(line, object.line);
+            else {
+                result = Integer.compare(line, object.line);
+            }
+            return result;
         }
 
+        /**
+         * Indicates whether some other object is "equal to" this one.
+         * Suppression on enumeration is needed so code stays consistent.
+         * @noinspection EqualsCalledOnEnumConstant
+         */
         @Override
-        public boolean equals(Object o) {
-            if (this == o) {
+        public boolean equals(Object other) {
+            if (this == other) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (other == null || getClass() != other.getClass()) {
                 return false;
             }
-            final Tag tag = (Tag) o;
+            final Tag tag = (Tag) other;
             return Objects.equals(line, tag.line)
                     && Objects.equals(column, tag.column)
-                    && Objects.equals(on, tag.on)
-                    && Objects.equals(text, tag.text);
+                    && Objects.equals(tagType, tag.tagType)
+                    && Objects.equals(text, tag.text)
+                    && Objects.equals(tagCheckRegexp, tag.tagCheckRegexp)
+                    && Objects.equals(tagMessageRegexp, tag.tagMessageRegexp);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(text, line, column, on);
+            return Objects.hash(text, line, column, tagType, tagCheckRegexp, tagMessageRegexp);
         }
 
         /**
          * Determines whether the source of an audit event
          * matches the text of this tag.
-         * @param event the {@code AuditEvent} to check.
+         * @param event the {@code TreeWalkerAuditEvent} to check.
          * @return true if the source of event matches the text of this tag.
          */
-        public boolean isMatch(AuditEvent event) {
-            final Matcher tagMatcher =
-                tagCheckRegexp.matcher(event.getSourceName());
+        public boolean isMatch(TreeWalkerAuditEvent event) {
+            boolean match = false;
+            final Matcher tagMatcher = tagCheckRegexp.matcher(event.getSourceName());
             if (tagMatcher.find()) {
-                if (tagMessageRegexp != null) {
-                    final Matcher messageMatcher =
-                            tagMessageRegexp.matcher(event.getMessage());
-                    return messageMatcher.find();
+                if (tagMessageRegexp == null) {
+                    match = true;
                 }
-                return true;
+                else {
+                    final Matcher messageMatcher = tagMessageRegexp.matcher(event.getMessage());
+                    match = messageMatcher.find();
+                }
             }
-            return false;
-        }
-
-        /**
-         * Expand based on a matching comment.
-         * @param comment the comment.
-         * @param stringToExpand the string to expand.
-         * @param regexp the parsed expander.
-         * @return the expanded string
-         */
-        private static String expandFromCoont(
-            String comment,
-            String stringToExpand,
-            Pattern regexp) {
-            final Matcher matcher = regexp.matcher(comment);
-            // Match primarily for effect.
-            if (!matcher.find()) {
-                return stringToExpand;
+            else if (event.getModuleId() != null) {
+                final Matcher idMatcher = tagCheckRegexp.matcher(event.getModuleId());
+                match = idMatcher.find();
             }
-            String result = stringToExpand;
-            for (int i = 0; i <= matcher.groupCount(); i++) {
-                // $n expands comment match like in Pattern.subst().
-                result = result.replaceAll("\\$" + i, matcher.group(i));
-            }
-            return result;
+            return match;
         }
 
         @Override
-        public final String toString() {
-            return "Tag[line=" + getLine() + "; col=" + getColumn()
-                + "; on=" + isOn() + "; text='" + getText() + "']";
+        public String toString() {
+            return "Tag[text='" + text + '\''
+                    + ", line=" + line
+                    + ", column=" + column
+                    + ", type=" + tagType
+                    + ", tagCheckRegexp=" + tagCheckRegexp
+                    + ", tagMessageRegexp=" + tagMessageRegexp + ']';
         }
+
     }
+
 }

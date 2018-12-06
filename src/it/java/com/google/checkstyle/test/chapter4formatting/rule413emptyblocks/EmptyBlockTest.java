@@ -1,29 +1,39 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter4formatting.rule413emptyblocks;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.checks.blocks.EmptyBlockCheck;
 
-public class EmptyBlockTest extends BaseCheckTestSupport{
-    
-    static ConfigurationBuilder builder;
-    
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
+public class EmptyBlockTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter4formatting/rule413emptyblocks";
     }
 
     @Test
-    public void emptyBlockTest() throws IOException, Exception {
-        
+    public void testEmptyBlock() throws Exception {
         final String[] expected = {
             "19:21: " + getCheckMessage(EmptyBlockCheck.class, "block.empty", "if"),
             "22:34: " + getCheckMessage(EmptyBlockCheck.class, "block.empty", "if"),
@@ -60,26 +70,26 @@ public class EmptyBlockTest extends BaseCheckTestSupport{
             "320:34: " + getCheckMessage(EmptyBlockCheck.class, "block.empty", "if"),
         };
 
-        Configuration checkConfig = builder.getCheckConfig("EmptyBlock");
-        String filePath = builder.getFilePath("EmptyBlockInput_Basic");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+        final Configuration checkConfig = getModuleConfig("EmptyBlock");
+        final String filePath = getPath("InputEmptyBlockBasic.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
-    
+
     @Test
-    public void emptyBlockTestCatch() throws IOException, Exception {
-        
+    public void testEmptyBlockCatch() throws Exception {
         final String[] expected = {
             "29:17: " + getCheckMessage(EmptyBlockCheck.class, "block.empty", "finally"),
             "50:21: " + getCheckMessage(EmptyBlockCheck.class, "block.empty", "finally"),
             "72:21: " + getCheckMessage(EmptyBlockCheck.class, "block.empty", "finally"),
         };
 
-        Configuration checkConfig = builder.getCheckConfig("EmptyBlock");
-        String filePath = builder.getFilePath("EmptyBlockInputCatch");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+        final Configuration checkConfig = getModuleConfig("EmptyBlock");
+        final String filePath = getPath("InputEmptyBlock.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
+
 }

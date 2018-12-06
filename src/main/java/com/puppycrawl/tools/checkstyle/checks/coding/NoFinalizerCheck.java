@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,15 +19,18 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
 /**
  * Checks that no method having zero parameters is defined
  * using the name <em>finalize</em>.
  *
- * @author fqian@google.com (Feng Qian)
- * @author smckay@google.com (Steve McKay)
- * @author lkuehne
  */
-public class NoFinalizerCheck extends AbstractIllegalMethodCheck {
+@StatelessCheck
+public class NoFinalizerCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -35,10 +38,35 @@ public class NoFinalizerCheck extends AbstractIllegalMethodCheck {
      */
     public static final String MSG_KEY = "avoid.finalizer.method";
 
-    /**
-     * Creates an instance.
-     */
-    public NoFinalizerCheck() {
-        super("finalize", MSG_KEY);
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
     }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.METHOD_DEF};
+    }
+
+    @Override
+    public void visitToken(DetailAST aAST) {
+        final DetailAST mid = aAST.findFirstToken(TokenTypes.IDENT);
+        final String name = mid.getText();
+
+        if ("finalize".equals(name)) {
+            final DetailAST params = aAST.findFirstToken(TokenTypes.PARAMETERS);
+            final boolean hasEmptyParamList =
+                params.findFirstToken(TokenTypes.PARAMETER_DEF) == null;
+
+            if (hasEmptyParamList) {
+                log(aAST.getLineNo(), MSG_KEY);
+            }
+        }
+    }
+
 }

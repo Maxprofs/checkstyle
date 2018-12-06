@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,16 +19,17 @@
 
 package com.puppycrawl.tools.checkstyle.checks;
 
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>Checks that long constants are defined with an upper ell.
  * That is <span class="code">'L'</span> and not
  * <span class="code">'l'</span>. This is in accordance to the Java Language
- * Specification, <a href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-3.html#jls-3.10.1">
+ * Specification, <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-3.html#jls-3.10.1">
  * Section 3.10.1</a>.
  * </p>
  * <p>
@@ -36,7 +37,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * like the number <span class="code">1</span>.
  * </p>
  *
- * Examples
+ * <p>Examples
  * <p class="body">
  * To configure the check:
  *
@@ -45,9 +46,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * &lt;module name=&quot;UpperEll&quot;/&gt;
  * </pre>
  *
- * @author Oliver Burn
  */
-public class UpperEllCheck extends Check {
+@StatelessCheck
+public class UpperEllCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -57,20 +58,26 @@ public class UpperEllCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.NUM_LONG};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.NUM_LONG};
     }
 
     @Override
     public void visitToken(DetailAST ast) {
-        if (Utils.endsWithChar(ast.getText(), 'l')) {
+        if (CommonUtil.endsWithChar(ast.getText(), 'l')) {
             log(ast.getLineNo(),
                 ast.getColumnNo() + ast.getText().length() - 1,
                 MSG_KEY);
         }
     }
+
 }

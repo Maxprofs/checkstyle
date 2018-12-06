@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,49 +20,55 @@
 package com.puppycrawl.tools.checkstyle.checks.javadoc;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
 
 /**
- *
  * Implementation of DetailNode interface that is mutable.
  *
- * @author Baratali Izmailov
  *
  */
 public class JavadocNodeImpl implements DetailNode {
+
     /**
-     * Node index among parent's children
+     * Empty array of {@link DetailNode} type.
+     */
+    public static final JavadocNodeImpl[] EMPTY_DETAIL_NODE_ARRAY = new JavadocNodeImpl[0];
+
+    /**
+     * Node index among parent's children.
      */
     private int index;
 
     /**
-     * Node type
+     * Node type.
      */
     private int type;
 
     /**
-     * Node's text content
+     * Node's text content.
      */
     private String text;
 
     /**
-     * Line number
+     * Line number.
      */
     private int lineNumber;
 
     /**
-     * Column number
+     * Column number.
      */
     private int columnNumber;
 
     /**
-     * Array of child nodes
+     * Array of child nodes.
      */
     private DetailNode[] children;
 
     /**
-     * Parent node
+     * Parent node.
      */
     private DetailNode parent;
 
@@ -88,12 +94,11 @@ public class JavadocNodeImpl implements DetailNode {
 
     @Override
     public DetailNode[] getChildren() {
-        if (children == null) {
-            return new DetailNode[0];
+        DetailNode[] nodeChildren = EMPTY_DETAIL_NODE_ARRAY;
+        if (children != null) {
+            nodeChildren = Arrays.copyOf(children, children.length);
         }
-        else {
-            return Arrays.copyOf(children, children.length);
-        }
+        return nodeChildren;
     }
 
     @Override
@@ -106,38 +111,72 @@ public class JavadocNodeImpl implements DetailNode {
         return index;
     }
 
+    /**
+     * Sets node's type.
+     * @param type Node's type.
+     */
     public void setType(int type) {
         this.type = type;
     }
 
+    /**
+     * Sets node's text content.
+     * @param text Node's text content.
+     */
     public void setText(String text) {
         this.text = text;
     }
 
+    /**
+     * Sets line number.
+     * @param lineNumber Line number.
+     */
     public void setLineNumber(int lineNumber) {
         this.lineNumber = lineNumber;
     }
 
+    /**
+     * Sets column number.
+     * @param columnNumber Column number.
+     */
     public void setColumnNumber(int columnNumber) {
         this.columnNumber = columnNumber;
     }
 
+    /**
+     * Sets array of child nodes.
+     * @param children Array of child nodes.
+     */
     public void setChildren(DetailNode... children) {
         this.children = Arrays.copyOf(children, children.length);
     }
 
+    /**
+     * Sets parent node.
+     * @param parent Parent node.
+     */
     public void setParent(DetailNode parent) {
         this.parent = parent;
     }
 
+    /**
+     * Sets node's index among parent's children.
+     * @param index Node's index among parent's children.
+     */
     public void setIndex(int index) {
         this.index = index;
     }
 
     @Override
     public String toString() {
-        return JavadocUtils.getTokenName(getType())
-                + "[" + getLineNumber() + "x" + getColumnNumber() + "]";
+        return "JavadocNodeImpl["
+                + "index=" + index
+                + ", type=" + JavadocUtil.getTokenName(type)
+                + ", text='" + text + '\''
+                + ", lineNumber=" + lineNumber
+                + ", columnNumber=" + columnNumber
+                + ", children=" + Objects.hashCode(children)
+                + ", parent=" + parent + ']';
     }
 
 }

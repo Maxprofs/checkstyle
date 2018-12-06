@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,17 +20,41 @@
 package com.puppycrawl.tools.checkstyle.checks.javadoc;
 
 import static com.puppycrawl.tools.checkstyle.checks.javadoc.SingleLineJavadocCheck.MSG_KEY;
+import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-public class SingleLineJavadocCheckTest extends BaseCheckTestSupport {
+public class SingleLineJavadocCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/javadoc/singlelinejavadoc";
+    }
+
+    @Test
+    public void testAcceptableTokens() {
+        final SingleLineJavadocCheck checkObj = new SingleLineJavadocCheck();
+        final int[] expected = {TokenTypes.BLOCK_COMMENT_BEGIN };
+        assertArrayEquals("Default acceptable tokens are invalid",
+            expected, checkObj.getAcceptableTokens());
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final SingleLineJavadocCheck checkObj = new SingleLineJavadocCheck();
+        final int[] expected = {TokenTypes.BLOCK_COMMENT_BEGIN };
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void simpleTest() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(SingleLineJavadocCheck.class);
+                createModuleConfig(SingleLineJavadocCheck.class);
         final String[] expected = {
             "12: " + getCheckMessage(MSG_KEY),
             "28: " + getCheckMessage(MSG_KEY),
@@ -38,13 +62,13 @@ public class SingleLineJavadocCheckTest extends BaseCheckTestSupport {
             "43: " + getCheckMessage(MSG_KEY),
             "49: " + getCheckMessage(MSG_KEY),
         };
-        verify(checkConfig, getPath("javadoc/InputSingleLineJavadocCheck.java"), expected);
+        verify(checkConfig, getPath("InputSingleLineJavadoc.java"), expected);
     }
 
     @Test
     public void testIgnoredTags() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(SingleLineJavadocCheck.class);
+                createModuleConfig(SingleLineJavadocCheck.class);
         checkConfig.addAttribute("ignoredTags", "@inheritDoc, @throws,  "
             + "@ignoredCustomTag");
         checkConfig.addAttribute("ignoreInlineTags", "false");
@@ -57,6 +81,7 @@ public class SingleLineJavadocCheckTest extends BaseCheckTestSupport {
             "46: " + getCheckMessage(MSG_KEY),
             "49: " + getCheckMessage(MSG_KEY),
         };
-        verify(checkConfig, getPath("javadoc/InputSingleLineJavadocCheck.java"), expected);
+        verify(checkConfig, getPath("InputSingleLineJavadoc.java"), expected);
     }
+
 }

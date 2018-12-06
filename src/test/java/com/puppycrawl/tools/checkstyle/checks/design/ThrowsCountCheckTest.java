@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,83 +24,98 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.io.File;
-
 import org.junit.Test;
 
 import antlr.CommonHiddenStreamToken;
-
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-public class ThrowsCountCheckTest extends BaseCheckTestSupport {
+public class ThrowsCountCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/design/throwscount";
+    }
+
     @Test
     public void testDefault() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(ThrowsCountCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(ThrowsCountCheck.class);
 
-        String[] expected = {
+        final String[] expected = {
             "17:20: " + getCheckMessage(MSG_KEY, 5, 4),
             "22:20: " + getCheckMessage(MSG_KEY, 5, 4),
             "27:20: " + getCheckMessage(MSG_KEY, 6, 4),
             "55:43: " + getCheckMessage(MSG_KEY, 5, 4),
         };
 
-        verify(checkConfig, getPath("design" + File.separator + "InputThrowsCount.java"), expected);
+        verify(checkConfig, getPath("InputThrowsCount.java"), expected);
     }
 
     @Test
     public void testMax() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(ThrowsCountCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(ThrowsCountCheck.class);
         checkConfig.addAttribute("max", "5");
 
-        String[] expected = {
+        final String[] expected = {
             "27:20: " + getCheckMessage(MSG_KEY, 6, 5),
         };
 
-        verify(checkConfig, getPath("design" + File.separator + "InputThrowsCount.java"), expected);
+        verify(checkConfig, getPath("InputThrowsCount.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        ThrowsCountCheck obj = new ThrowsCountCheck();
-        int[] expected = {TokenTypes.LITERAL_THROWS};
-        assertArrayEquals(expected, obj.getAcceptableTokens());
+        final ThrowsCountCheck obj = new ThrowsCountCheck();
+        final int[] expected = {TokenTypes.LITERAL_THROWS};
+        assertArrayEquals("Default acceptable tokens are invalid",
+            expected, obj.getAcceptableTokens());
     }
 
     @Test
     public void testGetRequiredTokens() {
-        ThrowsCountCheck obj = new ThrowsCountCheck();
-        int[] expected = {TokenTypes.LITERAL_THROWS};
-        assertArrayEquals(expected, obj.getRequiredTokens());
+        final ThrowsCountCheck obj = new ThrowsCountCheck();
+        final int[] expected = {TokenTypes.LITERAL_THROWS};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, obj.getRequiredTokens());
     }
 
     @Test
     public void testWrongTokenType() {
-        ThrowsCountCheck obj = new ThrowsCountCheck();
-        DetailAST ast = new DetailAST();
+        final ThrowsCountCheck obj = new ThrowsCountCheck();
+        final DetailAST ast = new DetailAST();
         ast.initialize(new CommonHiddenStreamToken(TokenTypes.CLASS_DEF, "class"));
         try {
             obj.visitToken(ast);
-            fail();
+            fail("IllegalStateException is expected");
         }
-        catch (IllegalStateException e) {
-            assertEquals(ast.toString(), e.getMessage());
+        catch (IllegalStateException ex) {
+            assertEquals("Invalid exception message", ast.toString(), ex.getMessage());
         }
     }
 
     @Test
     public void testNotIgnorePrivateMethod() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(ThrowsCountCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(ThrowsCountCheck.class);
         checkConfig.addAttribute("ignorePrivateMethods", "false");
-        String[] expected = {
+        final String[] expected = {
             "17:20: " + getCheckMessage(MSG_KEY, 5, 4),
             "22:20: " + getCheckMessage(MSG_KEY, 5, 4),
             "27:20: " + getCheckMessage(MSG_KEY, 6, 4),
             "35:28: " + getCheckMessage(MSG_KEY, 5, 4),
             "55:43: " + getCheckMessage(MSG_KEY, 5, 4),
         };
-        verify(checkConfig, getPath("design" + File.separator + "InputThrowsCount.java"), expected);
+        verify(checkConfig, getPath("InputThrowsCount.java"), expected);
     }
+
+    @Test
+    public void testMethodWithAnnotation() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(ThrowsCountCheck.class);
+        final String[] expected = {
+            "18:26: " + getCheckMessage(MSG_KEY, 5, 4),
+        };
+        verify(checkConfig, getPath("InputThrowsCountMethodWithAnnotation.java"), expected);
+    }
+
 }

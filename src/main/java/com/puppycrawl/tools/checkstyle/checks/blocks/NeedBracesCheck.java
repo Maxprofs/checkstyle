@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.blocks;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -48,8 +50,8 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *     &lt;property name="tokens" value="LITERAL_IF, LITERAL_ELSE"/&gt;
  * &lt;/module&gt;
  * </pre>
- * Check has an option <b>allowSingleLineStatement</b> which allows single-line
- * statements without braces, e.g.:
+ * Check has the following options:
+ * <p><b>allowSingleLineStatement</b> which allows single-line statements without braces, e.g.:</p>
  * <p>
  * {@code
  * if (obj.isValid()) return true;
@@ -70,6 +72,18 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * for (int i = 0; ; ) this.notify();
  * }
  * </p>
+ * <p><b>allowEmptyLoopBody</b> which allows loops with empty bodies, e.g.:</p>
+ * <p>
+ * {@code
+ * while (value.incrementValue() < 5);
+ * }
+ * </p>
+ * <p>
+ * {@code
+ * for(int i = 0; i < 10; value.incrementValue());
+ * }
+ * </p>
+ * <p>Default value for allowEmptyLoopBody option is <b>false</b>.</p>
  * <p>
  * To configure the Check to allow {@code case, default} single-line statements
  * without braces:
@@ -95,12 +109,31 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * }
  * }
  * </pre>
+ * <p>
+ * To configure the Check to allow {@code while, for} loops with empty bodies:
+ * </p>
  *
+ * <pre>
+ * &lt;module name=&quot;NeedBraces&quot;&gt;
+ *     &lt;property name=&quot;allowEmptyLoopBody&quot; value=&quot;true&quot;/&gt;
+ * &lt;/module&gt;
+ * </pre>
  *
- * @author Rick Giles
- * @author <a href="mailto:nesterenko-aleksey@list.ru">Aleksey Nesterenko</a>
+ * <p>
+ * Such statements would be allowed:
+ * </p>
+ *
+ * <pre>
+ * {@code
+ * while (value.incrementValue() &lt; 5); // OK
+ * for(int i = 0; i &lt; 10; value.incrementValue()); // OK
+ * }
+ * </pre>
+ *
  */
-public class NeedBracesCheck extends Check {
+@StatelessCheck
+public class NeedBracesCheck extends AbstractCheck {
+
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
@@ -113,11 +146,24 @@ public class NeedBracesCheck extends Check {
     private boolean allowSingleLineStatement;
 
     /**
+     * Check's option for allowing loops with empty body.
+     */
+    private boolean allowEmptyLoopBody;
+
+    /**
      * Setter.
      * @param allowSingleLineStatement Check's option for skipping single-line statements
      */
     public void setAllowSingleLineStatement(boolean allowSingleLineStatement) {
         this.allowSingleLineStatement = allowSingleLineStatement;
+    }
+
+    /**
+     * Sets whether to allow empty loop body.
+     * @param allowEmptyLoopBody Check's option for allowing loops with empty body.
+     */
+    public void setAllowEmptyLoopBody(boolean allowEmptyLoopBody) {
+        this.allowEmptyLoopBody = allowEmptyLoopBody;
     }
 
     @Override
@@ -146,6 +192,11 @@ public class NeedBracesCheck extends Check {
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
         final DetailAST slistAST = ast.findFirstToken(TokenTypes.SLIST);
         boolean isElseIf = false;
@@ -153,12 +204,28 @@ public class NeedBracesCheck extends Check {
             && ast.findFirstToken(TokenTypes.LITERAL_IF) != null) {
             isElseIf = true;
         }
-
+        final boolean isDefaultInAnnotation = isDefaultInAnnotation(ast);
         final boolean skipStatement = isSkipStatement(ast);
+        final boolean skipEmptyLoopBody = allowEmptyLoopBody && isEmptyLoopBody(ast);
 
-        if (slistAST == null && !isElseIf && !skipStatement) {
+        if (slistAST == null && !isElseIf && !isDefaultInAnnotation
+                && !skipStatement && !skipEmptyLoopBody) {
             log(ast.getLineNo(), MSG_KEY_NEED_BRACES, ast.getText());
         }
+    }
+
+    /**
+     * Checks if ast is the default token of an annotation field.
+     * @param ast ast to test.
+     * @return true if current ast is default and it is part of annotation.
+     */
+    private static boolean isDefaultInAnnotation(DetailAST ast) {
+        boolean isDefaultInAnnotation = false;
+        if (ast.getType() == TokenTypes.LITERAL_DEFAULT
+                && ast.getParent().getType() == TokenTypes.ANNOTATION_FIELD_DEF) {
+            isDefaultInAnnotation = true;
+        }
+        return isDefaultInAnnotation;
     }
 
     /**
@@ -171,47 +238,74 @@ public class NeedBracesCheck extends Check {
     }
 
     /**
+     * Checks if current loop statement does not have body, e.g.:
+     * <p>
+     * {@code
+     *   while (value.incrementValue() < 5);
+     *   ...
+     *   for(int i = 0; i < 10; value.incrementValue());
+     * }
+     * </p>
+     * @param ast ast token.
+     * @return true if current loop statement does not have body.
+     */
+    private static boolean isEmptyLoopBody(DetailAST ast) {
+        boolean noBodyLoop = false;
+
+        if (ast.getType() == TokenTypes.LITERAL_FOR
+                || ast.getType() == TokenTypes.LITERAL_WHILE) {
+            DetailAST currentToken = ast.getFirstChild();
+            while (currentToken.getNextSibling() != null) {
+                currentToken = currentToken.getNextSibling();
+            }
+            noBodyLoop = currentToken.getType() == TokenTypes.EMPTY_STAT;
+        }
+        return noBodyLoop;
+    }
+
+    /**
      * Checks if current statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * if (obj.isValid()) return true;
-     * </code>
+     * }
      * </p>
      * <p>
-     * <code>
+     * {@code
      * while (obj.isValid()) return true;
-     * </code>
+     * }
      * </p>
      * @param statement if, for, while, do-while, lambda, else, case, default statements.
      * @return true if current statement is single-line statement.
      */
     private static boolean isSingleLineStatement(DetailAST statement) {
-        boolean result;
-        final int type = statement.getType();
+        final boolean result;
 
-        if (type == TokenTypes.LITERAL_IF) {
-            result = isSingleLineIf(statement);
-        }
-        else if (type == TokenTypes.LITERAL_FOR) {
-            result = isSingleLineFor(statement);
-        }
-        else if (type == TokenTypes.LITERAL_DO) {
-            result = isSingleLineDoWhile(statement);
-        }
-        else if (type == TokenTypes.LITERAL_WHILE) {
-            result = isSingleLineWhile(statement);
-        }
-        else if (type == TokenTypes.LAMBDA) {
-            result = isSingleLineLambda(statement);
-        }
-        else if (type == TokenTypes.LITERAL_CASE) {
-            result = isSingleLineCase(statement);
-        }
-        else if (type == TokenTypes.LITERAL_DEFAULT) {
-            result = isSingleLineDefault(statement);
-        }
-        else {
-            result = isSingleLineElse(statement);
+        switch (statement.getType()) {
+            case TokenTypes.LITERAL_IF:
+                result = isSingleLineIf(statement);
+                break;
+            case TokenTypes.LITERAL_FOR:
+                result = isSingleLineFor(statement);
+                break;
+            case TokenTypes.LITERAL_DO:
+                result = isSingleLineDoWhile(statement);
+                break;
+            case TokenTypes.LITERAL_WHILE:
+                result = isSingleLineWhile(statement);
+                break;
+            case TokenTypes.LAMBDA:
+                result = isSingleLineLambda(statement);
+                break;
+            case TokenTypes.LITERAL_CASE:
+                result = isSingleLineCase(statement);
+                break;
+            case TokenTypes.LITERAL_DEFAULT:
+                result = isSingleLineDefault(statement);
+                break;
+            default:
+                result = isSingleLineElse(statement);
+                break;
         }
 
         return result;
@@ -240,9 +334,9 @@ public class NeedBracesCheck extends Check {
     /**
      * Checks if current do-while statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * do this.notify(); while (o != null);
-     * </code>
+     * }
      * </p>
      * @param literalDo {@link TokenTypes#LITERAL_DO do-while statement}.
      * @return true if current do-while statement is single-line statement.
@@ -260,9 +354,9 @@ public class NeedBracesCheck extends Check {
     /**
      * Checks if current for statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * for (int i = 0; ; ) this.notify();
-     * </code>
+     * }
      * </p>
      * @param literalFor {@link TokenTypes#LITERAL_FOR for statement}.
      * @return true if current for statement is single-line statement.
@@ -274,8 +368,7 @@ public class NeedBracesCheck extends Check {
         }
         else if (literalFor.getParent().getType() == TokenTypes.SLIST
                 && literalFor.getLastChild().getType() != TokenTypes.SLIST) {
-            final DetailAST block = literalFor.findFirstToken(TokenTypes.EXPR);
-            result = literalFor.getLineNo() == block.getLineNo();
+            result = literalFor.getLineNo() == literalFor.getLastChild().getLineNo();
         }
         return result;
     }
@@ -283,16 +376,15 @@ public class NeedBracesCheck extends Check {
     /**
      * Checks if current if statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * if (obj.isValid()) return true;
-     * </code>
+     * }
      * </p>
      * @param literalIf {@link TokenTypes#LITERAL_IF if statement}.
      * @return true if current if statement is single-line statement.
      */
     private static boolean isSingleLineIf(DetailAST literalIf) {
         boolean result = false;
-        final DetailAST ifCondition = literalIf.findFirstToken(TokenTypes.EXPR);
         if (literalIf.getParent().getType() == TokenTypes.SLIST) {
             final DetailAST literalIfLastChild = literalIf.getLastChild();
             final DetailAST block;
@@ -302,6 +394,7 @@ public class NeedBracesCheck extends Check {
             else {
                 block = literalIfLastChild;
             }
+            final DetailAST ifCondition = literalIf.findFirstToken(TokenTypes.EXPR);
             result = ifCondition.getLineNo() == block.getLineNo();
         }
         return result;
@@ -310,9 +403,9 @@ public class NeedBracesCheck extends Check {
     /**
      * Checks if current lambda statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * Runnable r = () -> System.out.println("Hello, world!");
-     * </code>
+     * }
      * </p>
      * @param lambda {@link TokenTypes#LAMBDA lambda statement}.
      * @return true if current lambda statement is single-line statement.
@@ -330,8 +423,9 @@ public class NeedBracesCheck extends Check {
      * Checks if current case statement is single-line statement, e.g.:
      * <p>
      * {@code
-     * case 1: dosomeStuff(); break;
-     * case 2: dosomeStuff(); break;
+     * case 1: doSomeStuff(); break;
+     * case 2: doSomeStuff(); break;
+     * case 3: ;
      * }
      * </p>
      * @param literalCase {@link TokenTypes#LITERAL_CASE case statement}.
@@ -340,12 +434,17 @@ public class NeedBracesCheck extends Check {
     private static boolean isSingleLineCase(DetailAST literalCase) {
         boolean result = false;
         final DetailAST slist = literalCase.getNextSibling();
-        final DetailAST block = slist.getFirstChild();
-        if (block.getType() != TokenTypes.SLIST) {
-            final DetailAST caseBreak = slist.findFirstToken(TokenTypes.LITERAL_BREAK);
-            final boolean atOneLine = literalCase.getLineNo() == block.getLineNo();
-            if (caseBreak != null) {
-                result = atOneLine && block.getLineNo() == caseBreak.getLineNo();
+        if (slist == null) {
+            result = true;
+        }
+        else {
+            final DetailAST block = slist.getFirstChild();
+            if (block.getType() != TokenTypes.SLIST) {
+                final DetailAST caseBreak = slist.findFirstToken(TokenTypes.LITERAL_BREAK);
+                if (caseBreak != null) {
+                    final boolean atOneLine = literalCase.getLineNo() == block.getLineNo();
+                    result = atOneLine && block.getLineNo() == caseBreak.getLineNo();
+                }
             }
         }
         return result;
@@ -354,9 +453,9 @@ public class NeedBracesCheck extends Check {
     /**
      * Checks if current default statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * default: doSomeStuff();
-     * </code>
+     * }
      * </p>
      * @param literalDefault {@link TokenTypes#LITERAL_DEFAULT default statement}.
      * @return true if current default statement is single-line statement.
@@ -364,9 +463,14 @@ public class NeedBracesCheck extends Check {
     private static boolean isSingleLineDefault(DetailAST literalDefault) {
         boolean result = false;
         final DetailAST slist = literalDefault.getNextSibling();
-        final DetailAST block = slist.getFirstChild();
-        if (block.getType() != TokenTypes.SLIST) {
-            result = literalDefault.getLineNo() == block.getLineNo();
+        if (slist == null) {
+            result = true;
+        }
+        else {
+            final DetailAST block = slist.getFirstChild();
+            if (block != null && block.getType() != TokenTypes.SLIST) {
+                result = literalDefault.getLineNo() == block.getLineNo();
+            }
         }
         return result;
     }
@@ -374,9 +478,9 @@ public class NeedBracesCheck extends Check {
     /**
      * Checks if current else statement is single-line statement, e.g.:
      * <p>
-     * <code>
+     * {@code
      * else doSomeStuff();
-     * </code>
+     * }
      * </p>
      * @param literalElse {@link TokenTypes#LITERAL_ELSE else statement}.
      * @return true if current else statement is single-line statement.
@@ -389,4 +493,5 @@ public class NeedBracesCheck extends Check {
         }
         return result;
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for if statements.
  *
- * @author jrichard
  */
 public class IfHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -42,19 +42,27 @@ public class IfHandler extends BlockParentHandler {
     }
 
     @Override
-    public IndentLevel suggestedChildLevel(AbstractExpressionHandler child) {
+    public IndentLevel getSuggestedChildIndent(AbstractExpressionHandler child) {
+        final IndentLevel result;
         if (child instanceof ElseHandler) {
-            return getLevel();
+            result = getIndent();
         }
-        return super.suggestedChildLevel(child);
+        else {
+            result = super.getSuggestedChildIndent(child);
+        }
+        return result;
     }
 
     @Override
-    protected IndentLevel getLevelImpl() {
+    protected IndentLevel getIndentImpl() {
+        final IndentLevel result;
         if (isIfAfterElse()) {
-            return getParent().getLevel();
+            result = getParent().getIndent();
         }
-        return super.getLevelImpl();
+        else {
+            result = super.getIndentImpl();
+        }
+        return result;
     }
 
     /**
@@ -71,12 +79,10 @@ public class IfHandler extends BlockParentHandler {
     }
 
     @Override
-    protected void checkToplevelToken() {
-        if (isIfAfterElse()) {
-            return;
+    protected void checkTopLevelToken() {
+        if (!isIfAfterElse()) {
+            super.checkTopLevelToken();
         }
-
-        super.checkToplevelToken();
     }
 
     /**
@@ -86,7 +92,7 @@ public class IfHandler extends BlockParentHandler {
         final DetailAST condAst = getMainAst().findFirstToken(TokenTypes.LPAREN)
             .getNextSibling();
         final IndentLevel expected =
-            new IndentLevel(getLevel(), getBasicOffset());
+            new IndentLevel(getIndent(), getBasicOffset());
         checkExpressionSubtree(condAst, expected, false, false);
     }
 
@@ -94,10 +100,7 @@ public class IfHandler extends BlockParentHandler {
     public void checkIndentation() {
         super.checkIndentation();
         checkCondExpr();
-        final LineWrappingHandler lineWrap =
-            new LineWrappingHandler(getIndentCheck(), getMainAst(),
-                    getIfStatementRightParen(getMainAst()));
-        lineWrap.checkIndentation();
+        checkWrappingIndentation(getMainAst(), getIfStatementRightParen(getMainAst()));
     }
 
     /**
@@ -109,4 +112,5 @@ public class IfHandler extends BlockParentHandler {
     private static DetailAST getIfStatementRightParen(DetailAST literalIfAst) {
         return literalIfAst.findFirstToken(TokenTypes.RPAREN);
     }
+
 }

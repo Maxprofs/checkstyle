@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,14 +19,15 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * <p>Checks that if a class defines a covariant method equals,
@@ -40,9 +41,9 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * <pre>
  * &lt;module name="CovariantEquals"/&gt;
  * </pre>
- * @author Rick Giles
  */
-public class CovariantEqualsCheck extends Check {
+@FileStatefulCheck
+public class CovariantEqualsCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -50,22 +51,22 @@ public class CovariantEqualsCheck extends Check {
      */
     public static final String MSG_KEY = "covariant.equals";
 
-    /** Set of equals method definitions */
-    private final Set<DetailAST> equalsMethods = Sets.newHashSet();
+    /** Set of equals method definitions. */
+    private final Set<DetailAST> equalsMethods = new HashSet<>();
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.CLASS_DEF, TokenTypes.LITERAL_NEW, TokenTypes.ENUM_DEF, };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
+        return new int[] {TokenTypes.CLASS_DEF, TokenTypes.LITERAL_NEW, TokenTypes.ENUM_DEF, };
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.CLASS_DEF, TokenTypes.LITERAL_NEW, TokenTypes.ENUM_DEF, };
+        return getRequiredTokens();
     }
 
     @Override
@@ -79,7 +80,7 @@ public class CovariantEqualsCheck extends Check {
             boolean hasEqualsObject = false;
             while (child != null) {
                 if (child.getType() == TokenTypes.METHOD_DEF
-                        && CheckUtils.isEqualsMethod(child)) {
+                        && CheckUtil.isEqualsMethod(child)) {
                     if (isFirstParameterObject(child)) {
                         hasEqualsObject = true;
                     }
@@ -95,8 +96,7 @@ public class CovariantEqualsCheck extends Check {
                 for (DetailAST equalsAST : equalsMethods) {
                     final DetailAST nameNode = equalsAST
                             .findFirstToken(TokenTypes.IDENT);
-                    log(nameNode.getLineNo(), nameNode.getColumnNo(),
-                            MSG_KEY);
+                    log(nameNode, MSG_KEY);
                 }
             }
         }
@@ -105,7 +105,7 @@ public class CovariantEqualsCheck extends Check {
     /**
      * Tests whether a method's first parameter is an Object.
      * @param methodDefAst the method definition AST to test.
-     * Precondition: ast is a TokenTypes.METHOD_DEF node.
+     *     Precondition: ast is a TokenTypes.METHOD_DEF node.
      * @return true if ast has first parameter of type Object.
      */
     private static boolean isFirstParameterObject(DetailAST methodDefAst) {
@@ -119,4 +119,5 @@ public class CovariantEqualsCheck extends Check {
         final String name = fullIdent.getText();
         return "Object".equals(name) || "java.lang.Object".equals(name);
     }
+
 }

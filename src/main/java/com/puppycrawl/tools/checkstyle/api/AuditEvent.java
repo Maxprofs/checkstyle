@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -35,17 +35,18 @@ import java.util.EventObject;
  * </i>
  * </p>
  *
- * @author <a href="mailto:stephane.bailliez@wanadoo.fr">Stephane Bailliez</a>
  * @see AuditListener
+ * @noinspection SerializableHasSerializationMethods
  */
 public final class AuditEvent
     extends EventObject {
+
     /** Record a version. */
     private static final long serialVersionUID = -3774725606973812736L;
-    /** filename event associated with **/
+    /** Filename event associated with. **/
     private final String fileName;
-    /** message associated with the event **/
-    private final LocalizedMessage message;
+    /** Message associated with the event. **/
+    private final LocalizedMessage localizedMessage;
 
     /**
      * Creates a new instance.
@@ -69,66 +70,83 @@ public final class AuditEvent
      *
      * @param src source of the event
      * @param fileName file associated with the event
-     * @param message the actual message
+     * @param localizedMessage the actual message
      */
-    public AuditEvent(Object src, String fileName, LocalizedMessage message) {
+    public AuditEvent(Object src, String fileName, LocalizedMessage localizedMessage) {
         super(src);
         this.fileName = fileName;
-        this.message = message;
+        this.localizedMessage = localizedMessage;
     }
 
     /**
+     * Returns name of file being audited.
      * @return the file name currently being audited or null if there is
-     * no relation to a file.
+     *     no relation to a file.
      */
     public String getFileName() {
         return fileName;
     }
 
     /**
-     * return the line number on the source file where the event occurred.
+     * Return the line number on the source file where the event occurred.
      * This may be 0 if there is no relation to a file content.
      * @return an integer representing the line number in the file source code.
      */
     public int getLine() {
-        return message.getLineNo();
+        return localizedMessage.getLineNo();
     }
 
     /**
-     * return the message associated to the event.
+     * Return the message associated to the event.
      * @return the event message
      */
     public String getMessage() {
-        return message.getMessage();
-    }
-
-    /** @return the column associated with the message **/
-    public int getColumn() {
-        return message.getColumnNo();
-    }
-
-    /** @return the audit event severity level **/
-    public SeverityLevel getSeverityLevel() {
-        return message == null
-            ? SeverityLevel.INFO
-            : message.getSeverityLevel();
+        return localizedMessage.getMessage();
     }
 
     /**
+     * Gets the column associated with the message.
+     * @return the column associated with the message
+     */
+    public int getColumn() {
+        return localizedMessage.getColumnNo();
+    }
+
+    /**
+     * Gets the audit event severity level.
+     * @return the audit event severity level
+     */
+    public SeverityLevel getSeverityLevel() {
+        SeverityLevel severityLevel = SeverityLevel.INFO;
+        if (localizedMessage != null) {
+            severityLevel = localizedMessage.getSeverityLevel();
+        }
+        return severityLevel;
+    }
+
+    /**
+     * Returns id of module.
      * @return the identifier of the module that generated the event. Can return
      *         null.
      */
     public String getModuleId() {
-        return message.getModuleId();
+        return localizedMessage.getModuleId();
     }
 
-    /** @return the name of the source for the message **/
+    /**
+     * Gets the name of the source for the message.
+     * @return the name of the source for the message
+     */
     public String getSourceName() {
-        return message.getSourceName();
+        return localizedMessage.getSourceName();
     }
 
-    /** @return the localized message **/
+    /**
+     * Gets the localized message.
+     * @return the localized message
+     */
     public LocalizedMessage getLocalizedMessage() {
-        return message;
+        return localizedMessage;
     }
+
 }

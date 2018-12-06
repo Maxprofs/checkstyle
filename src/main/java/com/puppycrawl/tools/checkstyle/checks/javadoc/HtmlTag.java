@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,9 +22,9 @@ package com.puppycrawl.tools.checkstyle.checks.javadoc;
 /**
  * Used to keep track of a tag and the text that follows it.
  *
- * @author Chris Stillwell
  */
 class HtmlTag {
+
     /** The maximum length of text to display with this tag. */
     private static final int MAX_TEXT_LEN = 60;
 
@@ -40,11 +40,11 @@ class HtmlTag {
     /** The comment line of text where this tag appears. */
     private final String text;
 
-    /** if this tag is self-closed. */
+    /** If this tag is self-closed. */
     private final boolean closedTag;
 
-    /** if the tag is incomplete. */
-    private final boolean incomplete;
+    /** If the tag is incomplete. */
+    private final boolean incompleteTag;
 
     /**
      * Construct the HtmlTag.
@@ -62,7 +62,7 @@ class HtmlTag {
         this.position = position;
         this.text = text;
         this.closedTag = closedTag;
-        this.incomplete = incomplete;
+        incompleteTag = incomplete;
     }
 
     /**
@@ -94,7 +94,7 @@ class HtmlTag {
      * @return {@code true} if the tag is incomplete.
      */
     public boolean isIncompleteTag() {
-        return incomplete;
+        return incompleteTag;
     }
 
     /**
@@ -117,9 +117,22 @@ class HtmlTag {
 
     @Override
     public String toString() {
+        return "HtmlTag[id='" + id + '\''
+                + ", lineNo=" + lineNo
+                + ", position=" + position
+                + ", text='" + text + '\''
+                + ", closedTag=" + closedTag
+                + ", incompleteTag=" + incompleteTag + ']';
+    }
+
+    /**
+     * Returns the comment line of text where this tag appears.
+     * @return text of the tag
+     */
+    public String getText() {
         final int startOfText = position;
-        final int endOfText =
-            Math.min(startOfText + MAX_TEXT_LEN, text.length());
+        final int endOfText = Math.min(startOfText + MAX_TEXT_LEN, text.length());
         return text.substring(startOfText, endOfText);
     }
+
 }

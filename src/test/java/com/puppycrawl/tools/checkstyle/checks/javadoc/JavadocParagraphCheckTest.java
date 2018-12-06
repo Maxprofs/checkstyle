@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,31 +23,41 @@ import static com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocParagraphChe
 import static com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocParagraphCheck.MSG_MISPLACED_TAG;
 import static com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocParagraphCheck.MSG_REDUNDANT_PARAGRAPH;
 import static com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocParagraphCheck.MSG_TAG_AFTER;
+import static org.junit.Assert.assertArrayEquals;
 
-import org.junit.Before;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class JavadocParagraphCheckTest extends BaseCheckTestSupport {
+public class JavadocParagraphCheckTest extends AbstractModuleTestSupport {
 
-    private DefaultConfiguration checkConfig;
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/javadoc/javadocparagraph";
+    }
 
-    @Before
-    public void setUp() {
-        checkConfig = createCheckConfig(JavadocParagraphCheck.class);
+    @Test
+    public void testGetRequiredTokens() {
+        final JavadocParagraphCheck checkObj = new JavadocParagraphCheck();
+        final int[] expected = {TokenTypes.BLOCK_COMMENT_BEGIN};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
     }
 
     @Test
     public void testCorrect() throws Exception {
-        final String[] expected = {};
+        final DefaultConfiguration checkConfig = createModuleConfig(JavadocParagraphCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("javadoc/InputCorrectJavaDocParagraphCheck.java"), expected);
+        verify(checkConfig, getPath("InputJavadocParagraphCorrect.java"), expected);
     }
 
     @Test
     public void testIncorrect() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(JavadocParagraphCheck.class);
         final String[] expected = {
             "7: " + getCheckMessage(MSG_MISPLACED_TAG),
             "7: " + getCheckMessage(MSG_LINE_BEFORE),
@@ -86,11 +96,12 @@ public class JavadocParagraphCheckTest extends BaseCheckTestSupport {
             "81: " + getCheckMessage(MSG_TAG_AFTER),
             "82: " + getCheckMessage(MSG_TAG_AFTER),
         };
-        verify(checkConfig, getPath("javadoc/InputIncorrectJavaDocParagraphCheck.java"), expected);
+        verify(checkConfig, getPath("InputJavadocParagraphIncorrect.java"), expected);
     }
 
     @Test
     public void testAllowNewlineParagraph() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(JavadocParagraphCheck.class);
         checkConfig.addAttribute("allowNewlineParagraph", "false");
         final String[] expected = {
             "7: " + getCheckMessage(MSG_LINE_BEFORE),
@@ -113,6 +124,7 @@ public class JavadocParagraphCheckTest extends BaseCheckTestSupport {
             "81: " + getCheckMessage(MSG_TAG_AFTER),
             "82: " + getCheckMessage(MSG_TAG_AFTER),
         };
-        verify(checkConfig, getPath("javadoc/InputIncorrectJavaDocParagraphCheck.java"), expected);
+        verify(checkConfig, getPath("InputJavadocParagraphIncorrect.java"), expected);
     }
+
 }

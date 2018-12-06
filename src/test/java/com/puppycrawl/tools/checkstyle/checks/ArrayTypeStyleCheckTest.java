@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,50 +19,69 @@
 
 package com.puppycrawl.tools.checkstyle.checks;
 
+import static com.puppycrawl.tools.checkstyle.checks.ArrayTypeStyleCheck.MSG_KEY;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 public class ArrayTypeStyleCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/arraytypestyle";
+    }
+
     @Test
-    public void testJavaStyle()
-        throws Exception {
+    public void testGetRequiredTokens() {
+        final ArrayTypeStyleCheck checkObj = new ArrayTypeStyleCheck();
+        final int[] expected = {TokenTypes.ARRAY_DECLARATOR};
+        assertArrayEquals("Required tokens differs from expected",
+                expected, checkObj.getRequiredTokens());
+    }
+
+    @Test
+    public void testJavaStyleOn()
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ArrayTypeStyleCheck.class);
+            createModuleConfig(ArrayTypeStyleCheck.class);
         final String[] expected = {
-            "14:23: Array brackets at illegal position.",
-            "20:44: Array brackets at illegal position.",
+            "14:23: " + getCheckMessage(MSG_KEY),
+            "15:18: " + getCheckMessage(MSG_KEY),
+            "21:44: " + getCheckMessage(MSG_KEY),
         };
         verify(checkConfig, getPath("InputArrayTypeStyle.java"), expected);
     }
 
     @Test
-    public void testCStyle()
-        throws Exception {
+    public void testJavaStyleOff()
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ArrayTypeStyleCheck.class);
+            createModuleConfig(ArrayTypeStyleCheck.class);
         checkConfig.addAttribute("javaStyle", "false");
         final String[] expected = {
-            "13:16: Array brackets at illegal position.",
-            "16:39: Array brackets at illegal position.",
-            "22:18: Array brackets at illegal position.",
-            "30:20: Array brackets at illegal position.",
+            "13:16: " + getCheckMessage(MSG_KEY),
+            "17:39: " + getCheckMessage(MSG_KEY),
+            "23:18: " + getCheckMessage(MSG_KEY),
+            "31:20: " + getCheckMessage(MSG_KEY),
         };
         verify(checkConfig, getPath("InputArrayTypeStyle.java"), expected);
     }
 
     @Test
-    public void testGetAcceptableTockens() {
-        int[] expected = {TokenTypes.ARRAY_DECLARATOR };
-        ArrayTypeStyleCheck check = new ArrayTypeStyleCheck();
-        int[] actual = check.getAcceptableTokens();
-        assertTrue(actual.length == 1);
-        assertArrayEquals(expected, actual);
+    public void testGetAcceptableTokens() {
+        final int[] expected = {TokenTypes.ARRAY_DECLARATOR };
+        final ArrayTypeStyleCheck check = new ArrayTypeStyleCheck();
+        final int[] actual = check.getAcceptableTokens();
+        assertEquals("Amount of acceptable tokens differs from expected",
+                1, actual.length);
+        assertArrayEquals("Acceptable tokens differs from expected",
+                expected, actual);
     }
+
 }

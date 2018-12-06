@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,8 @@
 
 package com.puppycrawl.tools.checkstyle.checks.blocks;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -39,7 +40,6 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *     System.out.println("value = " + whichIsWhich);
  * }
  * </pre>
- *
  * and debugging / refactoring leftovers such as
  *
  * <pre>
@@ -83,9 +83,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * }
  * </pre>
  *
- * @author lkuehne
  */
-public class AvoidNestedBlocksCheck extends Check {
+@StatelessCheck
+public class AvoidNestedBlocksCheck extends AbstractCheck {
+
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
@@ -100,24 +101,27 @@ public class AvoidNestedBlocksCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.SLIST};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.SLIST};
     }
 
     @Override
     public void visitToken(DetailAST ast) {
         final DetailAST parent = ast.getParent();
-        if (parent.getType() == TokenTypes.SLIST) {
-            if (allowInSwitchCase
-                    && parent.getParent().getType() == TokenTypes.CASE_GROUP
-                    && parent.getNumberOfChildren() == 1) {
-                return;
-            }
-            log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY_BLOCK_NESTED);
+        if (parent.getType() == TokenTypes.SLIST
+                && (!allowInSwitchCase
+                    || parent.getParent().getType() != TokenTypes.CASE_GROUP
+                    || parent.getNumberOfChildren() != 1)) {
+            log(ast, MSG_KEY_BLOCK_NESTED);
         }
     }
 
@@ -129,4 +133,5 @@ public class AvoidNestedBlocksCheck extends Check {
     public void setAllowInSwitchCase(boolean allowInSwitchCase) {
         this.allowInSwitchCase = allowInSwitchCase;
     }
+
 }

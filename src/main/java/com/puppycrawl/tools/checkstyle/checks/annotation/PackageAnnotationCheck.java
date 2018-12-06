@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.annotation;
 
-import com.puppycrawl.tools.checkstyle.AnnotationUtility;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
 
 /**
  * This check makes sure that all package annotations are in the
@@ -39,12 +40,18 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * placed in the package-info.java file.
  *
  * See <a
- * href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-7.html#jls-7.4.1">
+ * href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-7.html#jls-7.4.1">
  * Java Language Specification, section 7.4.1</a>.
  * </p>
- * @author Travis Schneeberger
  */
-public class PackageAnnotationCheck extends Check {
+@StatelessCheck
+public class PackageAnnotationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties"
+     * file.
+     */
+    public static final String MSG_KEY = "annotation.package.location";
 
     @Override
     public int[] getDefaultTokens() {
@@ -66,12 +73,13 @@ public class PackageAnnotationCheck extends Check {
     @Override
     public void visitToken(final DetailAST ast) {
         final boolean containsAnnotation =
-            AnnotationUtility.containsAnnotation(ast);
+            AnnotationUtil.containsAnnotation(ast);
         final boolean inPackageInfo =
             getFileContents().inPackageInfo();
 
         if (containsAnnotation && !inPackageInfo) {
-            log(ast.getLine(), "annotation.package.location");
+            log(ast.getLine(), MSG_KEY);
         }
     }
+
 }

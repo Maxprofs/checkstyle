@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for class definitions.
  *
- * @author jrichard
  */
 public class ClassDefHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -39,27 +39,23 @@ public class ClassDefHandler extends BlockParentHandler {
     public ClassDefHandler(IndentationCheck indentCheck,
                            DetailAST ast,
                            AbstractExpressionHandler parent) {
-        super(indentCheck,
-              ast.getType() == TokenTypes.CLASS_DEF
-              ? "class def" : ast.getType() == TokenTypes.ENUM_DEF
-                  ? "enum def" : "interface def",
-              ast, parent);
+        super(indentCheck, getHandlerName(ast), ast, parent);
     }
 
     @Override
-    protected DetailAST getLCurly() {
+    protected DetailAST getLeftCurly() {
         return getMainAst().findFirstToken(TokenTypes.OBJBLOCK)
             .findFirstToken(TokenTypes.LCURLY);
     }
 
     @Override
-    protected DetailAST getRCurly() {
+    protected DetailAST getRightCurly() {
         return getMainAst().findFirstToken(TokenTypes.OBJBLOCK)
             .findFirstToken(TokenTypes.RCURLY);
     }
 
     @Override
-    protected DetailAST getToplevelAST() {
+    protected DetailAST getTopLevelAst() {
         return null;
         // note: ident checked by hand in check indentation;
     }
@@ -73,20 +69,27 @@ public class ClassDefHandler extends BlockParentHandler {
     public void checkIndentation() {
         final DetailAST modifiers = getMainAst().findFirstToken(TokenTypes.MODIFIERS);
         if (modifiers.getChildCount() == 0) {
-            final DetailAST ident = getMainAst().findFirstToken(TokenTypes.IDENT);
-            final int lineStart = getLineStart(ident);
-            if (!getLevel().accept(lineStart)) {
-                logError(ident, "ident", lineStart);
+            if (getMainAst().getType() != TokenTypes.ANNOTATION_DEF) {
+                final DetailAST ident = getMainAst().findFirstToken(TokenTypes.IDENT);
+                final int lineStart = getLineStart(ident);
+                if (!getIndent().isAcceptable(lineStart)) {
+                    logError(ident, "ident", lineStart);
+                }
             }
-
         }
         else {
             checkModifiers();
         }
-
-        final LineWrappingHandler lineWrap =
-            new LineWrappingHandler(getIndentCheck(), getMainAst(), getMainAst().getLastChild());
-        lineWrap.checkIndentation();
+        if (getMainAst().getType() == TokenTypes.ANNOTATION_DEF) {
+            final DetailAST atAst = getMainAst().findFirstToken(TokenTypes.AT);
+            if (isOnStartOfLine(atAst)) {
+                checkWrappingIndentation(getMainAst(), getListChild(), 0,
+                        getIndent().getFirstIndentLevel(), false);
+            }
+        }
+        else {
+            checkWrappingIndentation(getMainAst(), getListChild());
+        }
         super.checkIndentation();
     }
 
@@ -100,6 +103,30 @@ public class ClassDefHandler extends BlockParentHandler {
             TokenTypes.LITERAL_THROW,
             TokenTypes.LITERAL_CONTINUE,
         };
+    }
+
+    /**
+     * Creates a handler name for this class according to ast type.
+     *
+     * @param ast the abstract syntax tree.
+     * @return handler name for this class.
+     */
+    private static String getHandlerName(DetailAST ast) {
+        final String name;
+
+        if (ast.getType() == TokenTypes.CLASS_DEF) {
+            name = "class def";
+        }
+        else if (ast.getType() == TokenTypes.ENUM_DEF) {
+            name = "enum def";
+        }
+        else if (ast.getType() == TokenTypes.ANNOTATION_DEF) {
+            name = "annotation def";
+        }
+        else {
+            name = "interface def";
+        }
+        return name;
     }
 
 }

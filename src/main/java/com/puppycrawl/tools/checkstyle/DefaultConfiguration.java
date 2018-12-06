@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,55 +19,72 @@
 
 package com.puppycrawl.tools.checkstyle;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Default implementation of the Configuration interface.
- * @author lkuehne
+ * @noinspection SerializableHasSerializationMethods
  */
 public final class DefaultConfiguration implements Configuration {
-    /** Required for serialization. */
+
     private static final long serialVersionUID = 1157875385356127169L;
 
-    /** The name of this configuration */
+    /** Constant for optimization. */
+    private static final Configuration[] EMPTY_CONFIGURATION_ARRAY = new Configuration[0];
+
+    /** The name of this configuration. */
     private final String name;
 
-    /** the list of child Configurations */
-    private final List<Configuration> children = Lists.newArrayList();
+    /** The list of child Configurations. */
+    private final List<Configuration> children = new ArrayList<>();
 
-    /** the map from attribute names to attribute values */
-    private final Map<String, String> attributeMap = Maps.newHashMap();
+    /** The map from attribute names to attribute values. */
+    private final Map<String, String> attributeMap = new HashMap<>();
 
-    /** the map containing custom messages. */
-    private final Map<String, String> messages = Maps.newHashMap();
+    /** The map containing custom messages. */
+    private final Map<String, String> messages = new HashMap<>();
+
+    /** The thread mode configuration. */
+    private final ThreadModeSettings threadModeSettings;
 
     /**
      * Instantiates a DefaultConfiguration.
      * @param name the name for this DefaultConfiguration.
      */
     public DefaultConfiguration(String name) {
+        this(name, ThreadModeSettings.SINGLE_THREAD_MODE_INSTANCE);
+    }
+
+    /**
+     * Instantiates a DefaultConfiguration.
+     * @param name the name for this DefaultConfiguration.
+     * @param threadModeSettings the thread mode configuration.
+     */
+    public DefaultConfiguration(String name,
+        ThreadModeSettings threadModeSettings) {
         this.name = name;
+        this.threadModeSettings = threadModeSettings;
     }
 
     @Override
     public String[] getAttributeNames() {
         final Set<String> keySet = attributeMap.keySet();
-        return keySet.toArray(new String[keySet.size()]);
+        return keySet.toArray(CommonUtil.EMPTY_STRING_ARRAY);
     }
 
     @Override
     public String getAttribute(String attributeName) throws CheckstyleException {
         if (!attributeMap.containsKey(attributeName)) {
             throw new CheckstyleException(
-                    "missing key '" + attributeName + "' in " + getName());
+                    "missing key '" + attributeName + "' in " + name);
         }
         return attributeMap.get(attributeName);
     }
@@ -75,7 +92,7 @@ public final class DefaultConfiguration implements Configuration {
     @Override
     public Configuration[] getChildren() {
         return children.toArray(
-            new Configuration[children.size()]);
+                EMPTY_CONFIGURATION_ARRAY);
     }
 
     @Override
@@ -105,7 +122,7 @@ public final class DefaultConfiguration implements Configuration {
      * @param value the value of the attribute.
      */
     public void addAttribute(String attributeName, String value) {
-        final String current = attributeMap.put(attributeName, value);
+        final String current = attributeMap.get(attributeName);
         if (current == null) {
             attributeMap.put(attributeName, value);
         }
@@ -129,7 +146,16 @@ public final class DefaultConfiguration implements Configuration {
      * @return unmodifiable map containing custom messages
      */
     @Override
-    public ImmutableMap<String, String> getMessages() {
-        return ImmutableMap.copyOf(messages);
+    public Map<String, String> getMessages() {
+        return new HashMap<>(messages);
     }
+
+    /**
+     * Gets the thread mode configuration.
+     * @return the thread mode configuration.
+     */
+    public ThreadModeSettings getThreadModeSettings() {
+        return threadModeSettings;
+    }
+
 }

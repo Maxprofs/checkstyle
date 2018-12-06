@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,12 +22,13 @@ package com.puppycrawl.tools.checkstyle;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AuditListener;
 import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
+import com.puppycrawl.tools.checkstyle.api.LocalizedMessage;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
 /**
@@ -37,35 +38,69 @@ import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
  * stdout anyway. If there is really a problem this is what XMLLogger is for.
  * It gives structure.
  *
- * @author <a href="mailto:stephane.bailliez@wanadoo.fr">Stephane Bailliez</a>
  * @see XMLLogger
+ * @noinspection ClassWithTooManyConstructors
  */
-public class DefaultLogger
-    extends AutomaticBean
-    implements AuditListener {
-    /** cushion for avoiding StringBuffer.expandCapacity */
-    private static final int BUFFER_CUSHION = 12;
+public class DefaultLogger extends AutomaticBean implements AuditListener {
 
-    /** where to write info messages **/
+    /**
+     * A key pointing to the add exception
+     * message in the "messages.properties" file.
+     */
+    public static final String ADD_EXCEPTION_MESSAGE = "DefaultLogger.addException";
+    /**
+     * A key pointing to the started audit
+     * message in the "messages.properties" file.
+     */
+    public static final String AUDIT_STARTED_MESSAGE = "DefaultLogger.auditStarted";
+    /**
+     * A key pointing to the finished audit
+     * message in the "messages.properties" file.
+     */
+    public static final String AUDIT_FINISHED_MESSAGE = "DefaultLogger.auditFinished";
+
+    /** Where to write info messages. **/
     private final PrintWriter infoWriter;
-    /** close info stream after use */
+    /** Close info stream after use. */
     private final boolean closeInfo;
 
-    /** where to write error messages **/
+    /** Where to write error messages. **/
     private final PrintWriter errorWriter;
-    /** close error stream after use */
+    /** Close error stream after use. */
     private final boolean closeError;
+
+    /** Formatter for the log message. */
+    private final AuditEventFormatter formatter;
 
     /**
      * Creates a new {@code DefaultLogger} instance.
-     * @param os where to log infos and errors
+     * @param outputStream where to log infos and errors
      * @param closeStreamsAfterUse if oS should be closed in auditFinished()
-     * @exception UnsupportedEncodingException if there is a problem to use UTF-8 encoding
+     * @deprecated in order to fulfill demands of BooleanParameter IDEA check.
+     * @noinspection BooleanParameter
      */
-    public DefaultLogger(OutputStream os, boolean closeStreamsAfterUse)
-            throws UnsupportedEncodingException {
+    @Deprecated
+    public DefaultLogger(OutputStream outputStream, boolean closeStreamsAfterUse) {
         // no need to close oS twice
-        this(os, closeStreamsAfterUse, os, false);
+        this(outputStream, closeStreamsAfterUse, outputStream, false);
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     * @param infoStream the {@code OutputStream} for info messages.
+     * @param closeInfoAfterUse auditFinished should close infoStream.
+     * @param errorStream the {@code OutputStream} for error messages.
+     * @param closeErrorAfterUse auditFinished should close errorStream
+     * @deprecated in order to fulfill demands of BooleanParameter IDEA check.
+     * @noinspection BooleanParameter
+     */
+    @Deprecated
+    public DefaultLogger(OutputStream infoStream,
+                         boolean closeInfoAfterUse,
+                         OutputStream errorStream,
+                         boolean closeErrorAfterUse) {
+        this(infoStream, closeInfoAfterUse, errorStream, closeErrorAfterUse,
+            new AuditEventDefaultFormatter());
     }
 
     /**
@@ -75,20 +110,97 @@ public class DefaultLogger
      * @param closeInfoAfterUse auditFinished should close infoStream
      * @param errorStream the {@code OutputStream} for error messages
      * @param closeErrorAfterUse auditFinished should close errorStream
-     * @exception UnsupportedEncodingException if there is a problem to use UTF-8 encoding
+     * @param messageFormatter formatter for the log message.
+     * @deprecated in order to fulfill demands of BooleanParameter IDEA check.
+     * @noinspection BooleanParameter, WeakerAccess
      */
+    @Deprecated
     public DefaultLogger(OutputStream infoStream,
                          boolean closeInfoAfterUse,
                          OutputStream errorStream,
-                         boolean closeErrorAfterUse) throws UnsupportedEncodingException {
+                         boolean closeErrorAfterUse,
+                         AuditEventFormatter messageFormatter) {
         closeInfo = closeInfoAfterUse;
         closeError = closeErrorAfterUse;
-        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, "UTF-8");
-        final Writer errorStreamWriter = new OutputStreamWriter(errorStream, "UTF-8");
+        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, StandardCharsets.UTF_8);
         infoWriter = new PrintWriter(infoStreamWriter);
-        errorWriter = infoStream == errorStream
-            ? infoWriter
-            : new PrintWriter(errorStreamWriter);
+
+        if (infoStream == errorStream) {
+            errorWriter = infoWriter;
+        }
+        else {
+            final Writer errorStreamWriter = new OutputStreamWriter(errorStream,
+                    StandardCharsets.UTF_8);
+            errorWriter = new PrintWriter(errorStreamWriter);
+        }
+        formatter = messageFormatter;
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     * @param outputStream where to log infos and errors
+     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+     */
+    public DefaultLogger(OutputStream outputStream, OutputStreamOptions outputStreamOptions) {
+        // no need to close oS twice
+        this(outputStream, outputStreamOptions, outputStream, OutputStreamOptions.NONE);
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     * @param infoStream the {@code OutputStream} for info messages.
+     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+     * @param errorStream the {@code OutputStream} for error messages.
+     * @param errorStreamOptions if {@code CLOSE} error should be closed in auditFinished()
+     */
+    public DefaultLogger(OutputStream infoStream,
+                         OutputStreamOptions infoStreamOptions,
+                         OutputStream errorStream,
+                         OutputStreamOptions errorStreamOptions) {
+        this(infoStream, infoStreamOptions, errorStream, errorStreamOptions,
+                new AuditEventDefaultFormatter());
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     *
+     * @param infoStream the {@code OutputStream} for info messages
+     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+     * @param errorStream the {@code OutputStream} for error messages
+     * @param errorStreamOptions if {@code CLOSE} error should be closed in auditFinished()
+     * @param messageFormatter formatter for the log message.
+     * @noinspection WeakerAccess
+     */
+    public DefaultLogger(OutputStream infoStream,
+                         OutputStreamOptions infoStreamOptions,
+                         OutputStream errorStream,
+                         OutputStreamOptions errorStreamOptions,
+                         AuditEventFormatter messageFormatter) {
+        if (infoStreamOptions == null) {
+            throw new IllegalArgumentException("Parameter infoStreamOptions can not be null");
+        }
+        closeInfo = infoStreamOptions == OutputStreamOptions.CLOSE;
+        if (errorStreamOptions == null) {
+            throw new IllegalArgumentException("Parameter errorStreamOptions can not be null");
+        }
+        closeError = errorStreamOptions == OutputStreamOptions.CLOSE;
+        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, StandardCharsets.UTF_8);
+        infoWriter = new PrintWriter(infoStreamWriter);
+
+        if (infoStream == errorStream) {
+            errorWriter = infoWriter;
+        }
+        else {
+            final Writer errorStreamWriter = new OutputStreamWriter(errorStream,
+                    StandardCharsets.UTF_8);
+            errorWriter = new PrintWriter(errorStreamWriter);
+        }
+        formatter = messageFormatter;
+    }
+
+    @Override
+    protected void finishLocalSetup() {
+        // No code by default
     }
 
     /**
@@ -97,63 +209,58 @@ public class DefaultLogger
      * @see AuditListener
      **/
     @Override
-    public void addError(AuditEvent evt) {
-        final SeverityLevel severityLevel = evt.getSeverityLevel();
+    public void addError(AuditEvent event) {
+        final SeverityLevel severityLevel = event.getSeverityLevel();
         if (severityLevel != SeverityLevel.IGNORE) {
-
-            final String fileName = evt.getFileName();
-            final String message = evt.getMessage();
-
-            // avoid StringBuffer.expandCapacity
-            final int bufLen = fileName.length() + message.length()
-                + BUFFER_CUSHION;
-            final StringBuilder sb = new StringBuilder(bufLen);
-
-            sb.append(fileName).append(':').append(evt.getLine());
-            if (evt.getColumn() > 0) {
-                sb.append(':').append(evt.getColumn());
-            }
-            if (severityLevel == SeverityLevel.WARNING) {
-                sb.append(": warning");
-            }
-            sb.append(": ").append(message);
-            errorWriter.println(sb);
+            final String errorMessage = formatter.format(event);
+            errorWriter.println(errorMessage);
         }
     }
 
     @Override
-    public void addException(AuditEvent evt, Throwable throwable) {
+    public void addException(AuditEvent event, Throwable throwable) {
         synchronized (errorWriter) {
-            errorWriter.println("Error auditing " + evt.getFileName());
+            final LocalizedMessage addExceptionMessage = new LocalizedMessage(1,
+                Definitions.CHECKSTYLE_BUNDLE, ADD_EXCEPTION_MESSAGE,
+                new String[] {event.getFileName()}, null,
+                LocalizedMessage.class, null);
+            errorWriter.println(addExceptionMessage.getMessage());
             throwable.printStackTrace(errorWriter);
         }
     }
 
     @Override
-    public void auditStarted(AuditEvent evt) {
-        infoWriter.println("Starting audit...");
+    public void auditStarted(AuditEvent event) {
+        final LocalizedMessage auditStartMessage = new LocalizedMessage(1,
+            Definitions.CHECKSTYLE_BUNDLE, AUDIT_STARTED_MESSAGE, null, null,
+            LocalizedMessage.class, null);
+        infoWriter.println(auditStartMessage.getMessage());
+        infoWriter.flush();
     }
 
     @Override
-    public void fileFinished(AuditEvent evt) {
-        // No need to implement this method in this class
-    }
-
-    @Override
-    public void fileStarted(AuditEvent evt) {
-        // No need to implement this method in this class
-    }
-
-    @Override
-    public void auditFinished(AuditEvent evt) {
-        infoWriter.println("Audit done.");
+    public void auditFinished(AuditEvent event) {
+        final LocalizedMessage auditFinishMessage = new LocalizedMessage(1,
+            Definitions.CHECKSTYLE_BUNDLE, AUDIT_FINISHED_MESSAGE, null, null,
+            LocalizedMessage.class, null);
+        infoWriter.println(auditFinishMessage.getMessage());
         closeStreams();
+    }
+
+    @Override
+    public void fileStarted(AuditEvent event) {
+        // No need to implement this method in this class
+    }
+
+    @Override
+    public void fileFinished(AuditEvent event) {
+        infoWriter.flush();
     }
 
     /**
      * Flushes the output streams and closes them if needed.
      */
-    protected void closeStreams() {
+    private void closeStreams() {
         infoWriter.flush();
         if (closeInfo) {
             infoWriter.close();
@@ -164,4 +271,5 @@ public class DefaultLogger
             errorWriter.close();
         }
     }
+
 }

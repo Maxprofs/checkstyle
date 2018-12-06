@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,17 +22,18 @@ package com.puppycrawl.tools.checkstyle.checks.sizes;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * Restricts the number of executable statements to a specified limit
  * (default = 30).
- * @author Simon Harris
  */
+@FileStatefulCheck
 public final class ExecutableStatementCountCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -40,21 +41,21 @@ public final class ExecutableStatementCountCheck
      */
     public static final String MSG_KEY = "executableStatementCount";
 
-    /** default threshold */
+    /** Default threshold. */
     private static final int DEFAULT_MAX = 30;
-
-    /** threshold to report error for */
-    private int max;
 
     /** Stack of method contexts. */
     private final Deque<Context> contextStack = new ArrayDeque<>();
+
+    /** Threshold to report error for. */
+    private int max;
 
     /** Current method context. */
     private Context context;
 
     /** Constructs a {@code ExecutableStatementCountCheck}. */
     public ExecutableStatementCountCheck() {
-        setMax(DEFAULT_MAX);
+        max = DEFAULT_MAX;
     }
 
     @Override
@@ -82,14 +83,6 @@ public final class ExecutableStatementCountCheck
             TokenTypes.STATIC_INIT,
             TokenTypes.SLIST,
         };
-    }
-
-    /**
-     * Gets the maximum threshold.
-     * @return the maximum threshold.
-     */
-    public int getMax() {
-        return max;
     }
 
     /**
@@ -156,9 +149,8 @@ public final class ExecutableStatementCountCheck
      */
     private void leaveMemberDef(DetailAST ast) {
         final int count = context.getCount();
-        if (count > getMax()) {
-            log(ast.getLineNo(), ast.getColumnNo(),
-                    MSG_KEY, count, getMax());
+        if (count > max) {
+            log(ast, MSG_KEY, count, max);
         }
         context = contextStack.pop();
     }
@@ -178,7 +170,6 @@ public final class ExecutableStatementCountCheck
                 && type != TokenTypes.METHOD_DEF
                 && type != TokenTypes.INSTANCE_INIT
                 && type != TokenTypes.STATIC_INIT) {
-
                 parent = parent.getParent();
                 type = parent.getType();
             }
@@ -190,9 +181,9 @@ public final class ExecutableStatementCountCheck
 
     /**
      * Class to encapsulate counting information about one member.
-     * @author Simon Harris
      */
     private static class Context {
+
         /** Member AST node. */
         private final DetailAST ast;
 
@@ -203,7 +194,7 @@ public final class ExecutableStatementCountCheck
          * Creates new member context.
          * @param ast member AST node.
          */
-        public Context(DetailAST ast) {
+        Context(DetailAST ast) {
             this.ast = ast;
             count = 0;
         }
@@ -213,7 +204,7 @@ public final class ExecutableStatementCountCheck
          * @param addition the count increment.
          */
         public void addCount(int addition) {
-            this.count += addition;
+            count += addition;
         }
 
         /**
@@ -231,5 +222,7 @@ public final class ExecutableStatementCountCheck
         public int getCount() {
             return count;
         }
+
     }
+
 }

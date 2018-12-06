@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -33,7 +35,13 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <p> By default the check will check the following tokens:
  *  {@link TokenTypes#COMMA COMMA},
  *  {@link TokenTypes#SEMI SEMI},
- *  {@link TokenTypes#TYPECAST TYPECAST}.
+ *  {@link TokenTypes#TYPECAST TYPECAST},
+ *  {@link TokenTypes#LITERAL_IF LITERAL_IF},
+ *  {@link TokenTypes#LITERAL_ELSE LITERAL_ELSE},
+ *  {@link TokenTypes#LITERAL_WHILE LITERAL_WHILE},
+ *  {@link TokenTypes#LITERAL_FOR LITERAL_FOR},
+ *  {@link TokenTypes#LITERAL_DO LITERAL_DO},
+ *  {@link TokenTypes#DO_WHILE DO_WHILE}.
  * </p>
  * <p>
  * An example of how to configure the check is:
@@ -49,23 +57,22 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *     &lt;property name="tokens" value="COMMA, SEMI"/&gt;
  * &lt;/module&gt;
  * </pre>
- * @author Oliver Burn
- * @author Rick Giles
  */
+@StatelessCheck
 public class WhitespaceAfterCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WS_NOT_FOLLOWED = "ws.notFollowed";
+    public static final String MSG_WS_NOT_FOLLOWED = "ws.notFollowed";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WS_TYPECAST = "ws.typeCast";
+    public static final String MSG_WS_TYPECAST = "ws.typeCast";
 
     @Override
     public int[] getDefaultTokens() {
@@ -78,33 +85,45 @@ public class WhitespaceAfterCheck
             TokenTypes.COMMA,
             TokenTypes.SEMI,
             TokenTypes.TYPECAST,
+            TokenTypes.LITERAL_IF,
+            TokenTypes.LITERAL_ELSE,
+            TokenTypes.LITERAL_WHILE,
+            TokenTypes.LITERAL_DO,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.DO_WHILE,
         };
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
-        final String line = getLine(ast.getLineNo() - 1);
         if (ast.getType() == TokenTypes.TYPECAST) {
             final DetailAST targetAST = ast.findFirstToken(TokenTypes.RPAREN);
+            final String line = getLine(targetAST.getLineNo() - 1);
             if (!isFollowedByWhitespace(targetAST, line)) {
                 log(targetAST.getLineNo(),
                     targetAST.getColumnNo() + targetAST.getText().length(),
-                    WS_TYPECAST);
+                    MSG_WS_TYPECAST);
             }
         }
         else {
+            final String line = getLine(ast.getLineNo() - 1);
             if (!isFollowedByWhitespace(ast, line)) {
                 final Object[] message = {ast.getText()};
                 log(ast.getLineNo(),
                     ast.getColumnNo() + ast.getText().length(),
-                    WS_NOT_FOLLOWED,
+                    MSG_WS_NOT_FOLLOWED,
                     message);
             }
         }
     }
 
     /**
-     * checks whether token is followed by a whitespace.
+     * Checks whether token is followed by a whitespace.
      * @param targetAST Ast token.
      * @param line The line associated with the ast token.
      * @return true if ast token is followed by a whitespace.
@@ -116,10 +135,11 @@ public class WhitespaceAfterCheck
 
         if (after < line.length()) {
             final char charAfter = line.charAt(after);
-            followedByWhitespace = Character.isWhitespace(charAfter)
-                || targetAST.getType() == TokenTypes.SEMI
-                    && (charAfter == ';' || charAfter == ')');
+            followedByWhitespace = charAfter == ';'
+                || charAfter == ')'
+                || Character.isWhitespace(charAfter);
         }
         return followedByWhitespace;
     }
+
 }

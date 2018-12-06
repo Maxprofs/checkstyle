@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -30,18 +30,16 @@ import java.util.Locale;
  * defined here.
  * </p>
  *
- * @author David Schneider
- * @author Travis Schneeberger
- * @author Mehmet Can Cömert
  */
 public enum SeverityLevel {
-    /** security level ignore. */
+
+    /** Severity level ignore. */
     IGNORE,
-    /** security level info. */
+    /** Severity level info. */
     INFO,
-    /** security level warning. */
+    /** Severity level warning. */
     WARNING,
-    /** security level error. */
+    /** Severity level error. */
     ERROR;
 
     @Override
@@ -50,6 +48,7 @@ public enum SeverityLevel {
     }
 
     /**
+     * Returns name of severity level.
      * @return the name of this severity level.
      */
     public String getName() {
@@ -61,10 +60,11 @@ public enum SeverityLevel {
      *
      * @param securityLevelName level name, such as "ignore", "info", etc.
      * @return the {@code SeverityLevel}
-     * associated with {@code securityLevelName}
+     *     associated with {@code securityLevelName}
      */
     public static SeverityLevel getInstance(String securityLevelName) {
         return valueOf(SeverityLevel.class, securityLevelName.trim()
                 .toUpperCase(Locale.ENGLISH));
     }
+
 }

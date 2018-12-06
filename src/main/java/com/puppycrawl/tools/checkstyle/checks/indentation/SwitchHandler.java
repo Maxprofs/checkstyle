@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for switch statements.
  *
- * @author jrichard
  */
 public class SwitchHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -42,12 +42,12 @@ public class SwitchHandler extends BlockParentHandler {
     }
 
     @Override
-    protected DetailAST getLCurly() {
+    protected DetailAST getLeftCurly() {
         return getMainAst().findFirstToken(TokenTypes.LCURLY);
     }
 
     @Override
-    protected DetailAST getRCurly() {
+    protected DetailAST getRightCurly() {
         return getMainAst().findFirstToken(TokenTypes.RCURLY);
     }
 
@@ -61,7 +61,7 @@ public class SwitchHandler extends BlockParentHandler {
     }
 
     @Override
-    protected DetailAST getNonlistChild() {
+    protected DetailAST getNonListChild() {
         return null;
     }
 
@@ -71,7 +71,7 @@ public class SwitchHandler extends BlockParentHandler {
     private void checkSwitchExpr() {
         checkExpressionSubtree(
             getMainAst().findFirstToken(TokenTypes.LPAREN).getNextSibling(),
-            getLevel(),
+            getIndent(),
             false,
             false);
     }
@@ -81,4 +81,5 @@ public class SwitchHandler extends BlockParentHandler {
         checkSwitchExpr();
         super.checkIndentation();
     }
+
 }

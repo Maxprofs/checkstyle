@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.imports;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.collect.Lists;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -47,24 +48,21 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *   &lt;property name="allowStaticMemberImports" value="false"/&gt;
  * &lt;/module&gt;
  * </pre>
- *
  * The optional "excludes" property allows for certain packages like
  * java.io or java.net to be exempted from the rule. It also is used to
  * allow certain classes like java.lang.Math or java.io.File to be
  * excluded in order to support static member imports.
  *
- * The optional "allowClassImports" when set to true, will allow starred
+ * <p>The optional "allowClassImports" when set to true, will allow starred
  * class imports but will not affect static member imports.
  *
- * The optional "allowStaticMemberImports" when set to true will allow
+ * <p>The optional "allowStaticMemberImports" when set to true will allow
  * starred static member imports but will not affect class imports.
  *
- * @author Oliver Burn
- * @author <a href="bschneider@vecna.com">Bill Schneider</a>
- * @author Travis Schneeberger
  */
+@StatelessCheck
 public class AvoidStarImportCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -72,23 +70,26 @@ public class AvoidStarImportCheck
      */
     public static final String MSG_KEY = "import.avoidStar";
 
-    /** the packages/classes to exempt from this check. */
-    private final List<String> excludes = Lists.newArrayList();
+    /** Suffix for the star import. */
+    private static final String STAR_IMPORT_SUFFIX = ".*";
 
-    /** whether to allow all class imports */
+    /** The packages/classes to exempt from this check. */
+    private final List<String> excludes = new ArrayList<>();
+
+    /** Whether to allow all class imports. */
     private boolean allowClassImports;
 
-    /** whether to allow all static member imports */
+    /** Whether to allow all static member imports. */
     private boolean allowStaticMemberImports;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.IMPORT, TokenTypes.STATIC_IMPORT};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.IMPORT, TokenTypes.STATIC_IMPORT};
+        return getRequiredTokens();
     }
 
     @Override
@@ -109,12 +110,16 @@ public class AvoidStarImportCheck
      * Sets the list of packages or classes to be exempt from the check.
      * The excludes can contain a .* or not.
      * @param excludesParam a list of package names/fully-qualifies class names
-     * where star imports are ok
+     *     where star imports are ok.
      */
     public void setExcludes(String... excludesParam) {
-        excludes.clear();
         for (final String exclude : excludesParam) {
-            excludes.add(exclude.endsWith(".*") ? exclude : exclude + ".*");
+            if (exclude.endsWith(STAR_IMPORT_SUFFIX)) {
+                excludes.add(exclude);
+            }
+            else {
+                excludes.add(exclude + STAR_IMPORT_SUFFIX);
+            }
         }
     }
 
@@ -156,7 +161,7 @@ public class AvoidStarImportCheck
     private void logsStarredImportViolation(DetailAST startingDot) {
         final FullIdent name = FullIdent.createFullIdent(startingDot);
         final String importText = name.getText();
-        if (importText.endsWith(".*") && !excludes.contains(importText)) {
+        if (importText.endsWith(STAR_IMPORT_SUFFIX) && !excludes.contains(importText)) {
             log(startingDot.getLineNo(), MSG_KEY, importText);
         }
     }

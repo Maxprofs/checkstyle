@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,15 +19,19 @@
 
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * <p>
  * Checks that interface type parameter names conform to a format specified
- * by the format property.  The format is a
- * {@link java.util.regex.Pattern regular expression} and defaults to
- * <strong>^[A-Z]$</strong>.
+ * by the format property.
  * </p>
+ * <ul>
+ * <li>
+ * Property {@code format} - Specifies valid identifiers. Default value is {@code "^[A-Z]$"}.
+ * </li>
+ * </ul>
  * <p>
  * An example of how to configure the check is:
  * </p>
@@ -36,7 +40,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </pre>
  * <p>
  * An example of how to configure the check for names that are only a single
- * letter is
+ * letter is:
  * </p>
  * <pre>
  * &lt;module name="InterfaceTypeParameterName"&gt;
@@ -44,17 +48,38 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * &lt;/module&gt;
  * </pre>
  *
- * @author maxvetrenko
+ * @since 5.8
  */
 public class InterfaceTypeParameterNameCheck
-    extends AbstractTypeParameterNameCheck {
+    extends AbstractNameCheck {
+
     /** Creates a new {@code InterfaceTypeParameterNameCheck} instance. */
     public InterfaceTypeParameterNameCheck() {
         super("^[A-Z]$");
     }
 
     @Override
-    protected final int getLocation() {
-        return TokenTypes.INTERFACE_DEF;
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
     }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.TYPE_PARAMETER,
+        };
+    }
+
+    @Override
+    protected final boolean mustCheckName(DetailAST ast) {
+        final DetailAST location =
+            ast.getParent().getParent();
+        return location.getType() == TokenTypes.INTERFACE_DEF;
+    }
+
 }

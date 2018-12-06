@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,15 +19,16 @@
 
 package com.puppycrawl.tools.checkstyle.checks.sizes;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * Checks for the number of defined types at the "outer" level.
- * @author oliverb
  */
-public class OuterTypeNumberCheck extends Check {
+@FileStatefulCheck
+public class OuterTypeNumberCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -44,12 +45,16 @@ public class OuterTypeNumberCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF,
-            TokenTypes.ENUM_DEF, TokenTypes.ANNOTATION_DEF, };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF,
             TokenTypes.ENUM_DEF, TokenTypes.ANNOTATION_DEF, };
     }
@@ -82,9 +87,10 @@ public class OuterTypeNumberCheck extends Check {
 
     /**
      * Sets the maximum allowed number of outer types.
-     * @param to the new number.
+     * @param max the new number.
      */
-    public void setMax(int to) {
-        max = to;
+    public void setMax(int max) {
+        this.max = max;
     }
+
 }

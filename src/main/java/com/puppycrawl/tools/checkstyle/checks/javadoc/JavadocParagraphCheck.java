@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.javadoc;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailNode;
 import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
 
 /**
  * Checks that:
@@ -32,29 +34,25 @@ import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
  * before the first word, with no space after.</li>
  * </ul>
  *
- * <p>
- * The check can be specified by option tagImmediatelyBeforeFirstWord,
+ * <p>The check can be specified by option allowNewlineParagraph,
  * which says whether the &lt;p&gt; tag should be placed immediately before
  * the first word.
  *
- * <p>
- * Default configuration:
+ * <p>Default configuration:
  * </p>
  * <pre>
  * &lt;module name=&quot;JavadocParagraph&quot;/&gt;
  * </pre>
  *
- * <p>
- * To allow newlines and spaces immediately after the &lt;p&gt; tag:
+ * <p>To allow newlines and spaces immediately after the &lt;p&gt; tag:
  * <pre>
  * &lt;module name=&quot;JavadocParagraph&quot;&gt;
- *      &lt;property name=&quot;tagImmediatelyBeforeFirstWord&quot;
+ *      &lt;property name=&quot;allowNewlineParagraph&quot;
  *                   value==&quot;false&quot;/&gt;
  * &lt;/module&quot;&gt;
  * </pre>
  *
- * <p>
- * In case of tagImmediatelyBeforeFirstWord set to false
+ * <p>In case of allowNewlineParagraph set to false
  * the following example will not have any violations:
  * <pre>
  *   /**
@@ -70,10 +68,9 @@ import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
  *    *
  *    *&#47;
  * </pre>
- * @author maxvetrenko
- * @author Vladislav Lisetskiy
  *
  */
+@StatelessCheck
 public class JavadocParagraphCheck extends AbstractJavadocCheck {
 
     /**
@@ -103,14 +100,14 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
     /**
      * Whether the &lt;p&gt; tag should be placed immediately before the first word.
      */
-    private boolean tagImmediatelyBeforeFirstWord = true;
+    private boolean allowNewlineParagraph = true;
 
     /**
-     * Sets tagImmediatelyBeforeFirstWord.
+     * Sets allowNewlineParagraph.
      * @param value value to set.
      */
     public void setAllowNewlineParagraph(boolean value) {
-        tagImmediatelyBeforeFirstWord = value;
+        allowNewlineParagraph = value;
     }
 
     @Override
@@ -122,12 +119,17 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
     }
 
     @Override
+    public int[] getRequiredJavadocTokens() {
+        return getAcceptableJavadocTokens();
+    }
+
+    @Override
     public void visitJavadocToken(DetailNode ast) {
         if (ast.getType() == JavadocTokenTypes.NEWLINE && isEmptyLine(ast)) {
             checkEmptyLine(ast);
         }
         else if (ast.getType() == JavadocTokenTypes.HTML_ELEMENT
-                && JavadocUtils.getFirstChild(ast).getType() == JavadocTokenTypes.P_TAG_OPEN) {
+                && JavadocUtil.getFirstChild(ast).getType() == JavadocTokenTypes.P_TAG_START) {
             checkParagraphTag(ast);
         }
     }
@@ -138,7 +140,8 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      */
     private void checkEmptyLine(DetailNode newline) {
         final DetailNode nearestToken = getNearestNode(newline);
-        if (!isLastEmptyLine(newline) && nearestToken.getChildren().length > 1) {
+        if (!isLastEmptyLine(newline) && nearestToken.getType() == JavadocTokenTypes.TEXT
+                && !CommonUtil.isBlank(nearestToken.getText())) {
             log(newline.getLineNumber(), MSG_TAG_AFTER);
         }
     }
@@ -155,7 +158,7 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
         else if (newLine == null || tag.getLineNumber() - newLine.getLineNumber() != 1) {
             log(tag.getLineNumber(), MSG_LINE_BEFORE);
         }
-        if (tagImmediatelyBeforeFirstWord && isImmediatelyFollowedByText(tag)) {
+        if (allowNewlineParagraph && isImmediatelyFollowedByText(tag)) {
             log(tag.getLineNumber(), MSG_MISPLACED_TAG);
         }
     }
@@ -166,10 +169,10 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      * @return nearest node.
      */
     private static DetailNode getNearestNode(DetailNode node) {
-        DetailNode tag = JavadocUtils.getNextSibling(node);
+        DetailNode tag = JavadocUtil.getNextSibling(node);
         while (tag.getType() == JavadocTokenTypes.LEADING_ASTERISK
                 || tag.getType() == JavadocTokenTypes.NEWLINE) {
-            tag = JavadocUtils.getNextSibling(tag);
+            tag = JavadocUtil.getNextSibling(tag);
         }
         return tag;
     }
@@ -180,17 +183,18 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      * @return true, if line is empty line.
      */
     private static boolean isEmptyLine(DetailNode newLine) {
-        DetailNode previousSibling = JavadocUtils.getPreviousSibling(newLine);
-        if (previousSibling == null
-                || previousSibling.getParent().getType() != JavadocTokenTypes.JAVADOC) {
-            return false;
+        boolean result = false;
+        DetailNode previousSibling = JavadocUtil.getPreviousSibling(newLine);
+        if (previousSibling != null
+                && previousSibling.getParent().getType() == JavadocTokenTypes.JAVADOC) {
+            if (previousSibling.getType() == JavadocTokenTypes.TEXT
+                    && CommonUtil.isBlank(previousSibling.getText())) {
+                previousSibling = JavadocUtil.getPreviousSibling(previousSibling);
+            }
+            result = previousSibling != null
+                    && previousSibling.getType() == JavadocTokenTypes.LEADING_ASTERISK;
         }
-        if (previousSibling.getType() == JavadocTokenTypes.TEXT
-                && previousSibling.getChildren().length == 1) {
-            previousSibling = JavadocUtils.getPreviousSibling(previousSibling);
-        }
-        return previousSibling != null
-                && previousSibling.getType() == JavadocTokenTypes.LEADING_ASTERISK;
+        return result;
     }
 
     /**
@@ -199,18 +203,20 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      * @return true, if line with paragraph tag is first line in javadoc.
      */
     private static boolean isFirstParagraph(DetailNode paragraphTag) {
-        DetailNode previousNode = JavadocUtils.getPreviousSibling(paragraphTag);
+        boolean result = true;
+        DetailNode previousNode = JavadocUtil.getPreviousSibling(paragraphTag);
         while (previousNode != null) {
             if (previousNode.getType() == JavadocTokenTypes.TEXT
-                    && previousNode.getChildren().length > 1
+                    && !CommonUtil.isBlank(previousNode.getText())
                 || previousNode.getType() != JavadocTokenTypes.LEADING_ASTERISK
                     && previousNode.getType() != JavadocTokenTypes.NEWLINE
                     && previousNode.getType() != JavadocTokenTypes.TEXT) {
-                return false;
+                result = false;
+                break;
             }
-            previousNode = JavadocUtils.getPreviousSibling(previousNode);
+            previousNode = JavadocUtil.getPreviousSibling(previousNode);
         }
-        return true;
+        return result;
     }
 
     /**
@@ -219,9 +225,9 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      * @return Some nearest empty line in javadoc.
      */
     private static DetailNode getNearestEmptyLine(DetailNode node) {
-        DetailNode newLine = JavadocUtils.getPreviousSibling(node);
+        DetailNode newLine = JavadocUtil.getPreviousSibling(node);
         while (newLine != null) {
-            final DetailNode previousSibling = JavadocUtils.getPreviousSibling(newLine);
+            final DetailNode previousSibling = JavadocUtil.getPreviousSibling(newLine);
             if (newLine.getType() == JavadocTokenTypes.NEWLINE && isEmptyLine(newLine)) {
                 break;
             }
@@ -236,16 +242,18 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      * @return true, if NEWLINE node is a last node in javadoc.
      */
     private static boolean isLastEmptyLine(DetailNode newLine) {
-        DetailNode nextNode = JavadocUtils.getNextSibling(newLine);
+        boolean result = true;
+        DetailNode nextNode = JavadocUtil.getNextSibling(newLine);
         while (nextNode != null && nextNode.getType() != JavadocTokenTypes.JAVADOC_TAG) {
             if (nextNode.getType() == JavadocTokenTypes.TEXT
-                    && nextNode.getChildren().length > 1
+                    && !CommonUtil.isBlank(nextNode.getText())
                     || nextNode.getType() == JavadocTokenTypes.HTML_ELEMENT) {
-                return false;
+                result = false;
+                break;
             }
-            nextNode = JavadocUtils.getNextSibling(nextNode);
+            nextNode = JavadocUtil.getNextSibling(nextNode);
         }
-        return true;
+        return result;
     }
 
     /**
@@ -254,9 +262,10 @@ public class JavadocParagraphCheck extends AbstractJavadocCheck {
      * @return true, if the paragraph tag is immediately followed by the text.
      */
     private static boolean isImmediatelyFollowedByText(DetailNode tag) {
-        final DetailNode nextSibling = JavadocUtils.getNextSibling(tag);
+        final DetailNode nextSibling = JavadocUtil.getNextSibling(tag);
         return nextSibling.getType() == JavadocTokenTypes.NEWLINE
                 || nextSibling.getType() == JavadocTokenTypes.EOF
-                || Utils.startsWithChar(nextSibling.getText(), ' ');
+                || CommonUtil.startsWithChar(nextSibling.getText(), ' ');
     }
+
 }

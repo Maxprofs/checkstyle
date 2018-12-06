@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,18 +19,29 @@
 
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
-import com.puppycrawl.tools.checkstyle.ScopeUtils;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
 
 /**
  * <p>
  * Checks that local final variable names conform to a format specified
- * by the format property. A catch parameter is considered to be
- * a local variable.The format is a
- * {@link java.util.regex.Pattern regular expression} and defaults to
- * <strong>^[a-z][a-zA-Z0-9]*$</strong>.
+ * by the format property. A catch parameter and resources in try statements
+ * are considered to be a local, final variables.
  * </p>
+ * <ul>
+ * <li>
+ * Property {@code format} - Specifies valid identifiers. Default value is
+ * {@code "^[a-z][a-zA-Z0-9]*$"}.
+ * </li>
+ * <li>
+ * Property {@code tokens} - tokens to check Default value is:
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#VARIABLE_DEF">VARIABLE_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#PARAMETER_DEF">PARAMETER_DEF</a>,
+ * <a href="https://checkstyle.org/apidocs/com/puppycrawl/tools/checkstyle/api/TokenTypes.html#RESOURCE">RESOURCE</a>.
+ * </li>
+ * </ul>
  * <p>
  * An example of how to configure the check is:
  * </p>
@@ -43,14 +54,15 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </p>
  * <pre>
  * &lt;module name="LocalFinalVariableName"&gt;
- *    &lt;property name="format" value="^[A-Z][A-Z0-9]*$"/&gt;
+ *   &lt;property name="format" value="^[A-Z][A-Z0-9]*$"/&gt;
  * &lt;/module&gt;
  * </pre>
  *
- * @author Rick Giles
+ * @since 3.0
  */
 public class LocalFinalVariableNameCheck
     extends AbstractNameCheck {
+
     /** Creates a new {@code LocalFinalVariableNameCheck} instance. */
     public LocalFinalVariableNameCheck() {
         super("^[a-z][a-zA-Z0-9]*$");
@@ -58,10 +70,7 @@ public class LocalFinalVariableNameCheck
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.VARIABLE_DEF,
-            TokenTypes.PARAMETER_DEF,
-        };
+        return getAcceptableTokens();
     }
 
     @Override
@@ -69,14 +78,22 @@ public class LocalFinalVariableNameCheck
         return new int[] {
             TokenTypes.VARIABLE_DEF,
             TokenTypes.PARAMETER_DEF,
+            TokenTypes.RESOURCE,
         };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
     protected final boolean mustCheckName(DetailAST ast) {
         final DetailAST modifiersAST =
             ast.findFirstToken(TokenTypes.MODIFIERS);
-        final boolean isFinal = modifiersAST.branchContains(TokenTypes.FINAL);
-        return isFinal && ScopeUtils.isLocalVariableDef(ast);
+        final boolean isFinal = ast.getType() == TokenTypes.RESOURCE
+            || modifiersAST.findFirstToken(TokenTypes.FINAL) != null;
+        return isFinal && ScopeUtil.isLocalVariableDef(ast);
     }
+
 }

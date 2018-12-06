@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,16 +20,15 @@
 package com.puppycrawl.tools.checkstyle.checks.header;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.commons.beanutils.ConversionException;
-import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.collect.Lists;
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.FileText;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Checks the header of the source against a header file that contains a
@@ -38,17 +37,35 @@ import com.puppycrawl.tools.checkstyle.Utils;
  * if header is not specified, the default value of header is set to null
  * and the check does not rise any violations.
  *
- * @author Lars Kühne
- * @author o_sukhodolsky
  */
+@StatelessCheck
 public class RegexpHeaderCheck extends AbstractHeaderCheck {
-    /** empty array to avoid instantiations. */
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties"
+     * file.
+     */
+    public static final String MSG_HEADER_MISSING = "header.missing";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties"
+     * file.
+     */
+    public static final String MSG_HEADER_MISMATCH = "header.mismatch";
+
+    /** Empty array to avoid instantiations. */
     private static final int[] EMPTY_INT_ARRAY = new int[0];
 
-    /** the compiled regular expressions */
-    private final List<Pattern> headerRegexps = Lists.newArrayList();
+    /** Regex pattern for a blank line. **/
+    private static final String EMPTY_LINE_PATTERN = "^$";
 
-    /** the header lines to repeat (0 or more) in the check, sorted. */
+    /** Compiled regex pattern for a blank line. **/
+    private static final Pattern BLANK_LINE = Pattern.compile(EMPTY_LINE_PATTERN);
+
+    /** The compiled regular expressions. */
+    private final List<Pattern> headerRegexps = new ArrayList<>();
+
+    /** The header lines to repeat (0 or more) in the check, sorted. */
     private int[] multiLines = EMPTY_INT_ARRAY;
 
     /**
@@ -58,27 +75,27 @@ public class RegexpHeaderCheck extends AbstractHeaderCheck {
     public void setMultiLines(int... list) {
         if (list.length == 0) {
             multiLines = EMPTY_INT_ARRAY;
-            return;
         }
-
-        multiLines = new int[list.length];
-        System.arraycopy(list, 0, multiLines, 0, list.length);
-        Arrays.sort(multiLines);
+        else {
+            multiLines = new int[list.length];
+            System.arraycopy(list, 0, multiLines, 0, list.length);
+            Arrays.sort(multiLines);
+        }
     }
 
     @Override
-    protected void processFiltered(File file, List<String> lines) {
+    protected void processFiltered(File file, FileText fileText) {
         final int headerSize = getHeaderLines().size();
-        final int fileSize = lines.size();
+        final int fileSize = fileText.size();
 
         if (headerSize - multiLines.length > fileSize) {
-            log(1, "header.missing");
+            log(1, MSG_HEADER_MISSING);
         }
         else {
             int headerLineNo = 0;
-            int i;
-            for (i = 0; headerLineNo < headerSize && i < fileSize; i++) {
-                final String line = lines.get(i);
+            int index;
+            for (index = 0; headerLineNo < headerSize && index < fileSize; index++) {
+                final String line = fileText.get(index);
                 boolean isMatch = isMatch(line, headerLineNo);
                 while (!isMatch && isMultiLine(headerLineNo)) {
                     headerLineNo++;
@@ -86,23 +103,45 @@ public class RegexpHeaderCheck extends AbstractHeaderCheck {
                             || isMatch(line, headerLineNo);
                 }
                 if (!isMatch) {
-                    log(i + 1, "header.mismatch", getHeaderLines().get(
-                            headerLineNo));
-                    break; // stop checking
+                    log(index + 1, MSG_HEADER_MISMATCH, getHeaderLine(headerLineNo));
+                    break;
                 }
                 if (!isMultiLine(headerLineNo)) {
                     headerLineNo++;
                 }
             }
-            if (i == fileSize) {
+            if (index == fileSize) {
                 // if file finished, but we have at least one non-multi-line
                 // header isn't completed
-                for (; headerLineNo < headerSize; headerLineNo++) {
-                    if (!isMultiLine(headerLineNo)) {
-                        log(1, "header.missing");
-                        break;
-                    }
-                }
+                logFirstSinglelineLine(headerLineNo, headerSize);
+            }
+        }
+    }
+
+    /**
+     * Returns the line from the header. Where the line is blank return the regexp pattern
+     * for a blank line.
+     * @param headerLineNo header line number to return
+     * @return the line from the header
+     */
+    private String getHeaderLine(int headerLineNo) {
+        String line = getHeaderLines().get(headerLineNo);
+        if (line.isEmpty()) {
+            line = EMPTY_LINE_PATTERN;
+        }
+        return line;
+    }
+
+    /**
+     * Logs warning if any non-multiline lines left in header regexp.
+     * @param startHeaderLine header line number to start from
+     * @param headerSize whole header size
+     */
+    private void logFirstSinglelineLine(int startHeaderLine, int headerSize) {
+        for (int lineNum = startHeaderLine; lineNum < headerSize; lineNum++) {
+            if (!isMultiLine(lineNum)) {
+                log(1, MSG_HEADER_MISSING);
+                break;
             }
         }
     }
@@ -118,6 +157,7 @@ public class RegexpHeaderCheck extends AbstractHeaderCheck {
     }
 
     /**
+     * Returns true if line is multiline header lines or false.
      * @param lineNo a line number
      * @return if {@code lineNo} is one of the repeat header lines.
      */
@@ -126,18 +166,22 @@ public class RegexpHeaderCheck extends AbstractHeaderCheck {
     }
 
     @Override
-    protected void postprocessHeaderLines() {
+    protected void postProcessHeaderLines() {
         final List<String> headerLines = getHeaderLines();
-        headerRegexps.clear();
         for (String line : headerLines) {
             try {
-                headerRegexps.add(Pattern.compile(line));
+                if (line.isEmpty()) {
+                    headerRegexps.add(BLANK_LINE);
+                }
+                else {
+                    headerRegexps.add(Pattern.compile(line));
+                }
             }
-            catch (final PatternSyntaxException ignored) {
-                throw new ConversionException("line "
+            catch (final PatternSyntaxException ex) {
+                throw new IllegalArgumentException("line "
                         + (headerRegexps.size() + 1)
                         + " in header specification"
-                        + " is not a regular expression");
+                        + " is not a regular expression", ex);
             }
         }
     }
@@ -145,18 +189,17 @@ public class RegexpHeaderCheck extends AbstractHeaderCheck {
     /**
      * Validates the {@code header} by compiling it with
      * {@link Pattern#compile(String) } and throws
-     * {@link PatternSyntaxException} if {@code header} isn't a valid pattern.
+     * {@link IllegalArgumentException} if {@code header} isn't a valid pattern.
      * @param header the header value to validate and set (in that order)
      */
     @Override
     public void setHeader(String header) {
-        if (StringUtils.isBlank(header)) {
-            return;
+        if (!CommonUtil.isBlank(header)) {
+            if (!CommonUtil.isPatternValid(header)) {
+                throw new IllegalArgumentException("Unable to parse format: " + header);
+            }
+            super.setHeader(header);
         }
-        if (!Utils.isPatternValid(header)) {
-            throw new ConversionException("Unable to parse format: " + header);
-        }
-        super.setHeader(header);
     }
 
 }

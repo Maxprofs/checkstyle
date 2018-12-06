@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,8 @@
 
 package com.puppycrawl.tools.checkstyle.checks.javadoc;
 
+import java.util.LinkedList;
 import java.util.List;
-
-import com.google.common.collect.Lists;
 
 /**
  * <p>
@@ -43,18 +42,18 @@ import com.google.common.collect.Lists;
  * <MY_FOO_TYPE>}, etc. According to this class they are valid tags.
  * </p>
  *
- * @author Chris Stillwell
  */
 class TagParser {
+
     /** List of HtmlTags found on the input line of text. */
-    private final List<HtmlTag> tags = Lists.newLinkedList();
+    private final List<HtmlTag> tags = new LinkedList<>();
 
     /**
      * Constructs a TagParser and finds the first tag if any.
      * @param text the line of text to parse.
      * @param lineNo the source line number.
      */
-    public TagParser(String[] text, int lineNo) {
+    TagParser(String[] text, int lineNo) {
         parseTags(text, lineNo);
     }
 
@@ -93,40 +92,56 @@ class TagParser {
      */
     private void parseTags(String[] text, int lineNo) {
         final int nLines = text.length;
-        Point position = new Point(0, 0);
-
-        position = findChar(text, '<', position);
+        Point position = findChar(text, '<', new Point(0, 0));
         while (position.getLineNo() < nLines) {
             // if this is html comment then skip it
             if (isCommentTag(text, position)) {
                 position = skipHtmlComment(text, position);
             }
-            else if (!isTag(text, position)) {
-                position = getNextCharPos(text, position);
+            else if (isTag(text, position)) {
+                position = parseTag(text, lineNo, nLines, position);
             }
             else {
-                // find end of tag
-                final Point endTag = findChar(text, '>', position);
-                final boolean incompleteTag = endTag.getLineNo() >= nLines;
-                // get tag id (one word)
-                final String tagId =
-                        incompleteTag ? "" : getTagId(text, position);
-                // is this closed tag
-                final boolean closedTag =
-                        endTag.getLineNo() < nLines
-                         && text[endTag.getLineNo()]
-                         .charAt(endTag.getColumnNo() - 1) == '/';
-                // add new tag
-                add(new HtmlTag(tagId,
-                                position.getLineNo() + lineNo,
-                                position.getColumnNo(),
-                                closedTag,
-                                incompleteTag,
-                                text[position.getLineNo()]));
-                position = endTag;
+                position = getNextCharPos(text, position);
             }
             position = findChar(text, '<', position);
         }
+    }
+
+    /**
+     * Parses the tag and return position after it.
+     * @param text the source line to parse.
+     * @param lineNo the source line number.
+     * @param nLines line length
+     * @param position start position for parsing
+     * @return position after tag
+     */
+    private Point parseTag(String[] text, int lineNo, final int nLines, Point position) {
+        // find end of tag
+        final Point endTag = findChar(text, '>', position);
+        final boolean incompleteTag = endTag.getLineNo() >= nLines;
+        // get tag id (one word)
+        final String tagId;
+
+        if (incompleteTag) {
+            tagId = "";
+        }
+        else {
+            tagId = getTagId(text, position);
+        }
+        // is this closed tag
+        final boolean closedTag =
+                endTag.getLineNo() < nLines
+                 && text[endTag.getLineNo()]
+                 .charAt(endTag.getColumnNo() - 1) == '/';
+        // add new tag
+        add(new HtmlTag(tagId,
+                        position.getLineNo() + lineNo,
+                        position.getColumnNo(),
+                        closedTag,
+                        incompleteTag,
+                        text[position.getLineNo()]));
+        return endTag;
     }
 
     /**
@@ -139,12 +154,11 @@ class TagParser {
         final int column = pos.getColumnNo() + 1;
         final String text = javadocText[pos.getLineNo()];
 
-        //Character.isJavidentifier... may not be a valid HTML
+        //Character.isJavaIdentifier... may not be a valid HTML
         //identifier but is valid for generics
-        return column < text.length()
-                && (Character.isJavaIdentifierStart(text.charAt(column))
-                    || text.charAt(column) == '/')
-                || column >= text.length();
+        return column >= text.length()
+                || Character.isJavaIdentifierStart(text.charAt(column))
+                    || text.charAt(column) == '/';
     }
 
     /**
@@ -154,28 +168,28 @@ class TagParser {
      * @return id for given tag
      */
     private static String getTagId(String[] javadocText, Point tagStart) {
+        String tagId = "";
         int column = tagStart.getColumnNo() + 1;
         String text = javadocText[tagStart.getLineNo()];
-        if (column >= text.length()) {
-            return "";
+        if (column < text.length()) {
+            if (text.charAt(column) == '/') {
+                column++;
+            }
+
+            text = text.substring(column).trim();
+            int position = 0;
+
+            //Character.isJavaIdentifier... may not be a valid HTML
+            //identifier but is valid for generics
+            while (position < text.length()
+                    && (Character.isJavaIdentifierStart(text.charAt(position))
+                        || Character.isJavaIdentifierPart(text.charAt(position)))) {
+                position++;
+            }
+
+            tagId = text.substring(0, position);
         }
-
-        if (text.charAt(column) == '/') {
-            column++;
-        }
-
-        text = text.substring(column).trim();
-        column = 0;
-
-        //Character.isJavidentifier... may not be a valid HTML
-        //identifier but is valid for generics
-        while (column < text.length()
-            && (Character.isJavaIdentifierStart(text.charAt(column))
-                || Character.isJavaIdentifierPart(text.charAt(column)))) {
-            column++;
-        }
-
-        return text.substring(0, column);
+        return tagId;
     }
 
     /**
@@ -192,17 +206,17 @@ class TagParser {
     /**
      * Skips HTML comments.
      * @param text text of javadoc comments.
-     * @param from start position of HTML-comments
+     * @param fromPoint start position of HTML-comments
      * @return position after HTML-comments
      */
-    private static Point skipHtmlComment(String[] text, Point from) {
-        Point to = from;
-        to = findChar(text, '>', to);
-        while (!text[to.getLineNo()]
-               .substring(0, to.getColumnNo() + 1).endsWith("-->")) {
-            to = findChar(text, '>', getNextCharPos(text, to));
+    private static Point skipHtmlComment(String[] text, Point fromPoint) {
+        Point toPoint = fromPoint;
+        toPoint = findChar(text, '>', toPoint);
+        while (!text[toPoint.getLineNo()]
+               .substring(0, toPoint.getColumnNo() + 1).endsWith("-->")) {
+            toPoint = findChar(text, '>', getNextCharPos(text, toPoint));
         }
-        return to;
+        return toPoint;
     }
 
     /**
@@ -258,22 +272,22 @@ class TagParser {
 
     /**
      * Represents current position in the text.
-     * @author o_sukholsky
      */
     private static final class Point {
-        /** line number. */
-        private final int line;
-        /** column number.*/
-        private final int column;
+
+        /** Line number. */
+        private final int lineNo;
+        /** Column number.*/
+        private final int columnNo;
 
         /**
          * Creates new {@code Point} instance.
          * @param lineNo line number
          * @param columnNo column number
          */
-        public Point(int lineNo, int columnNo) {
-            line = lineNo;
-            column = columnNo;
+        Point(int lineNo, int columnNo) {
+            this.lineNo = lineNo;
+            this.columnNo = columnNo;
         }
 
         /**
@@ -281,7 +295,7 @@ class TagParser {
          * @return line number of the position.
          */
         public int getLineNo() {
-            return line;
+            return lineNo;
         }
 
         /**
@@ -289,7 +303,9 @@ class TagParser {
          * @return column number of the position.
          */
         public int getColumnNo() {
-            return column;
+            return columnNo;
         }
+
     }
+
 }

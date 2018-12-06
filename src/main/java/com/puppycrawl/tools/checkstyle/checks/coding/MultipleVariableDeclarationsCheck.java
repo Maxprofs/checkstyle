@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * <p>
@@ -31,7 +32,7 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * </p>
  * <p>
  * Rationale: <a
- * href="http://www.oracle.com/technetwork/java/javase/documentation/codeconventions-141270.html">
+ * href="https://www.oracle.com/technetwork/java/javase/documentation/codeconventions-141270.html">
  * the SUN Code conventions chapter 6.1</a> recommends that
  * declarations should be one per line.
  * </p>
@@ -41,9 +42,9 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * <pre>
  * &lt;module name="MultipleVariableDeclarations"/&gt;
  * </pre>
- * @author o_sukhodolsky
  */
-public class MultipleVariableDeclarationsCheck extends Check {
+@StatelessCheck
+public class MultipleVariableDeclarationsCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -59,59 +60,55 @@ public class MultipleVariableDeclarationsCheck extends Check {
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.VARIABLE_DEF};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return getAcceptableTokens();
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getAcceptableTokens();
+        return new int[] {TokenTypes.VARIABLE_DEF};
     }
 
     @Override
     public void visitToken(DetailAST ast) {
         DetailAST nextNode = ast.getNextSibling();
 
-        if (nextNode == null) {
-            // no next statement - no check
-            return;
-        }
+        if (nextNode != null) {
+            final boolean isCommaSeparated = nextNode.getType() == TokenTypes.COMMA;
 
-        final boolean isCommaSeparated = nextNode.getType() == TokenTypes.COMMA;
+            if (isCommaSeparated
+                || nextNode.getType() == TokenTypes.SEMI) {
+                nextNode = nextNode.getNextSibling();
+            }
 
-        if (isCommaSeparated
-            || nextNode.getType() == TokenTypes.SEMI) {
-            nextNode = nextNode.getNextSibling();
-        }
-
-        if (nextNode != null
-                && nextNode.getType() == TokenTypes.VARIABLE_DEF) {
-            final DetailAST firstNode = CheckUtils.getFirstNode(ast);
-            if (isCommaSeparated) {
-                // Check if the multiple variable declarations are in a
-                // for loop initializer. If they are, then no warning
-                // should be displayed. Declaring multiple variables in
-                // a for loop initializer is a good way to minimize
-                // variable scope. Refer Feature Request Id - 2895985
-                // for more details
-                if (ast.getParent().getType() != TokenTypes.FOR_INIT) {
-                    log(firstNode, "multiple.variable.declarations.comma");
+            if (nextNode != null
+                    && nextNode.getType() == TokenTypes.VARIABLE_DEF) {
+                final DetailAST firstNode = CheckUtil.getFirstNode(ast);
+                if (isCommaSeparated) {
+                    // Check if the multiple variable declarations are in a
+                    // for loop initializer. If they are, then no warning
+                    // should be displayed. Declaring multiple variables in
+                    // a for loop initializer is a good way to minimize
+                    // variable scope. Refer Feature Request Id - 2895985
+                    // for more details
+                    if (ast.getParent().getType() != TokenTypes.FOR_INIT) {
+                        log(firstNode, MSG_MULTIPLE_COMMA);
+                    }
                 }
-                return;
-            }
+                else {
+                    final DetailAST lastNode = getLastNode(ast);
+                    final DetailAST firstNextNode = CheckUtil.getFirstNode(nextNode);
 
-            final DetailAST lastNode = getLastNode(ast);
-            final DetailAST firstNextNode = CheckUtils.getFirstNode(nextNode);
-
-            if (firstNextNode.getLineNo() == lastNode.getLineNo()) {
-                log(firstNode, "multiple.variable.declarations");
+                    if (firstNextNode.getLineNo() == lastNode.getLineNo()) {
+                        log(firstNode, MSG_MULTIPLE);
+                    }
+                }
             }
         }
-
     }
 
     /**
@@ -134,4 +131,5 @@ public class MultipleVariableDeclarationsCheck extends Check {
 
         return currentNode;
     }
+
 }

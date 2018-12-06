@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,12 +19,13 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
-import org.apache.commons.lang3.StringUtils;
+import java.util.Locale;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -68,6 +69,7 @@ import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
  *  {@link TokenTypes#SL_ASSIGN SL_ASSIGN},
  *  {@link TokenTypes#SR_ASSIGN SR_ASSIGN},
  *  {@link TokenTypes#STAR_ASSIGN STAR_ASSIGN}.
+ *  {@link TokenTypes#METHOD_REF METHOD_REF}.
  * </p>
  *  <p>
  * An example of how to configure the check is:
@@ -81,33 +83,44 @@ import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
  * <pre>
  * &lt;module name="OperatorWrap"&gt;
  *     &lt;property name="tokens"
- *               value="ASSIGN,DIV_ASSIGN,PLUS_ASSIGN,MINUS_ASSIGN,STAR_ASSIGN,MOD_ASSIGN,SR_ASSIGN,BSR_ASSIGN,SL_ASSIGN,BXOR_ASSIGN,BOR_ASSIGN,BAND_ASSIGN"/&gt;
+ *               value="ASSIGN,DIV_ASSIGN,PLUS_ASSIGN,MINUS_ASSIGN,STAR_ASSIGN,MOD_ASSIGN
+ *               ,SR_ASSIGN,BSR_ASSIGN,SL_ASSIGN,BXOR_ASSIGN,BOR_ASSIGN,BAND_ASSIGN"/&gt;
  *     &lt;property name="option" value="eol"/&gt;
-  * &lt;/module&gt;
+ * &lt;/module&gt;
  * </pre>
  *
- * @author Rick Giles
  */
+@StatelessCheck
 public class OperatorWrapCheck
-    extends AbstractOptionCheck<WrapOption> {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String LINE_NEW = "line.new";
+    public static final String MSG_LINE_NEW = "line.new";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String LINE_PREVIOUS = "line.previous";
+    public static final String MSG_LINE_PREVIOUS = "line.previous";
+
+    /** The policy to enforce. */
+    private WrapOption option = WrapOption.NL;
 
     /**
-     * Sets the operator wrap option to new line.
+     * Set the option to enforce.
+     * @param optionStr string to decode option from
+     * @throws IllegalArgumentException if unable to decode
      */
-    public OperatorWrapCheck() {
-        super(WrapOption.NL, WrapOption.class);
+    public void setOption(String optionStr) {
+        try {
+            option = WrapOption.valueOf(optionStr.trim().toUpperCase(Locale.ENGLISH));
+        }
+        catch (IllegalArgumentException iae) {
+            throw new IllegalArgumentException("unable to parse " + optionStr, iae);
+        }
     }
 
     @Override
@@ -177,38 +190,40 @@ public class OperatorWrapCheck
             TokenTypes.BXOR_ASSIGN,       // "^="
             TokenTypes.BOR_ASSIGN,        // "|="
             TokenTypes.BAND_ASSIGN,       // "&="
-
+            TokenTypes.METHOD_REF,        // "::"
         };
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
-        if (ast.getType() == TokenTypes.COLON) {
-            final DetailAST parent = ast.getParent();
-            if (parent.getType() == TokenTypes.LITERAL_DEFAULT
-                || parent.getType() == TokenTypes.LITERAL_CASE) {
-                //we do not want to check colon for cases and defaults
-                return;
+        final DetailAST parent = ast.getParent();
+        //we do not want to check colon for cases and defaults
+        if (ast.getType() != TokenTypes.COLON
+                || parent.getType() != TokenTypes.LITERAL_DEFAULT
+                    && parent.getType() != TokenTypes.LITERAL_CASE) {
+            final String text = ast.getText();
+            final int colNo = ast.getColumnNo();
+            final int lineNo = ast.getLineNo();
+            final String currentLine = getLine(lineNo - 1);
+
+            // Check if rest of line is whitespace, and not just the operator
+            // by itself. This last bit is to handle the operator on a line by
+            // itself.
+            if (option == WrapOption.NL
+                    && !text.equals(currentLine.trim())
+                    && CommonUtil.isBlank(currentLine.substring(colNo + text.length()))) {
+                log(ast, MSG_LINE_NEW, text);
+            }
+            else if (option == WrapOption.EOL
+                    && CommonUtil.hasWhitespaceBefore(colNo - 1, currentLine)) {
+                log(ast, MSG_LINE_PREVIOUS, text);
             }
         }
-        final WrapOption wOp = getAbstractOption();
-
-        final String text = ast.getText();
-        final int colNo = ast.getColumnNo();
-        final int lineNo = ast.getLineNo();
-        final String currentLine = getLine(lineNo - 1);
-
-        // Check if rest of line is whitespace, and not just the operator
-        // by itself. This last bit is to handle the operator on a line by
-        // itself.
-        if (wOp == WrapOption.NL
-                && !text.equals(currentLine.trim())
-                && StringUtils.isBlank(currentLine.substring(colNo + text.length()))) {
-            log(lineNo, colNo, LINE_NEW, text);
-        }
-        else if (wOp == WrapOption.EOL
-                  && Utils.whitespaceBefore(colNo - 1, currentLine)) {
-            log(lineNo, colNo, LINE_PREVIOUS, text);
-        }
     }
+
 }

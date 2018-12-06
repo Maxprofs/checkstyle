@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,8 +21,8 @@ package com.puppycrawl.tools.checkstyle.checks;
 
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -48,11 +48,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *    &lt;property name="format" value="(TODO)|(FIXME)"/&gt;
  * &lt;/module&gt;
  * </pre>
- * @author Oliver Burn
- * @author Baratali Izmailov
  */
+@StatelessCheck
 public class TodoCommentCheck
-        extends Check {
+        extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -61,14 +60,9 @@ public class TodoCommentCheck
     public static final String MSG_KEY = "todo.match";
 
     /**
-     * Format of 'todo' comment.
-     */
-    private String format = "TODO:";
-
-    /**
      * Regular expression pattern compiled from format.
      */
-    private Pattern regexp = Pattern.compile(format);
+    private Pattern format = Pattern.compile("TODO:");
 
     @Override
     public boolean isCommentNodesRequired() {
@@ -76,24 +70,26 @@ public class TodoCommentCheck
     }
 
     /**
-     * Setter for 'todo' comment format.
-     * @param format
-     *        format of 'todo' comment.
-     * @throws org.apache.commons.beanutils.ConversionException
-     *         if unable to create Pattern object.
+     * Setter for 'todo' comment pattern.
+     * @param pattern
+     *        pattern of 'todo' comment.
      */
-    public void setFormat(String format) {
-        this.format = format;
-        regexp = Utils.createPattern(format);
+    public void setFormat(Pattern pattern) {
+        format = pattern;
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.COMMENT_CONTENT };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.COMMENT_CONTENT };
     }
 
@@ -102,9 +98,10 @@ public class TodoCommentCheck
         final String[] lines = ast.getText().split("\n");
 
         for (int i = 0; i < lines.length; i++) {
-            if (regexp.matcher(lines[i]).find()) {
-                log(ast.getLineNo() + i, MSG_KEY, format);
+            if (format.matcher(lines[i]).find()) {
+                log(ast.getLineNo() + i, MSG_KEY, format.pattern());
             }
         }
     }
+
 }

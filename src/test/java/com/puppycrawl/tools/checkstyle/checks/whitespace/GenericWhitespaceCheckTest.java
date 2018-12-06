@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,125 +19,156 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.WS_FOLLOWED;
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.WS_ILLEGAL_FOLLOW;
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.WS_NOT_PRECEDED;
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.WS_PRECEDED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.MSG_WS_FOLLOWED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.MSG_WS_ILLEGAL_FOLLOW;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.MSG_WS_NOT_PRECEDED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck.MSG_WS_PRECEDED;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-import java.io.File;
-import java.util.Map;
-
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import antlr.CommonHiddenStreamToken;
-
-import com.google.common.collect.Maps;
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class GenericWhitespaceCheckTest
-    extends BaseCheckTestSupport {
-    private DefaultConfiguration checkConfig;
+    extends AbstractModuleTestSupport {
 
-    @Before
-    public void setUp() {
-        checkConfig = createCheckConfig(GenericWhitespaceCheck.class);
-        Map<Class<?>, Integer> x = Maps.newHashMap();
-        for (final Map.Entry<Class<?>, Integer> entry : x.entrySet()) {
-            entry.getValue();
-        }
-        //for (final Entry<Class<?>, Integer> entry : entrySet())
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/whitespace/genericwhitespace";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final GenericWhitespaceCheck checkObj = new GenericWhitespaceCheck();
+        final int[] expected = {
+            TokenTypes.GENERIC_START,
+            TokenTypes.GENERIC_END,
+        };
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
     }
 
     @Test
     public void testDefault() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
         final String[] expected = {
-            "16:13: " + getCheckMessage(WS_PRECEDED, "<"),
-            "16:15: " + getCheckMessage(WS_FOLLOWED, "<"),
-            "16:23: " + getCheckMessage(WS_PRECEDED, ">"),
-            "16:43: " + getCheckMessage(WS_PRECEDED, "<"),
-            "16:45: " + getCheckMessage(WS_FOLLOWED, "<"),
-            "16:53: " + getCheckMessage(WS_PRECEDED, ">"),
-            "17:13: " + getCheckMessage(WS_PRECEDED, "<"),
-            "17:15: " + getCheckMessage(WS_FOLLOWED, "<"),
-            "17:20: " + getCheckMessage(WS_PRECEDED, "<"),
-            "17:22: " + getCheckMessage(WS_FOLLOWED, "<"),
-            "17:30: " + getCheckMessage(WS_PRECEDED, ">"),
-            "17:32: " + getCheckMessage(WS_FOLLOWED, ">"),
-            "17:32: " + getCheckMessage(WS_PRECEDED, ">"),
-            "17:52: " + getCheckMessage(WS_PRECEDED, "<"),
-            "17:54: " + getCheckMessage(WS_FOLLOWED, "<"),
-            "17:59: " + getCheckMessage(WS_PRECEDED, "<"),
-            "17:61: " + getCheckMessage(WS_FOLLOWED, "<"),
-            "17:69: " + getCheckMessage(WS_PRECEDED, ">"),
-            "17:71: " + getCheckMessage(WS_FOLLOWED, ">"),
-            "17:71: " + getCheckMessage(WS_PRECEDED, ">"),
-            "30:17: " + getCheckMessage(WS_NOT_PRECEDED, "<"),
-            "30:21: " + getCheckMessage(WS_ILLEGAL_FOLLOW, ">"),
-            "42:21: " + getCheckMessage(WS_PRECEDED, "<"),
-            "42:30: " + getCheckMessage(WS_FOLLOWED, ">"),
-            "60:60: " + getCheckMessage(WS_NOT_PRECEDED, "&"),
-            "63:60: " + getCheckMessage(WS_FOLLOWED, ">"),
+            "16:13: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "16:15: " + getCheckMessage(MSG_WS_FOLLOWED, "<"),
+            "16:23: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "16:43: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "16:45: " + getCheckMessage(MSG_WS_FOLLOWED, "<"),
+            "16:53: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "17:13: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "17:15: " + getCheckMessage(MSG_WS_FOLLOWED, "<"),
+            "17:20: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "17:22: " + getCheckMessage(MSG_WS_FOLLOWED, "<"),
+            "17:30: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "17:32: " + getCheckMessage(MSG_WS_FOLLOWED, ">"),
+            "17:32: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "17:52: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "17:54: " + getCheckMessage(MSG_WS_FOLLOWED, "<"),
+            "17:59: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "17:61: " + getCheckMessage(MSG_WS_FOLLOWED, "<"),
+            "17:69: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "17:71: " + getCheckMessage(MSG_WS_FOLLOWED, ">"),
+            "17:71: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "30:17: " + getCheckMessage(MSG_WS_NOT_PRECEDED, "<"),
+            "30:21: " + getCheckMessage(MSG_WS_ILLEGAL_FOLLOW, ">"),
+            "42:21: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+            "42:30: " + getCheckMessage(MSG_WS_FOLLOWED, ">"),
+            "60:60: " + getCheckMessage(MSG_WS_NOT_PRECEDED, "&"),
+            "63:60: " + getCheckMessage(MSG_WS_FOLLOWED, ">"),
         };
-        verify(checkConfig,
-                getPath("whitespace/InputGenericWhitespaceCheck.java"),
-                expected);
+        verify(checkConfig, getPath("InputGenericWhitespaceDefault.java"), expected);
     }
 
     @Test
-    public void testGh47() throws Exception {
-        final String[] expected = {};
-        verify(checkConfig, getPath("whitespace/Gh47.java"), expected);
+    public void testAtTheStartOfTheLine() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
+        final String[] expected = {
+            "10:1: " + getCheckMessage(MSG_WS_PRECEDED, ">"),
+            "12:1: " + getCheckMessage(MSG_WS_PRECEDED, "<"),
+        };
+        verify(checkConfig, getPath("InputGenericWhitespaceAtStartOfTheLine.java"), expected);
+    }
+
+    @Test
+    public void testNestedGeneric() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
+        final String[] expected = {
+            "11:2: " + getCheckMessage(MSG_WS_NOT_PRECEDED, "&"),
+        };
+        verify(checkConfig, getPath("InputGenericWhitespaceNested.java"), expected);
+    }
+
+    @Test
+    public void testList() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputGenericWhitespaceList.java"), expected);
     }
 
     @Test
     public void testInnerClass() throws Exception {
-        final String[] expected = {
-
-        };
-        verify(checkConfig, getPath("whitespace/"
-                + "InputGenericWhitespaceInnerClassCheck.java"), expected);
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputGenericWhitespaceInnerClass.java"), expected);
     }
 
     @Test
     public void testMethodReferences() throws Exception {
-        final String[] expected = {};
-        verify(checkConfig, new File("src/test/resources-noncompilable/com/puppycrawl/tools/"
-                + "checkstyle/grammars/java8/"
-                + "InputMethodReferencesTest3.java").getCanonicalPath(), expected);
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputGenericWhitespaceMethodRef1.java"), expected);
     }
 
     @Test
     public void testMethodReferences2() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
         final String[] expected = {
-            "7:69: " + getCheckMessage(WS_FOLLOWED, ">"),
+            "10:70: " + getCheckMessage(MSG_WS_FOLLOWED, ">"),
         };
-        verify(checkConfig, new File("src/test/resources-noncompilable/com/puppycrawl/tools/"
-                + "checkstyle/whitespace/"
-                + "InputGenericWhitespaceMethodRef.java").getCanonicalPath(), expected);
+        verify(checkConfig, getPath("InputGenericWhitespaceMethodRef2.java"), expected);
+    }
+
+    @Test
+    public void testGenericEndsTheLine() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(GenericWhitespaceCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputGenericWhitespaceEndsTheLine.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        GenericWhitespaceCheck genericWhitespaceCheckObj = new GenericWhitespaceCheck();
-        int[] actual = genericWhitespaceCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final GenericWhitespaceCheck genericWhitespaceCheckObj = new GenericWhitespaceCheck();
+        final int[] actual = genericWhitespaceCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.GENERIC_START,
             TokenTypes.GENERIC_END,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testWrongTokenType() {
-        GenericWhitespaceCheck genericWhitespaceCheckObj = new GenericWhitespaceCheck();
-        DetailAST ast = new DetailAST();
+        final GenericWhitespaceCheck genericWhitespaceCheckObj = new GenericWhitespaceCheck();
+        final DetailAST ast = new DetailAST();
         ast.initialize(new CommonHiddenStreamToken(TokenTypes.INTERFACE_DEF, "interface"));
-        genericWhitespaceCheckObj.visitToken(ast);
+        try {
+            genericWhitespaceCheckObj.visitToken(ast);
+            fail("exception expected");
+        }
+        catch (IllegalArgumentException ex) {
+            assertEquals("Invalid exception message",
+                "Unknown type interface[0x-1]", ex.getMessage());
+        }
     }
+
 }

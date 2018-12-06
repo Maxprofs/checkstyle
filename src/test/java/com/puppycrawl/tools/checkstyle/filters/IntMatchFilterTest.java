@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,30 +25,29 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-/** Tests IntMatchFilter */
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.EqualsVerifierReport;
+
 public class IntMatchFilterTest {
+
     @Test
     public void testDecide() {
         final IntFilter filter = new IntMatchFilter(0);
-        assertFalse("less than", filter.accept(Integer.valueOf(-1)));
-        assertTrue("equal", filter.accept(Integer.valueOf(0)));
-        assertFalse("greater than", filter.accept(Integer.valueOf(1)));
+        assertFalse("less than", filter.accept(-1));
+        assertTrue("equal", filter.accept(0));
+        assertFalse("greater than", filter.accept(1));
     }
 
     @Test
-    public void testEquals() {
-        final IntFilter filter = new IntMatchFilter(0);
-        final IntFilter filter2 = new IntMatchFilter(0);
-        final IntFilter filter3 = new IntMatchFilter(1);
-        assertEquals("0", filter, filter2);
-        assertFalse("0 != 1", filter.equals(filter3));
-        assertFalse("0 != this", filter.equals(this));
-        assertFalse("0 != null", filter.equals(null));
+    public void testEqualsAndHashCode() {
+        final EqualsVerifierReport ev = EqualsVerifier.forClass(IntMatchFilter.class).report();
+        assertEquals("Error: " + ev.getMessage(), EqualsVerifierReport.SUCCESS, ev);
     }
 
     @Test
     public void testToString() {
         final IntFilter filter = new IntMatchFilter(6);
-        assertEquals("IntMatchFilter[6]", filter.toString());
+        assertEquals("Invalid toString result", "IntMatchFilter[6]", filter.toString());
     }
+
 }

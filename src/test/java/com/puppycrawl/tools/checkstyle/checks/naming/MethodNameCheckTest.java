@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,112 +21,143 @@ package com.puppycrawl.tools.checkstyle.checks.naming;
 
 import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
 import static com.puppycrawl.tools.checkstyle.checks.naming.MethodNameCheck.MSG_KEY;
+import static org.junit.Assert.assertArrayEquals;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class MethodNameCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/naming/methodname";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final MethodNameCheck checkObj = new MethodNameCheck();
+        final int[] expected = {TokenTypes.METHOD_DEF};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodNameCheck.class);
+            createModuleConfig(MethodNameCheck.class);
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
         final String[] expected = {
             "137:10: " + getCheckMessage(MSG_INVALID_PATTERN, "ALL_UPPERCASE_METHOD", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputMethodNameSimple.java"), expected);
     }
 
     @Test
     public void testMethodEqClass() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodNameCheck.class);
+            createModuleConfig(MethodNameCheck.class);
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
         final String[] expected = {
-            "12:16: " + getCheckMessage(MSG_KEY, "InputMethNameEqualClsName"),
-            "12:16: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
-            "17:17: " + getCheckMessage(MSG_INVALID_PATTERN, "PRIVATEInputMethNameEqualClsName", pattern),
+            "12:16: " + getCheckMessage(MSG_KEY, "InputMethodNameEqualClassName"),
+            "12:16: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
+            "17:17: " + getCheckMessage(MSG_INVALID_PATTERN, "PRIVATEInputMethodNameEqualClassName",
+                pattern),
             "23:20: " + getCheckMessage(MSG_KEY, "Inner"),
             "23:20: " + getCheckMessage(MSG_INVALID_PATTERN, "Inner", pattern),
-            "28:20: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
-            "37:24: " + getCheckMessage(MSG_KEY, "InputMethNameEqualClsName"),
-            "37:24: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
+            "28:20: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
+            "37:24: " + getCheckMessage(MSG_KEY, "InputMethodNameEqualClassName"),
+            "37:24: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
             "47:9: " + getCheckMessage(MSG_KEY, "SweetInterface"),
             "47:9: " + getCheckMessage(MSG_INVALID_PATTERN, "SweetInterface", pattern),
-            "53:17: " + getCheckMessage(MSG_KEY, "Outter"),
-            "53:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Outter", pattern),
+            "53:17: " + getCheckMessage(MSG_KEY, "Outer"),
+            "53:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Outer", pattern),
         };
 
-        verify(checkConfig, getPath("InputMethNameEqualClsName.java"), expected);
+        verify(checkConfig, getPath("InputMethodNameEqualClassName.java"), expected);
     }
 
     @Test
     public void testMethodEqClassAllow() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodNameCheck.class);
-        checkConfig.addAttribute("allowClassName", "true"); //allow method names and class names to equal
+            createModuleConfig(MethodNameCheck.class);
+
+        // allow method names and class names to equal
+        checkConfig.addAttribute("allowClassName", "true");
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
         final String[] expected = {
-            "12:16: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
-            "17:17: " + getCheckMessage(MSG_INVALID_PATTERN, "PRIVATEInputMethNameEqualClsName", pattern),
+            "12:16: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
+            "17:17: " + getCheckMessage(MSG_INVALID_PATTERN, "PRIVATEInputMethodNameEqualClassName",
+                pattern),
             "23:20: " + getCheckMessage(MSG_INVALID_PATTERN, "Inner", pattern),
-            "28:20: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
-            "37:24: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
+            "28:20: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
+            "37:24: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
             "47:9: " + getCheckMessage(MSG_INVALID_PATTERN, "SweetInterface", pattern),
-            "53:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Outter", pattern),
+            "53:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Outer", pattern),
         };
 
-        verify(checkConfig, getPath("InputMethNameEqualClsName.java"), expected);
+        verify(checkConfig, getPath("InputMethodNameEqualClassName.java"), expected);
     }
 
     @Test
     public void testAccessTuning() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodNameCheck.class);
-        checkConfig.addAttribute("allowClassName", "true"); //allow method names and class names to equal
-        checkConfig.addAttribute("applyToPrivate", "false"); //allow method names and class names to equal
+            createModuleConfig(MethodNameCheck.class);
+
+        // allow method names and class names to equal
+        checkConfig.addAttribute("allowClassName", "true");
+
+        // allow method names and class names to equal
+        checkConfig.addAttribute("applyToPrivate", "false");
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
         final String[] expected = {
-            "12:16: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
+            "12:16: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
             "23:20: " + getCheckMessage(MSG_INVALID_PATTERN, "Inner", pattern),
-            "28:20: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
-            "37:24: " + getCheckMessage(MSG_INVALID_PATTERN, "InputMethNameEqualClsName", pattern),
+            "28:20: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
+            "37:24: " + getCheckMessage(MSG_INVALID_PATTERN,
+                    "InputMethodNameEqualClassName", pattern),
             "47:9: " + getCheckMessage(MSG_INVALID_PATTERN, "SweetInterface", pattern),
-            "53:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Outter", pattern),
+            "53:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Outer", pattern),
         };
 
-        verify(checkConfig, getPath("InputMethNameEqualClsName.java"), expected);
+        verify(checkConfig, getPath("InputMethodNameEqualClassName.java"), expected);
     }
 
     @Test
     public void testForNpe() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodNameCheck.class);
+            createModuleConfig(MethodNameCheck.class);
 
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("naming/InputMethodNameExtra.java"), expected);
+        verify(checkConfig, getPath("InputMethodNameExtra.java"), expected);
     }
 
     @Test
-    public void testOverridenMethods() throws Exception {
+    public void testOverriddenMethods() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodNameCheck.class);
+            createModuleConfig(MethodNameCheck.class);
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
@@ -135,17 +166,17 @@ public class MethodNameCheckTest
             "20:20: " + getCheckMessage(MSG_INVALID_PATTERN, "PROTECTEDfoo", pattern),
         };
 
-        verify(checkConfig, getPath("naming/InputMethodNameOverridenMethods.java"), expected);
+        verify(checkConfig, getPath("InputMethodNameOverriddenMethods.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        MethodNameCheck methodNameCheckObj = new MethodNameCheck();
-        int[] actual = methodNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final MethodNameCheck methodNameCheckObj = new MethodNameCheck();
+        final int[] actual = methodNameCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.METHOD_DEF,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
+
 }

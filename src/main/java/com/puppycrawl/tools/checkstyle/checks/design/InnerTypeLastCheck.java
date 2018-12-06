@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,11 @@
 
 package com.puppycrawl.tools.checkstyle.checks.design;
 
-import com.puppycrawl.tools.checkstyle.ScopeUtils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
 
 /**
  * <p>
@@ -30,9 +31,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * class after all method and field declarations.
  * </p>
  *
- * @author <a href="mailto:ryly@mail.ru">Ruslan Dyachenko</a>
  */
-public class InnerTypeLastCheck extends Check {
+@FileStatefulCheck
+public class InnerTypeLastCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -45,11 +46,16 @@ public class InnerTypeLastCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF};
     }
 
@@ -62,11 +68,10 @@ public class InnerTypeLastCheck extends Check {
         else {
             DetailAST nextSibling = ast.getNextSibling();
             while (nextSibling != null) {
-                if (!ScopeUtils.inCodeBlock(ast)
+                if (!ScopeUtil.isInCodeBlock(ast)
                     && (nextSibling.getType() == TokenTypes.VARIABLE_DEF
                         || nextSibling.getType() == TokenTypes.METHOD_DEF)) {
-                    log(nextSibling.getLineNo(), nextSibling.getColumnNo(),
-                        MSG_KEY);
+                    log(nextSibling, MSG_KEY);
                 }
                 nextSibling = nextSibling.getNextSibling();
             }
@@ -80,4 +85,5 @@ public class InnerTypeLastCheck extends Check {
             rootClass = true;
         }
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,34 +19,42 @@
 
 package com.puppycrawl.tools.checkstyle;
 
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
  * Resolves external properties from an
  * underlying {@code Properties} object.
  *
- * @author lkuehne
  */
 public final class PropertiesExpander
     implements PropertyResolver {
-    /** the underlying Properties object. */
-    private final Properties properties = new Properties();
+
+    /** The underlying values. */
+    private final Map<String, String> values;
 
     /**
      * Creates a new PropertiesExpander.
      * @param properties the underlying properties to use for
-     * property resolution.
+     *     property resolution.
      * @throws IllegalArgumentException indicates null was passed
      */
     public PropertiesExpander(Properties properties) {
         if (properties == null) {
             throw new IllegalArgumentException("cannot pass null");
         }
-        this.properties.putAll(properties);
+        values = new HashMap<>(properties.size());
+        for (Enumeration<?> e = properties.propertyNames(); e.hasMoreElements();) {
+            final String name = (String) e.nextElement();
+            values.put(name, properties.getProperty(name));
+        }
     }
 
     @Override
-    public String resolve(String propertyName) {
-        return properties.getProperty(propertyName);
+    public String resolve(String name) {
+        return values.get(name);
     }
+
 }

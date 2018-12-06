@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,13 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import java.util.Locale;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -59,50 +62,42 @@ import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
  *     &lt;property name="allowLineBreaks" value="true"/&gt;
  * &lt;/module&gt;
  * </pre>
- * @author Rick Giles
  */
 
+@StatelessCheck
 public class MethodParamPadCheck
-    extends AbstractOptionCheck<PadOption> {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String LINE_PREVIOUS = "line.previous";
+    public static final String MSG_LINE_PREVIOUS = "line.previous";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WS_PRECEDED = "ws.preceded";
+    public static final String MSG_WS_PRECEDED = "ws.preceded";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WS_NOT_PRECEDED = "ws.notPreceded";
+    public static final String MSG_WS_NOT_PRECEDED = "ws.notPreceded";
 
-    /** Whether whitespace is allowed if the method identifier is at a
-     * linebreak */
+    /**
+     * Whether whitespace is allowed if the method identifier is at a
+     * linebreak.
+     */
     private boolean allowLineBreaks;
 
-    /**
-     * Sets the pad option to nospace.
-     */
-    public MethodParamPadCheck() {
-        super(PadOption.NOSPACE, PadOption.class);
-    }
+    /** The policy to enforce. */
+    private PadOption option = PadOption.NOSPACE;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.CTOR_DEF,
-            TokenTypes.LITERAL_NEW,
-            TokenTypes.METHOD_CALL,
-            TokenTypes.METHOD_DEF,
-            TokenTypes.SUPER_CTOR_CALL,
-        };
+        return getAcceptableTokens();
     }
 
     @Override
@@ -113,7 +108,13 @@ public class MethodParamPadCheck
             TokenTypes.METHOD_CALL,
             TokenTypes.METHOD_DEF,
             TokenTypes.SUPER_CTOR_CALL,
+            TokenTypes.ENUM_CONSTANT_DEF,
         };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
@@ -125,36 +126,50 @@ public class MethodParamPadCheck
         else {
             parenAST = ast.findFirstToken(TokenTypes.LPAREN);
             // array construction => parenAST == null
-            if (parenAST == null) {
-                return;
-            }
         }
 
-        final String line = getLines()[parenAST.getLineNo() - 1];
-        if (Utils.whitespaceBefore(parenAST.getColumnNo(), line)) {
-            if (!allowLineBreaks) {
-                log(parenAST, LINE_PREVIOUS, parenAST.getText());
+        if (parenAST != null) {
+            final String line = getLines()[parenAST.getLineNo() - 1];
+            if (CommonUtil.hasWhitespaceBefore(parenAST.getColumnNo(), line)) {
+                if (!allowLineBreaks) {
+                    log(parenAST, MSG_LINE_PREVIOUS, parenAST.getText());
+                }
             }
-        }
-        else {
-            final int before = parenAST.getColumnNo() - 1;
-            if (getAbstractOption() == PadOption.NOSPACE
-                && Character.isWhitespace(line.charAt(before))) {
-                log(parenAST , WS_PRECEDED, parenAST.getText());
-            }
-            else if (getAbstractOption() == PadOption.SPACE
-                     && !Character.isWhitespace(line.charAt(before))) {
-                log(parenAST, WS_NOT_PRECEDED, parenAST.getText());
+            else {
+                final int before = parenAST.getColumnNo() - 1;
+                if (option == PadOption.NOSPACE
+                    && Character.isWhitespace(line.charAt(before))) {
+                    log(parenAST, MSG_WS_PRECEDED, parenAST.getText());
+                }
+                else if (option == PadOption.SPACE
+                         && !Character.isWhitespace(line.charAt(before))) {
+                    log(parenAST, MSG_WS_NOT_PRECEDED, parenAST.getText());
+                }
             }
         }
     }
 
     /**
-     * Control whether whitespace is flagged at linebreaks.
+     * Control whether whitespace is flagged at line breaks.
      * @param allowLineBreaks whether whitespace should be
-     * flagged at linebreaks.
+     *     flagged at line breaks.
      */
     public void setAllowLineBreaks(boolean allowLineBreaks) {
         this.allowLineBreaks = allowLineBreaks;
     }
+
+    /**
+     * Set the option to enforce.
+     * @param optionStr string to decode option from
+     * @throws IllegalArgumentException if unable to decode
+     */
+    public void setOption(String optionStr) {
+        try {
+            option = PadOption.valueOf(optionStr.trim().toUpperCase(Locale.ENGLISH));
+        }
+        catch (IllegalArgumentException iae) {
+            throw new IllegalArgumentException("unable to parse " + optionStr, iae);
+        }
+    }
+
 }

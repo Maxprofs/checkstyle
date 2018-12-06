@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,9 @@ package com.puppycrawl.tools.checkstyle.checks.header;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.List;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.FileText;
 
 /**
  * Checks the header of the source against a fixed header file.
@@ -29,8 +31,8 @@ import java.util.List;
  * the default value of header is set to null
  * and the check does not rise any violations.
  *
- * @author Lars Kühne
  */
+@StatelessCheck
 public class HeaderCheck extends AbstractHeaderCheck {
 
     /**
@@ -45,13 +47,14 @@ public class HeaderCheck extends AbstractHeaderCheck {
      */
     public static final String MSG_MISMATCH = "header.mismatch";
 
-    /** empty array to avoid instantiations. */
+    /** Empty array to avoid instantiations. */
     private static final int[] EMPTY_INT_ARRAY = new int[0];
 
-    /** the header lines to ignore in the check, sorted. */
+    /** The header lines to ignore in the check, sorted. */
     private int[] ignoreLines = EMPTY_INT_ARRAY;
 
     /**
+     * Returns true if lineNo is header lines or false.
      * @param lineNo a line number
      * @return if {@code lineNo} is one of the ignored header lines.
      */
@@ -65,7 +68,7 @@ public class HeaderCheck extends AbstractHeaderCheck {
      * @param line the line contents
      * @return true if and only if the line matches the required header line
      */
-    protected boolean isMatch(int lineNumber, String line) {
+    private boolean isMatch(int lineNumber, String line) {
         // skip lines we are meant to ignore
         return isIgnoreLine(lineNumber + 1)
             || getHeaderLines().get(lineNumber).equals(line);
@@ -78,26 +81,32 @@ public class HeaderCheck extends AbstractHeaderCheck {
     public void setIgnoreLines(int... list) {
         if (list.length == 0) {
             ignoreLines = EMPTY_INT_ARRAY;
-            return;
         }
-
-        ignoreLines = new int[list.length];
-        System.arraycopy(list, 0, ignoreLines, 0, list.length);
-        Arrays.sort(ignoreLines);
+        else {
+            ignoreLines = new int[list.length];
+            System.arraycopy(list, 0, ignoreLines, 0, list.length);
+            Arrays.sort(ignoreLines);
+        }
     }
 
     @Override
-    protected void processFiltered(File file, List<String> lines) {
-        if (getHeaderLines().size() > lines.size()) {
+    protected void processFiltered(File file, FileText fileText) {
+        if (getHeaderLines().size() > fileText.size()) {
             log(1, MSG_MISSING);
         }
         else {
             for (int i = 0; i < getHeaderLines().size(); i++) {
-                if (!isMatch(i, lines.get(i))) {
+                if (!isMatch(i, fileText.get(i))) {
                     log(i + 1, MSG_MISMATCH, getHeaderLines().get(i));
-                    break; // stop checking
+                    break;
                 }
             }
         }
     }
+
+    @Override
+    protected void postProcessHeaderLines() {
+        // no code
+    }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for case statements.
  *
- * @author jrichard
  */
 public class CaseHandler extends AbstractExpressionHandler {
+
     /**
      * The child elements of a case expression.
      */
@@ -50,8 +50,8 @@ public class CaseHandler extends AbstractExpressionHandler {
     }
 
     @Override
-    protected IndentLevel getLevelImpl() {
-        return new IndentLevel(getParent().getLevel(),
+    protected IndentLevel getIndentImpl() {
+        return new IndentLevel(getParent().getIndent(),
                                getIndentCheck().getCaseIndent());
     }
 
@@ -59,16 +59,17 @@ public class CaseHandler extends AbstractExpressionHandler {
      * Check the indentation of the case statement.
      */
     private void checkCase() {
-        checkChildren(getMainAst(), CASE_CHILDREN, getLevel(), true, false);
+        checkChildren(getMainAst(), CASE_CHILDREN, getIndent(), true, false);
     }
 
     @Override
-    public IndentLevel suggestedChildLevel(AbstractExpressionHandler child) {
-        return getLevel();
+    public IndentLevel getSuggestedChildIndent(AbstractExpressionHandler child) {
+        return getIndent();
     }
 
     @Override
     public void checkIndentation() {
         checkCase();
     }
+
 }

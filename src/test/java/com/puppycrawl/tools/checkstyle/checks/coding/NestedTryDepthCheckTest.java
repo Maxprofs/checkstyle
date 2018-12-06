@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,14 +24,20 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.NestedTryDepthCheck.
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 
-public class NestedTryDepthCheckTest extends BaseCheckTestSupport {
+public class NestedTryDepthCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/nestedtrydepth";
+    }
+
     @Test
     public void testDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(NestedTryDepthCheck.class);
+            createModuleConfig(NestedTryDepthCheck.class);
 
         final String[] expected = {
             "22:17: " + getCheckMessage(MSG_KEY, 2, 1),
@@ -39,27 +45,28 @@ public class NestedTryDepthCheckTest extends BaseCheckTestSupport {
             "34:21: " + getCheckMessage(MSG_KEY, 3, 1),
         };
 
-        verify(checkConfig, getPath("coding/InputNestedTryDepth.java"), expected);
+        verify(checkConfig, getPath("InputNestedTryDepth.java"), expected);
     }
 
     @Test
-    public void testCustonestingDepth() throws Exception {
+    public void testCustomizedDepth() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(NestedTryDepthCheck.class);
+            createModuleConfig(NestedTryDepthCheck.class);
         checkConfig.addAttribute("max", "2");
 
         final String[] expected = {
             "34:21: " + getCheckMessage(MSG_KEY, 3, 2),
         };
 
-        verify(checkConfig, getPath("coding/InputNestedTryDepth.java"), expected);
+        verify(checkConfig, getPath("InputNestedTryDepth.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        NestedTryDepthCheck check = new NestedTryDepthCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final NestedTryDepthCheck check = new NestedTryDepthCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,15 +24,21 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.SimplifyBooleanExpre
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 
 public class SimplifyBooleanExpressionCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/simplifybooleanexpression";
+    }
+
     @Test
     public void testIt() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(SimplifyBooleanExpressionCheck.class);
+            createModuleConfig(SimplifyBooleanExpressionCheck.class);
         final String[] expected = {
             "20:18: " + getCheckMessage(MSG_KEY),
             "41:36: " + getCheckMessage(MSG_KEY),
@@ -40,14 +46,15 @@ public class SimplifyBooleanExpressionCheckTest
             "43:16: " + getCheckMessage(MSG_KEY),
             "43:32: " + getCheckMessage(MSG_KEY),
         };
-        verify(checkConfig, getPath("InputSimplifyBoolean.java"), expected);
+        verify(checkConfig, getPath("InputSimplifyBooleanExpression.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        SimplifyBooleanExpressionCheck check = new SimplifyBooleanExpressionCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final SimplifyBooleanExpressionCheck check = new SimplifyBooleanExpressionCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

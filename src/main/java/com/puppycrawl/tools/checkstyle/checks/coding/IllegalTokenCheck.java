@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,13 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
 
 /**
  * <p>
@@ -48,11 +51,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *     &lt;property name="tokens" value="LITERAL_NATIVE"/&gt;
  * &lt;/module&gt;
  * </pre>
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
- * @author Rick Giles
  */
+@StatelessCheck
 public class IllegalTokenCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -69,19 +71,23 @@ public class IllegalTokenCheck
 
     @Override
     public int[] getAcceptableTokens() {
-        return Utils.getAllTokenIds();
+        return TokenUtil.getAllTokenIds();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return new int[0];
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
     }
 
     @Override
     public void visitToken(DetailAST ast) {
         log(
-            ast.getLineNo(),
-            ast.getColumnNo(),
+            ast,
             MSG_KEY,
             convertToString(ast)
         );
@@ -94,11 +100,17 @@ public class IllegalTokenCheck
      */
     private static String convertToString(DetailAST ast) {
         final String tokenText;
-        if (ast.getType() == TokenTypes.LABELED_STAT) {
-            tokenText = ast.getFirstChild().getText() + ast.getText();
-        }
-        else {
-            tokenText = ast.getText();
+        switch (ast.getType()) {
+            case TokenTypes.LABELED_STAT:
+                tokenText = ast.getFirstChild().getText() + ast.getText();
+                break;
+            // multiline tokens need to become singlelined
+            case TokenTypes.COMMENT_CONTENT:
+                tokenText = JavadocUtil.escapeAllControlChars(ast.getText());
+                break;
+            default:
+                tokenText = ast.getText();
+                break;
         }
         return tokenText;
     }

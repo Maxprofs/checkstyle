@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,42 +19,36 @@
 
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.AbstractFormatCheck;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Abstract class for checking that names conform to a specified format.
  *
- * @author Rick Giles
  */
+@StatelessCheck
 public abstract class AbstractNameCheck
-    extends AbstractFormatCheck {
+    extends AbstractCheck {
+
     /**
      * Message key for invalid pattern error.
      */
     public static final String MSG_INVALID_PATTERN = "name.invalidPattern";
+
+    /** The regexp to match against. */
+    private Pattern format;
 
     /**
      * Creates a new {@code AbstractNameCheck} instance.
      * @param format format to check with
      */
     protected AbstractNameCheck(String format) {
-        super(format);
-    }
-
-    @Override
-    public void visitToken(DetailAST ast) {
-        if (mustCheckName(ast)) {
-            final DetailAST nameAST = ast.findFirstToken(TokenTypes.IDENT);
-            if (!getRegexp().matcher(nameAST.getText()).find()) {
-                log(nameAST.getLineNo(),
-                    nameAST.getColumnNo(),
-                    MSG_INVALID_PATTERN,
-                    nameAST.getText(),
-                    getFormat());
-            }
-        }
+        this.format = CommonUtil.createPattern(format);
     }
 
     /**
@@ -62,7 +56,29 @@ public abstract class AbstractNameCheck
      * the format regexp.
      * @param ast the AST to check.
      * @return true if the IDENT subnode of ast should be checked against
-     * the format regexp.
+     *     the format regexp.
      */
     protected abstract boolean mustCheckName(DetailAST ast);
+
+    /**
+     * Set the format for the specified regular expression.
+     * @param pattern the new pattern
+     */
+    public final void setFormat(Pattern pattern) {
+        format = pattern;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (mustCheckName(ast)) {
+            final DetailAST nameAST = ast.findFirstToken(TokenTypes.IDENT);
+            if (!format.matcher(nameAST.getText()).find()) {
+                log(nameAST,
+                    MSG_INVALID_PATTERN,
+                    nameAST.getText(),
+                    format.pattern());
+            }
+        }
+    }
+
 }

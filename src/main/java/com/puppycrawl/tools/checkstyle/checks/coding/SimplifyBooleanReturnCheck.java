@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,8 +20,8 @@
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import antlr.collections.AST;
-
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -36,30 +36,30 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <pre>
  * &lt;module name="SimplifyBooleanReturn"/&gt;
  * </pre>
- * @author Lars Kühne
  */
+@StatelessCheck
 public class SimplifyBooleanReturnCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String MSG_KEY = "simplify.boolreturn";
+    public static final String MSG_KEY = "simplify.boolReturn";
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.LITERAL_IF};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return getAcceptableTokens();
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getAcceptableTokens();
+        return new int[] {TokenTypes.LITERAL_IF};
     }
 
     @Override
@@ -74,26 +74,25 @@ public class SimplifyBooleanReturnCheck
         // don't bother if this is not if then else
         final AST elseLiteral =
             ast.findFirstToken(TokenTypes.LITERAL_ELSE);
-        if (elseLiteral == null) {
-            return;
-        }
-        final AST elseStatement = elseLiteral.getFirstChild();
+        if (elseLiteral != null) {
+            final AST elseStatement = elseLiteral.getFirstChild();
 
-        // skip '(' and ')'
-        final AST condition = ast.getFirstChild().getNextSibling();
-        final AST thenStatement = condition.getNextSibling().getNextSibling();
+            // skip '(' and ')'
+            final AST condition = ast.getFirstChild().getNextSibling();
+            final AST thenStatement = condition.getNextSibling().getNextSibling();
 
-        if (returnsOnlyBooleanLiteral(thenStatement)
-            && returnsOnlyBooleanLiteral(elseStatement)) {
-            log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY);
+            if (canReturnOnlyBooleanLiteral(thenStatement)
+                && canReturnOnlyBooleanLiteral(elseStatement)) {
+                log(ast, MSG_KEY);
+            }
         }
     }
 
     /**
-     * Returns if an AST is a return statment with a boolean literal
+     * Returns if an AST is a return statement with a boolean literal
      * or a compound statement that contains only such a return statement.
      *
-     * Returns {@code true} iff ast represents
+     * <p>Returns {@code true} iff ast represents
      * <br/>
      * <pre>
      * return true/false;
@@ -106,43 +105,42 @@ public class SimplifyBooleanReturnCheck
      * }
      * </pre>
      *
-     * @param ast the sytax tree to check
-     * @return if ast is a return statment with a boolean literal.
+     * @param ast the syntax tree to check
+     * @return if ast is a return statement with a boolean literal.
      */
-    private static boolean returnsOnlyBooleanLiteral(AST ast) {
-        if (isBooleanLiteralReturnStatement(ast)) {
-            return true;
+    private static boolean canReturnOnlyBooleanLiteral(AST ast) {
+        boolean result = true;
+        if (!isBooleanLiteralReturnStatement(ast)) {
+            final AST firstStatement = ast.getFirstChild();
+            result = isBooleanLiteralReturnStatement(firstStatement);
         }
-
-        final AST firstStmnt = ast.getFirstChild();
-        return isBooleanLiteralReturnStatement(firstStmnt);
+        return result;
     }
 
     /**
-     * Returns if an AST is a return statment with a boolean literal.
+     * Returns if an AST is a return statement with a boolean literal.
      *
-     * Returns {@code true} iff ast represents
+     * <p>Returns {@code true} iff ast represents
      * <br/>
      * <pre>
      * return true/false;
      * </pre>
      *
-     * @param ast the sytax tree to check
-     * @return if ast is a return statment with a boolean literal.
+     * @param ast the syntax tree to check
+     * @return if ast is a return statement with a boolean literal.
      */
     private static boolean isBooleanLiteralReturnStatement(AST ast) {
-        if (ast == null || ast.getType() != TokenTypes.LITERAL_RETURN) {
-            return false;
+        boolean booleanReturnStatement = false;
+
+        if (ast != null && ast.getType() == TokenTypes.LITERAL_RETURN) {
+            final AST expr = ast.getFirstChild();
+
+            if (expr.getType() != TokenTypes.SEMI) {
+                final AST value = expr.getFirstChild();
+                booleanReturnStatement = isBooleanLiteralType(value.getType());
+            }
         }
-
-        final AST expr = ast.getFirstChild();
-
-        if (expr.getType() == TokenTypes.SEMI) {
-            return false;
-        }
-
-        final AST value = expr.getFirstChild();
-        return isBooleanLiteralType(value.getType());
+        return booleanReturnStatement;
     }
 
     /**
@@ -151,8 +149,9 @@ public class SimplifyBooleanReturnCheck
      * @return true iff tokenType is LITERAL_TRUE or LITERAL_FALSE
      */
     private static boolean isBooleanLiteralType(final int tokenType) {
-        final boolean iastrue = tokenType == TokenTypes.LITERAL_TRUE;
+        final boolean isTrue = tokenType == TokenTypes.LITERAL_TRUE;
         final boolean isFalse = tokenType == TokenTypes.LITERAL_FALSE;
-        return iastrue || isFalse;
+        return isTrue || isFalse;
     }
+
 }

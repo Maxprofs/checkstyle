@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,10 +24,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * Handler for operator new.
- * @author o_sukhodolsky
- * @author Ilja Dubinin
  */
 public class NewHandler extends AbstractExpressionHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -46,25 +45,30 @@ public class NewHandler extends AbstractExpressionHandler {
     public void checkIndentation() {
         final DetailAST type = getMainAst().getFirstChild();
         if (type != null) {
-            checkExpressionSubtree(type, getLevel(), false, false);
+            checkExpressionSubtree(type, getIndent(), false, false);
         }
 
         final DetailAST lparen = getMainAst().findFirstToken(TokenTypes.LPAREN);
-        checkLParen(lparen);
+        checkLeftParen(lparen);
     }
 
     @Override
-    protected IndentLevel getLevelImpl() {
+    protected IndentLevel getIndentImpl() {
+        final IndentLevel result;
         // if our expression isn't first on the line, just use the start
         // of the line
-        if (getLineStart(getMainAst()) != getMainAst().getColumnNo()) {
-            return new IndentLevel(getLineStart(getMainAst()));
+        if (getLineStart(getMainAst()) == getMainAst().getColumnNo()) {
+            result = super.getIndentImpl();
         }
-        return super.getLevelImpl();
+        else {
+            result = new IndentLevel(getLineStart(getMainAst()));
+        }
+        return result;
     }
 
     @Override
     protected boolean shouldIncreaseIndent() {
         return false;
     }
+
 }

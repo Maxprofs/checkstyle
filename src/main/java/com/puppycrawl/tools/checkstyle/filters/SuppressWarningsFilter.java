@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -27,14 +27,19 @@ import com.puppycrawl.tools.checkstyle.checks.SuppressWarningsHolder;
 /**
  * A filter that suppresses warnings using the {@link SuppressWarnings}
  * annotation.
- * @author Trevor Robinson
  */
 public class SuppressWarningsFilter
     extends AutomaticBean
     implements Filter {
+
+    @Override
+    protected void finishLocalSetup() {
+        // No code by default
+    }
+
     @Override
     public boolean accept(AuditEvent event) {
-        return !SuppressWarningsHolder.isSuppressed(event.getSourceName(),
-            event.getLine(), event.getColumn());
+        return !SuppressWarningsHolder.isSuppressed(event);
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -28,13 +28,15 @@ package com.puppycrawl.tools.checkstyle.api;
  * to parent object or created by parent object.
  * The general idea of Context/Contextualizable was taken from <a target="_top"
  * href="http://avalon.apache.org/closed.html">Jakarta's Avalon framework</a>.
- * @author lkuehne
  */
+@FunctionalInterface
 public interface Contextualizable {
+
     /**
      * Sets the context for this Component.
      * @param context the context.
      * @throws CheckstyleException if there is a contextualization error.
      */
     void contextualize(Context context) throws CheckstyleException;
+
 }

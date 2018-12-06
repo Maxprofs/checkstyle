@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,16 +23,23 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.IllegalTokenCheck.MS
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
 
 public class IllegalTokenCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/illegaltoken";
+    }
+
     @Test
     public void testCheckWithDefaultSettings()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenCheck.class);
+            createModuleConfig(IllegalTokenCheck.class);
         final String[] expected = {
             "29:14: " + getCheckMessage(MSG_KEY, "label:"),
             "31:25: " + getCheckMessage(MSG_KEY, "anotherLabel:"),
@@ -42,9 +49,9 @@ public class IllegalTokenCheckTest
 
     @Test
     public void testPreviouslyIllegalTokens()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenCheck.class);
+            createModuleConfig(IllegalTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_SWITCH,POST_INC,POST_DEC");
         final String[] expected = {
             "11:9: " + getCheckMessage(MSG_KEY, "switch"),
@@ -57,10 +64,73 @@ public class IllegalTokenCheckTest
     @Test
     public void testNative() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalTokenCheck.class);
+            createModuleConfig(IllegalTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_NATIVE");
         final String[] expected = {
             "20:12: " + getCheckMessage(MSG_KEY, "native"),
+        };
+        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+    }
+
+    @Test
+    public void testCommentContentToken()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalTokenCheck.class);
+        checkConfig.addAttribute("tokens", "COMMENT_CONTENT");
+
+        final String[] expected = {
+            "3:3: " + getCheckMessage(MSG_KEY,
+                        JavadocUtil.escapeAllControlChars(
+                            "*" + System.lineSeparator()
+                            + " * Test for illegal tokens"
+                            + System.lineSeparator() + " ")),
+            "31:29: " + getCheckMessage(MSG_KEY,
+                        JavadocUtil.escapeAllControlChars(
+                            " some comment href" + System.lineSeparator())),
+            "35:28: " + getCheckMessage(MSG_KEY,
+                        JavadocUtil.escapeAllControlChars(
+                            " some a href" + System.lineSeparator())),
+        };
+        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+    }
+
+    @Test
+    public void testBlockCommentBeginToken()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalTokenCheck.class);
+        checkConfig.addAttribute("tokens", "BLOCK_COMMENT_BEGIN");
+
+        final String[] expected = {
+            "3:1: " + getCheckMessage(MSG_KEY, "/*"),
+        };
+        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+    }
+
+    @Test
+    public void testBlockCommentEndToken()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalTokenCheck.class);
+        checkConfig.addAttribute("tokens", "BLOCK_COMMENT_END");
+
+        final String[] expected = {
+            "5:2: " + getCheckMessage(MSG_KEY, "*/"),
+        };
+        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+    }
+
+    @Test
+    public void testSingleLineCommentToken()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalTokenCheck.class);
+        checkConfig.addAttribute("tokens", "SINGLE_LINE_COMMENT");
+
+        final String[] expected = {
+            "31:27: " + getCheckMessage(MSG_KEY, "//"),
+            "35:26: " + getCheckMessage(MSG_KEY, "//"),
         };
         verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
     }

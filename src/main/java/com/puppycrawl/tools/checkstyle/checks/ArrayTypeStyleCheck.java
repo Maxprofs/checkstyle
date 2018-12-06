@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,8 @@
 
 package com.puppycrawl.tools.checkstyle.checks;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -28,44 +29,51 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * Some like Java-style: {@code public static void main(String[] args)}
  * and some like C-style: public static void main(String args[])
  *
- * By default the Check enforces Java style.
- * @author lkuehne
+ * <p>By default the Check enforces Java style.
  */
-public class ArrayTypeStyleCheck extends Check {
-    /** controls whether to use Java or C style */
+@StatelessCheck
+public class ArrayTypeStyleCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties"
+     * file.
+     */
+    public static final String MSG_KEY = "array.type.style";
+
+    /** Controls whether to use Java or C style. */
     private boolean javaStyle = true;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.ARRAY_DECLARATOR};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.ARRAY_DECLARATOR};
     }
 
     @Override
     public void visitToken(DetailAST ast) {
         final DetailAST typeAST = ast.getParent();
-        if (typeAST.getType() != TokenTypes.TYPE) {
-            return;
-        }
-        final DetailAST declAST = typeAST.getParent();
-        if (declAST.getType() == TokenTypes.METHOD_DEF) {
-            // Do not check method's return type.
-            // We have no alternatives here.
-            return;
-        }
+        if (typeAST.getType() == TokenTypes.TYPE
+                // Do not check method's return type.
+                // We have no alternatives here.
+                && typeAST.getParent().getType() != TokenTypes.METHOD_DEF) {
+            final DetailAST variableAST = typeAST.getNextSibling();
+            if (variableAST != null) {
+                final boolean isJavaStyle =
+                    variableAST.getLineNo() > ast.getLineNo()
+                    || variableAST.getColumnNo() - ast.getColumnNo() > -1;
 
-        final DetailAST variableAST = typeAST.getNextSibling();
-        if (variableAST != null) {
-            final boolean isJavaStyle =
-                variableAST.getLineNo() > ast.getLineNo()
-                || variableAST.getColumnNo() > ast.getColumnNo();
-
-            if (isJavaStyle != javaStyle) {
-                log(ast.getLineNo(), ast.getColumnNo(), "array.type.style");
+                if (isJavaStyle != javaStyle) {
+                    log(ast, MSG_KEY);
+                }
             }
         }
     }
@@ -77,4 +85,5 @@ public class ArrayTypeStyleCheck extends Check {
     public void setJavaStyle(boolean javaStyle) {
         this.javaStyle = javaStyle;
     }
+
 }

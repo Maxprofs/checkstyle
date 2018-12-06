@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,21 +20,20 @@
 package com.puppycrawl.tools.checkstyle.api;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-
-import com.google.common.collect.Sets;
 
 /**
  * A filter set applies filters to AuditEvents.
  * If a filter in the set rejects an AuditEvent, then the
  * AuditEvent is rejected. Otherwise, the AuditEvent is accepted.
- * @author Rick Giles
  */
 public class FilterSet
     implements Filter {
-    /** filter set */
-    private final Set<Filter> filters = Sets.newHashSet();
+
+    /** Filter set. */
+    private final Set<Filter> filters = new HashSet<>();
 
     /**
      * Adds a Filter to the set.
@@ -66,14 +65,14 @@ public class FilterSet
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object other) {
+        if (this == other) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (other == null || getClass() != other.getClass()) {
             return false;
         }
-        final FilterSet filterSet = (FilterSet) o;
+        final FilterSet filterSet = (FilterSet) other;
         return Objects.equals(filters, filterSet.filters);
     }
 
@@ -84,16 +83,19 @@ public class FilterSet
 
     @Override
     public boolean accept(AuditEvent event) {
+        boolean result = true;
         for (Filter filter : filters) {
             if (!filter.accept(event)) {
-                return false;
+                result = false;
+                break;
             }
         }
-        return true;
+        return result;
     }
 
     /** Clears the FilterSet. */
     public void clear() {
         filters.clear();
     }
+
 }

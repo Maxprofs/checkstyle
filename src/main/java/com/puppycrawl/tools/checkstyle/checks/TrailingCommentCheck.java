@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,30 +19,31 @@
 
 package com.puppycrawl.tools.checkstyle.checks;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.ArrayUtils;
-
-import com.google.common.collect.Sets;
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TextBlock;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
- * The check to ensure that requires that comments be the only thing on a line.
- * For the case of // comments that means that the only thing that should
+ * The check to ensure that comments are the only thing on a line.
+ * For the case of {@code //} comments that means that the only thing that should
  * precede it is whitespace.
  * It doesn't check comments if they do not end line, i.e. it accept
  * the following:
- * {@code Thread.sleep( 10 &lt;some comment here&gt; );}
- * Format property is intended to deal with the "} // while" example.
  * </p>
- * <p>
- * Rationale: Steve McConnel in &quot;Code Complete&quot; suggests that endline
+ * <pre><code>Thread.sleep( 10 /*some comment here&#42;/ );</code></pre>
+ * <p>Format property is intended to deal with the <code>} // while</code> example.
+ * </p>
+ *
+ * <p>Rationale: Steve McConnell in &quot;Code Complete&quot; suggests that endline
  * comments are a bad practice. An end line comment would
  * be one that is on the same line as actual code. For example:
  * <pre>
@@ -89,17 +90,17 @@ import com.puppycrawl.tools.checkstyle.api.TextBlock;
  * the line changes are even more important in the age of
  * automated refactorings.
  *
- * <p>
- * To configure the check so it enforces only comment on a line:
+ * <p>To configure the check so it enforces only comment on a line:
  * <pre>
  * &lt;module name=&quot;TrailingComment&quot;&gt;
  *    &lt;property name=&quot;format&quot; value=&quot;^\\s*$&quot;/&gt;
  * &lt;/module&gt;
  * </pre>
  *
- * @author o_sukhodolsky
+ * @noinspection HtmlTagCanBeJavadocTag
  */
-public class TrailingCommentCheck extends AbstractFormatCheck {
+@StatelessCheck
+public class TrailingCommentCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -107,30 +108,41 @@ public class TrailingCommentCheck extends AbstractFormatCheck {
      */
     public static final String MSG_KEY = "trailing.comments";
 
-    /** default format for allowed blank line. */
-    private static final String DEFAULT_FORMAT = "^[\\s\\}\\);]*$";
-
-    /** pattern for legal trailing comment. */
+    /** Pattern for legal trailing comment. */
     private Pattern legalComment;
 
-    /**
-     * Creates new instance of the check.
-     */
-    public TrailingCommentCheck() {
-        super(DEFAULT_FORMAT);
-    }
+    /** The regexp to match against. */
+    private Pattern format = Pattern.compile("^[\\s});]*$");
 
     /**
      * Sets patter for legal trailing comments.
-     * @param format format to set.
+     * @param legalComment pattern to set.
      */
-    public void setLegalComment(final String format) {
-        legalComment = Utils.createPattern(format);
+    public void setLegalComment(final Pattern legalComment) {
+        this.legalComment = legalComment;
+    }
+
+    /**
+     * Set the format for the specified regular expression.
+     * @param pattern a pattern
+     */
+    public final void setFormat(Pattern pattern) {
+        format = pattern;
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return ArrayUtils.EMPTY_INT_ARRAY;
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
@@ -140,19 +152,18 @@ public class TrailingCommentCheck extends AbstractFormatCheck {
 
     @Override
     public void beginTree(DetailAST rootAST) {
-        final Pattern blankLinePattern = getRegexp();
         final Map<Integer, TextBlock> cppComments = getFileContents()
-                .getCppComments();
+                .getSingleLineComments();
         final Map<Integer, List<TextBlock>> cComments = getFileContents()
-                .getCComments();
-        final Set<Integer> lines = Sets.newHashSet();
+                .getBlockComments();
+        final Set<Integer> lines = new HashSet<>();
         lines.addAll(cppComments.keySet());
         lines.addAll(cComments.keySet());
 
         for (Integer lineNo : lines) {
             final String line = getLines()[lineNo - 1];
-            String lineBefore;
-            TextBlock comment;
+            final String lineBefore;
+            final TextBlock comment;
             if (cppComments.containsKey(lineNo)) {
                 comment = cppComments.get(lineNo);
                 lineBefore = line.substring(0, comment.getStartColNo());
@@ -161,18 +172,17 @@ public class TrailingCommentCheck extends AbstractFormatCheck {
                 final List<TextBlock> commentList = cComments.get(lineNo);
                 comment = commentList.get(commentList.size() - 1);
                 lineBefore = line.substring(0, comment.getStartColNo());
-                if (comment.getText().length == 1) {
-                    final String lineAfter =
-                        line.substring(comment.getEndColNo() + 1).trim();
-                    if (!lineAfter.isEmpty()) {
-                        // do not check comment which doesn't end line
-                        continue;
-                    }
+
+                // do not check comment which doesn't end line
+                if (comment.getText().length == 1
+                        && !CommonUtil.isBlank(line
+                            .substring(comment.getEndColNo() + 1))) {
+                    continue;
                 }
             }
-            if (!blankLinePattern.matcher(lineBefore).find()
+            if (!format.matcher(lineBefore).find()
                 && !isLegalComment(comment)) {
-                log(lineNo.intValue(), MSG_KEY);
+                log(lineNo, MSG_KEY);
             }
         }
     }
@@ -184,21 +194,24 @@ public class TrailingCommentCheck extends AbstractFormatCheck {
      * @return true if the comment if legal.
      */
     private boolean isLegalComment(final TextBlock comment) {
-        if (legalComment == null) {
-            return false;
-        }
+        final boolean legal;
+
         // multi-line comment can not be legal
-        if (comment.getStartLineNo() != comment.getEndLineNo()) {
-            return false;
+        if (legalComment == null || comment.getStartLineNo() != comment.getEndLineNo()) {
+            legal = false;
         }
-        String commentText = comment.getText()[0];
-        // remove chars which start comment
-        commentText = commentText.substring(2);
-        // if this is a C-style comment we need to remove its end
-        if (commentText.endsWith("*/")) {
-            commentText = commentText.substring(0, commentText.length() - 2);
+        else {
+            String commentText = comment.getText()[0];
+            // remove chars which start comment
+            commentText = commentText.substring(2);
+            // if this is a C-style comment we need to remove its end
+            if (commentText.endsWith("*/")) {
+                commentText = commentText.substring(0, commentText.length() - 2);
+            }
+            commentText = commentText.trim();
+            legal = legalComment.matcher(commentText).find();
         }
-        commentText = commentText.trim();
-        return legalComment.matcher(commentText).find();
+        return legal;
     }
+
 }

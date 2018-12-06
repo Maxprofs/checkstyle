@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,13 +22,14 @@ package com.puppycrawl.tools.checkstyle.checks.javadoc;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.TextBlock;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -61,40 +62,38 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * &lt;/module&gt;
  * </pre>
  *
- * @author Daniel Grenner
  */
+@StatelessCheck
 public class WriteTagCheck
-    extends Check {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String MISSING_TAG = "type.missingTag";
+    public static final String MSG_MISSING_TAG = "type.missingTag";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WRITE_TAG = "javadoc.writeTag";
+    public static final String MSG_WRITE_TAG = "javadoc.writeTag";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String TAG_FORMAT = "type.tagFormat";
+    public static final String MSG_TAG_FORMAT = "type.tagFormat";
 
-    /** compiled regexp to match tag **/
-    private Pattern tagRE;
-    /** compiled regexp to match tag content **/
-    private Pattern tagFormatRE;
+    /** Compiled regexp to match tag. **/
+    private Pattern tagRegExp;
+    /** Compiled regexp to match tag content. **/
+    private Pattern tagFormat;
 
-    /** regexp to match tag */
+    /** Regexp to match tag. */
     private String tag;
-    /** regexp to match tag content */
-    private String tagFormat;
-    /** the severity level of found tag reports */
-    private SeverityLevel tagSeverityLevel = SeverityLevel.INFO;
+    /** The severity level of found tag reports. */
+    private SeverityLevel tagSeverity = SeverityLevel.INFO;
 
     /**
      * Sets the tag to check.
@@ -102,27 +101,25 @@ public class WriteTagCheck
      */
     public void setTag(String tag) {
         this.tag = tag;
-        tagRE = Utils.createPattern(tag + "\\s*(.*$)");
+        tagRegExp = CommonUtil.createPattern(tag + "\\s*(.*$)");
     }
 
     /**
      * Set the tag format.
-     * @param format a {@code String} value
+     * @param pattern a {@code String} value
      */
-    public void setTagFormat(String format) {
-        tagFormat = format;
-        tagFormatRE = Utils.createPattern(format);
+    public void setTagFormat(Pattern pattern) {
+        tagFormat = pattern;
     }
 
     /**
-     * Sets the tag severity level.  The string should be one of the names
-     * defined in the {@code SeverityLevel} class.
+     * Sets the tag severity level.
      *
      * @param severity  The new severity level
      * @see SeverityLevel
      */
-    public final void setTagSeverity(String severity) {
-        tagSeverityLevel = SeverityLevel.getInstance(severity);
+    public final void setTagSeverity(SeverityLevel severity) {
+        tagSeverity = severity;
     }
 
     @Override
@@ -148,17 +145,21 @@ public class WriteTagCheck
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
         final FileContents contents = getFileContents();
         final int lineNo = ast.getLineNo();
         final TextBlock cmt =
             contents.getJavadocBefore(lineNo);
         if (cmt == null) {
-            log(lineNo, MISSING_TAG, tag);
+            log(lineNo, MSG_MISSING_TAG, tag);
         }
         else {
-            checkTag(lineNo, cmt.getText(), tag, tagRE, tagFormatRE,
-                tagFormat);
+            checkTag(lineNo, cmt.getText());
         }
     }
 
@@ -166,44 +167,29 @@ public class WriteTagCheck
      * Verifies that a type definition has a required tag.
      * @param lineNo the line number for the type definition.
      * @param comment the Javadoc comment for the type definition.
-     * @param tagName the required tag name.
-     * @param tagRegexp regexp for the full tag.
-     * @param formatRE regexp for the tag value.
-     * @param format pattern for the tag value.
      */
-    private void checkTag(
-            int lineNo,
-            String[] comment,
-            String tagName,
-            Pattern tagRegexp,
-            Pattern formatRE,
-            String format) {
-        if (tagRegexp == null) {
-            return;
-        }
-
-        int tagCount = 0;
-        for (int i = 0; i < comment.length; i++) {
-            final String s = comment[i];
-            final Matcher matcher = tagRegexp.matcher(s);
-            if (matcher.find()) {
-                tagCount += 1;
-                final int contentStart = matcher.start(1);
-                final String content = s.substring(contentStart);
-                if (formatRE != null && !formatRE.matcher(content).find()) {
-                    log(lineNo + i - comment.length, TAG_FORMAT, tagName,
-                        format);
+    private void checkTag(int lineNo, String... comment) {
+        if (tagRegExp != null) {
+            int tagCount = 0;
+            for (int i = 0; i < comment.length; i++) {
+                final String commentValue = comment[i];
+                final Matcher matcher = tagRegExp.matcher(commentValue);
+                if (matcher.find()) {
+                    tagCount += 1;
+                    final int contentStart = matcher.start(1);
+                    final String content = commentValue.substring(contentStart);
+                    if (tagFormat == null || tagFormat.matcher(content).find()) {
+                        logTag(lineNo + i - comment.length, tag, content);
+                    }
+                    else {
+                        log(lineNo + i - comment.length, MSG_TAG_FORMAT, tag, tagFormat.pattern());
+                    }
                 }
-                else {
-                    logTag(lineNo + i - comment.length, tagName, content);
-                }
-
+            }
+            if (tagCount == 0) {
+                log(lineNo, MSG_MISSING_TAG, tag);
             }
         }
-        if (tagCount == 0) {
-            log(lineNo, MISSING_TAG, tagName);
-        }
-
     }
 
     /**
@@ -215,12 +201,13 @@ public class WriteTagCheck
      *
      * @see java.text.MessageFormat
      */
-    protected final void logTag(int line, String tagName, String tagValue) {
+    private void logTag(int line, String tagName, String tagValue) {
         final String originalSeverity = getSeverity();
-        setSeverity(tagSeverityLevel.getName());
+        setSeverity(tagSeverity.getName());
 
-        log(line, WRITE_TAG, tagName, tagValue);
+        log(line, MSG_WRITE_TAG, tagName, tagValue);
 
         setSeverity(originalSeverity);
     }
+
 }

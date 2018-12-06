@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -26,14 +26,15 @@ import java.util.Map;
  * findings. Such modules have a Severity level which is used for the
  * {@link LocalizedMessage localized messages} that are created by the module.
  *
- * @author lkuehne
+ * @noinspection NoopMethodInAbstractClass
  */
 public abstract class AbstractViolationReporter
     extends AutomaticBean {
-    /** the severity level of any violations found */
+
+    /** The severity level of any violations found. */
     private SeverityLevel severityLevel = SeverityLevel.ERROR;
 
-    /** the identifier of the reporter */
+    /** The identifier of the reporter. */
     private String id;
 
     /**
@@ -41,6 +42,7 @@ public abstract class AbstractViolationReporter
      * @return the severity level
      * @see SeverityLevel
      * @see LocalizedMessage#getSeverityLevel
+     * @noinspection WeakerAccess
      */
     public final SeverityLevel getSeverityLevel() {
         return severityLevel;
@@ -61,6 +63,7 @@ public abstract class AbstractViolationReporter
      *  Get the severity level's name.
      *
      *  @return  the check's severity level name.
+     *  @noinspection WeakerAccess
      */
     public final String getSeverity() {
         return severityLevel.getName();
@@ -83,19 +86,16 @@ public abstract class AbstractViolationReporter
     }
 
     /**
-     * Helper method to log a LocalizedMessage.
-     *
-     * @param ast a node to get line id column numbers associated
-     *             with the message
-     * @param key key to locale message format
-     * @param args arguments to format
+     * Returns an unmodifiable map instance containing the custom messages
+     * for this configuration.
+     * @return unmodifiable map containing custom messages
      */
-    protected final void log(DetailAST ast, String key, Object... args) {
-        log(ast.getLineNo(), ast.getColumnNo(), key, args);
+    protected Map<String, String> getCustomMessages() {
+        return getConfiguration().getMessages();
     }
 
     /**
-     * Returns the message bundle name resourcebundle that contains the messages
+     * Returns the message bundle name resource bundle that contains the messages
      * used by this module.
      * <p>
      * The default implementation expects the resource files to be named
@@ -108,7 +108,7 @@ public abstract class AbstractViolationReporter
      * </p>
      *
      * @return name of a resource bundle that contains the messages
-     * used by this module.
+     *     used by this module.
      */
     protected String getMessageBundle() {
         final String className = getClass().getName();
@@ -116,28 +116,28 @@ public abstract class AbstractViolationReporter
     }
 
     /**
-     * Returns an unmodifiable map instance containing the custom messages
-     * for this configuration.
-     * @return unmodifiable map containing custom messages
-     */
-    protected Map<String, String> getCustomMessages() {
-        return getConfiguration().getMessages();
-    }
-
-    /**
-     * for unit tests, especially with a class with no package name.
+     * For unit tests, especially with a class with no package name.
      * @param className class name of the module.
      * @return name of a resource bundle that contains the messages
-     * used by the module.
+     *     used by the module.
      */
-    static String getMessageBundle(final String className) {
+    private static String getMessageBundle(final String className) {
+        final String messageBundle;
         final int endIndex = className.lastIndexOf('.');
         final String messages = "messages";
-        if (endIndex < 0) {
-            return messages;
+        if (endIndex == -1) {
+            messageBundle = messages;
         }
-        final String packageName = className.substring(0, endIndex);
-        return packageName + "." + messages;
+        else {
+            final String packageName = className.substring(0, endIndex);
+            messageBundle = packageName + "." + messages;
+        }
+        return messageBundle;
+    }
+
+    @Override
+    protected void finishLocalSetup() throws CheckstyleException {
+        // No code by default
     }
 
     /**
@@ -149,6 +149,8 @@ public abstract class AbstractViolationReporter
      *
      * @see java.text.MessageFormat
      */
+    // -@cs[CustomDeclarationOrder] CustomDeclarationOrder does not treat groups of
+    // overloaded methods. See https://github.com/sevntu-checkstyle/sevntu.checkstyle/issues/414
     public abstract void log(int line, String key, Object... args);
 
     /**
@@ -161,6 +163,9 @@ public abstract class AbstractViolationReporter
      *
      * @see java.text.MessageFormat
      */
+    // -@cs[CustomDeclarationOrder] CustomDeclarationOrder does not treat groups of
+    // overloaded methods. See https://github.com/sevntu-checkstyle/sevntu.checkstyle/issues/414
     public abstract void log(int line, int col, String key,
             Object... args);
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,46 +19,65 @@
 
 package com.puppycrawl.tools.checkstyle.checks.regexp;
 
-import java.util.Arrays;
-
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Implementation of a check that looks for a single line in Java files.
  * Supports ignoring comments for matches.
- * @author Oliver Burn
  */
-public class RegexpSinglelineJavaCheck extends Check {
-    /** The detection options to use. */
-    private final DetectorOptions options = new DetectorOptions(0, this);
-    /** The detector to use. */
-    private SinglelineDetector detector;
+@StatelessCheck
+public class RegexpSinglelineJavaCheck extends AbstractCheck {
+
+    /** The format of the regular expression to match. */
+    private String format = "$.";
+    /** The message to report for a match. */
+    private String message;
+    /** The minimum number of matches required per file. */
+    private int minimum;
+    /** The maximum number of matches required per file. */
+    private int maximum;
+    /** Whether to ignore case when matching. */
+    private boolean ignoreCase;
     /** Suppress comments. **/
     private boolean ignoreComments;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[0];
+        return getRequiredTokens();
     }
 
     @Override
-    public void init() {
-        super.init();
-        detector = new SinglelineDetector(options);
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
     public void beginTree(DetailAST rootAST) {
-
+        MatchSuppressor suppressor = null;
         if (ignoreComments) {
-            options.setSuppressor(new CommentSuppressor(getFileContents()));
-        }
-        else {
-            options.setSuppressor(NeverSuppress.INSTANCE);
+            suppressor = new CommentSuppressor(getFileContents());
         }
 
-        detector.processLines(Arrays.asList(getLines()));
+        final DetectorOptions options = DetectorOptions.newBuilder()
+            .reporter(this)
+            .compileFlags(0)
+            .suppressor(suppressor)
+            .format(format)
+            .message(message)
+            .minimum(minimum)
+            .maximum(maximum)
+            .ignoreCase(ignoreCase)
+            .build();
+        final SinglelineDetector detector = new SinglelineDetector(options);
+        detector.processLines(getFileContents().getText());
     }
 
     /**
@@ -66,7 +85,7 @@ public class RegexpSinglelineJavaCheck extends Check {
      * @param format the format of the regular expression to match.
      */
     public void setFormat(String format) {
-        options.setFormat(format);
+        this.format = format;
     }
 
     /**
@@ -74,7 +93,7 @@ public class RegexpSinglelineJavaCheck extends Check {
      * @param message the message to report for a match.
      */
     public void setMessage(String message) {
-        options.setMessage(message);
+        this.message = message;
     }
 
     /**
@@ -82,7 +101,7 @@ public class RegexpSinglelineJavaCheck extends Check {
      * @param minimum the minimum number of matches required per file.
      */
     public void setMinimum(int minimum) {
-        options.setMinimum(minimum);
+        this.minimum = minimum;
     }
 
     /**
@@ -90,15 +109,15 @@ public class RegexpSinglelineJavaCheck extends Check {
      * @param maximum the maximum number of matches required per file.
      */
     public void setMaximum(int maximum) {
-        options.setMaximum(maximum);
+        this.maximum = maximum;
     }
 
     /**
      * Set whether to ignore case when matching.
-     * @param ignore whether to ignore case when matching.
+     * @param ignoreCase whether to ignore case when matching.
      */
-    public void setIgnoreCase(boolean ignore) {
-        options.setIgnoreCase(ignore);
+    public void setIgnoreCase(boolean ignoreCase) {
+        this.ignoreCase = ignoreCase;
     }
 
     /**
@@ -106,6 +125,7 @@ public class RegexpSinglelineJavaCheck extends Check {
      * @param ignore whether to ignore comments when matching.
      */
     public void setIgnoreComments(boolean ignore) {
-        this.ignoreComments = ignore;
+        ignoreComments = ignore;
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,46 +20,82 @@
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import static com.puppycrawl.tools.checkstyle.checks.coding.AbstractSuperCheck.MSG_KEY;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.JavaParser;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.internal.utils.TestUtil;
 
 public class SuperCloneCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/superclone";
+    }
+
     @Test
     public void testIt() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(SuperCloneCheck.class);
+            createModuleConfig(SuperCloneCheck.class);
         final String[] expected = {
             "27:19: " + getCheckMessage(MSG_KEY, "clone", "super.clone"),
             "35:19: " + getCheckMessage(MSG_KEY, "clone", "super.clone"),
             "60:48: " + getCheckMessage(MSG_KEY, "clone", "super.clone"),
         };
-        verify(checkConfig, getPath("coding/InputClone.java"), expected);
+        verify(checkConfig, getPath("InputSuperCloneInnerAndWithArguments.java"), expected);
     }
 
     @Test
-    public void testAntoherInputFile() throws Exception {
+    public void testAnotherInputFile() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(SuperCloneCheck.class);
+            createModuleConfig(SuperCloneCheck.class);
         final String[] expected = {
-            "13:8: " + getCheckMessage(MSG_KEY, "clone", "super.clone"),
-            "19:8: " + getCheckMessage(MSG_KEY, "clone", "super.clone"),
+            "9:17: " + getCheckMessage(MSG_KEY, "clone", "super.clone"),
         };
-        verify(checkConfig, new File("src/test/resources-noncompilable/com/puppycrawl/tools/"
-                + "checkstyle/coding/InputSuperCloneCheck.java").getCanonicalPath(), expected);
+        verify(checkConfig, getPath("InputSuperClonePlainAndSubclasses.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        SuperCloneCheck check = new SuperCloneCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final SuperCloneCheck check = new SuperCloneCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
+    /**
+     * We cannot reproduce situation when visitToken is called and leaveToken is not.
+     * So, we have to use reflection to be sure that even in such situation
+     * state of the field will be cleared.
+     *
+     * @throws Exception when code tested throws exception
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testClearState() throws Exception {
+        final AbstractSuperCheck check = new SuperCloneCheck();
+        final Optional<DetailAST> methodDef = TestUtil.findTokenInAstByPredicate(
+            JavaParser.parseFile(new File(getPath("InputSuperCloneWithoutWarnings.java")),
+                JavaParser.Options.WITHOUT_COMMENTS),
+            ast -> ast.getType() == TokenTypes.METHOD_DEF);
+
+        assertTrue("Ast should contain METHOD_DEF", methodDef.isPresent());
+        assertTrue("State is not cleared on beginTree",
+            TestUtil.isStatefulFieldClearedDuringBeginTree(check, methodDef.get(),
+                "methodStack",
+                methodStack -> ((Collection<Set<String>>) methodStack).isEmpty()));
+    }
+
 }

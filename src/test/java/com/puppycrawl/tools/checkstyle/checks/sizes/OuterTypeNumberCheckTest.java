@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,52 +24,71 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class OuterTypeNumberCheckTest extends BaseCheckTestSupport {
+public class OuterTypeNumberCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/sizes/outertypenumber";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final OuterTypeNumberCheck checkObj = new OuterTypeNumberCheck();
+        final int[] expected = {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ANNOTATION_DEF,
+        };
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testGetAcceptableTokens() {
-        OuterTypeNumberCheck outerTypeNumberObj =
+        final OuterTypeNumberCheck outerTypeNumberObj =
             new OuterTypeNumberCheck();
-        int[] actual = outerTypeNumberObj.getAcceptableTokens();
-        int[] expected = {
+        final int[] actual = outerTypeNumberObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.CLASS_DEF,
             TokenTypes.INTERFACE_DEF, TokenTypes.ENUM_DEF,
             TokenTypes.ANNOTATION_DEF,
         };
 
-        assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
 
     @Test
     public void testDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(OuterTypeNumberCheck.class);
+            createModuleConfig(OuterTypeNumberCheck.class);
         final String[] expected = {
             "6:1: " + getCheckMessage(MSG_KEY, 3, 1),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputOuterTypeNumberSimple.java"), expected);
     }
 
     @Test
     public void testMax30() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(OuterTypeNumberCheck.class);
+            createModuleConfig(OuterTypeNumberCheck.class);
         checkConfig.addAttribute("max", "30");
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputOuterTypeNumberSimple.java"), expected);
     }
 
     @Test
     public void testWithInnerClass() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(OuterTypeNumberCheck.class);
+            createModuleConfig(OuterTypeNumberCheck.class);
         checkConfig.addAttribute("max", "1");
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("OuterTypeNumberCheckInput.java"), expected);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputOuterTypeNumberEmptyInner.java"), expected);
     }
+
 }

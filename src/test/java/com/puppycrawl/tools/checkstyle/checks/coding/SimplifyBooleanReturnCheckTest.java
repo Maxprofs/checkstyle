@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,27 +24,34 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.SimplifyBooleanRetur
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 
 public class SimplifyBooleanReturnCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/simplifybooleanreturn";
+    }
+
     @Test
     public void testIt() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(SimplifyBooleanReturnCheck.class);
+            createModuleConfig(SimplifyBooleanReturnCheck.class);
         final String[] expected = {
             "20:9: " + getCheckMessage(MSG_KEY),
             "33:9: " + getCheckMessage(MSG_KEY),
         };
-        verify(checkConfig, getPath("InputSimplifyBoolean.java"), expected);
+        verify(checkConfig, getPath("InputSimplifyBooleanReturn.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        SimplifyBooleanReturnCheck check = new SimplifyBooleanReturnCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final SimplifyBooleanReturnCheck check = new SimplifyBooleanReturnCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,13 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import java.util.Locale;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>Checks the padding of an empty for initializer; that is whether a
@@ -44,10 +47,10 @@ for (
  * &lt;module name="EmptyForInitializerPad"/&gt;
  * </pre>
  *
- * @author lkuehne
  */
+@StatelessCheck
 public class EmptyForInitializerPadCheck
-    extends AbstractOptionCheck<PadOption> {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -61,23 +64,39 @@ public class EmptyForInitializerPadCheck
      */
     public static final String MSG_NOT_PRECEDED = "ws.notPreceded";
 
+    /** Semicolon literal. */
+    private static final String SEMICOLON = ";";
+
+    /** The policy to enforce. */
+    private PadOption option = PadOption.NOSPACE;
+
     /**
-     * Sets the paren pad otion to nospace.
+     * Set the option to enforce.
+     * @param optionStr string to decode option from
+     * @throws IllegalArgumentException if unable to decode
      */
-    public EmptyForInitializerPadCheck() {
-        super(PadOption.NOSPACE, PadOption.class);
+    public void setOption(String optionStr) {
+        try {
+            option = PadOption.valueOf(optionStr.trim().toUpperCase(Locale.ENGLISH));
+        }
+        catch (IllegalArgumentException iae) {
+            throw new IllegalArgumentException("unable to parse " + optionStr, iae);
+        }
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.FOR_INIT,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.FOR_INIT,
-        };
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.FOR_INIT};
     }
 
     @Override
@@ -89,17 +108,17 @@ public class EmptyForInitializerPadCheck
             final String line = getLines()[semiLineIdx];
             final int before = semi.getColumnNo() - 1;
             //don't check if semi at beginning of line
-            if (!Utils.whitespaceBefore(before, line)) {
-                final PadOption option = getAbstractOption();
+            if (!CommonUtil.hasWhitespaceBefore(before, line)) {
                 if (option == PadOption.NOSPACE
                     && Character.isWhitespace(line.charAt(before))) {
-                    log(semi.getLineNo(), before, MSG_PRECEDED, ";");
+                    log(semi.getLineNo(), before, MSG_PRECEDED, SEMICOLON);
                 }
                 else if (option == PadOption.SPACE
                          && !Character.isWhitespace(line.charAt(before))) {
-                    log(semi.getLineNo(), before, MSG_NOT_PRECEDED, ";");
+                    log(semi.getLineNo(), before, MSG_NOT_PRECEDED, SEMICOLON);
                 }
             }
         }
     }
+
 }

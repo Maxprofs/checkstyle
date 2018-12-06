@@ -1,31 +1,41 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter4formatting.rule411bracesareused;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.checks.blocks.NeedBracesCheck;
 
-public class NeedBracesTest extends BaseCheckTestSupport{
-    
-    static ConfigurationBuilder builder;
-    
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
+public class NeedBracesTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter4formatting/rule411bracesareused";
     }
 
     @Test
-    public void needBracesTest() throws IOException, Exception {
-        
-        Class<NeedBracesCheck> clazz = NeedBracesCheck.class;
-        String messageKey = "needBraces";
+    public void testNeedBraces() throws Exception {
+        final Class<NeedBracesCheck> clazz = NeedBracesCheck.class;
+        final String messageKey = "needBraces";
 
         final String[] expected = {
             "29: " + getCheckMessage(clazz, messageKey, "do"),
@@ -68,10 +78,11 @@ public class NeedBracesTest extends BaseCheckTestSupport{
             "210: " + getCheckMessage(clazz, messageKey, "for"),
         };
 
-        Configuration checkConfig = builder.getCheckConfig("NeedBraces");
-        String filePath = builder.getFilePath("NeedBracesInput");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+        final Configuration checkConfig = getModuleConfig("NeedBraces");
+        final String filePath = getPath("InputNeedBraces.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
+
 }

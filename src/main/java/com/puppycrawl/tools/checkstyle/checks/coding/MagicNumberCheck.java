@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,12 +21,14 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import java.util.Arrays;
 
-import com.puppycrawl.tools.checkstyle.ScopeUtils;
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
 
 /**
  * <p>
@@ -36,7 +38,7 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * By default, -1, 0, 1, and 2 are not considered to be magic numbers.
  * </p>
  *
- * Constant definition is any variable/field that has 'final' modifier.
+ * <p>Constant definition is any variable/field that has 'final' modifier.
  * It is fine to have one constant defining multiple numeric literals within one expression:
  * <pre>
  * {@code static final int SECONDS_PER_DAY = 24 * 60 * 60;
@@ -47,8 +49,7 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * static final Integer ANSWER_TO_THE_ULTIMATE_QUESTION_OF_LIFE = new Integer(42);}
  * </pre>
  *
- * <p>
- * Check have following options:
+ * <p>Check have following options:
  * ignoreHashCodeMethod - ignore magic numbers in hashCode methods;
  * ignoreAnnotation - ignore magic numbers in annotation declarations;
  * ignoreFieldDeclaration - ignore magic numbers in field declarations.
@@ -133,11 +134,9 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * }
  * }
  * </pre>
- * @author Rick Giles
- * @author Lars Kühne
- * @author Daniel Solano Gómez
  */
-public class MagicNumberCheck extends Check {
+@StatelessCheck
+public class MagicNumberCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -165,7 +164,7 @@ public class MagicNumberCheck extends Check {
         TokenTypes.MINUS,
     };
 
-    /** the numbers to ignore in the check, sorted */
+    /** The numbers to ignore in the check, sorted. */
     private double[] ignoreNumbers = {-1, 0, 1, 2};
 
     /** Whether to ignore magic numbers in a hash code method. */
@@ -201,33 +200,33 @@ public class MagicNumberCheck extends Check {
     }
 
     @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
     public void visitToken(DetailAST ast) {
-        if (ignoreAnnotation && isChildOf(ast, TokenTypes.ANNOTATION)) {
-            return;
-        }
+        if ((!ignoreAnnotation || !isChildOf(ast, TokenTypes.ANNOTATION))
+                && !isInIgnoreList(ast)
+                && (!ignoreHashCodeMethod || !isInHashCodeMethod(ast))) {
+            final DetailAST constantDefAST = findContainingConstantDef(ast);
 
-        if (inIgnoreList(ast)
-            || ignoreHashCodeMethod && isInHashCodeMethod(ast)) {
-            return;
-        }
-
-        final DetailAST constantDefAST = findContainingConstantDef(ast);
-
-        if (constantDefAST == null) {
-            if (!(ignoreFieldDeclaration && isFieldDeclaration(ast))) {
-                reportMagicNumber(ast);
+            if (constantDefAST == null) {
+                if (!ignoreFieldDeclaration || !isFieldDeclaration(ast)) {
+                    reportMagicNumber(ast);
+                }
             }
-        }
-        else {
-            final boolean found = isMagicNumberExists(ast, constantDefAST);
-            if (found) {
-                reportMagicNumber(ast);
+            else {
+                final boolean found = isMagicNumberExists(ast, constantDefAST);
+                if (found) {
+                    reportMagicNumber(ast);
+                }
             }
         }
     }
 
     /**
-     * is magic number some where at ast tree
+     * Is magic number some where at ast tree.
      * @param ast ast token
      * @param constantDefAST constant ast
      * @return true if magic number is present
@@ -249,8 +248,7 @@ public class MagicNumberCheck extends Check {
     /**
      * Finds the constant definition that contains aAST.
      * @param ast the AST
-     * @return the constant def or null if ast is not
-     * contained in a constant definition
+     * @return the constant def or null if ast is not contained in a constant definition.
      */
     private static DetailAST findContainingConstantDef(DetailAST ast) {
         DetailAST varDefAST = ast;
@@ -259,26 +257,25 @@ public class MagicNumberCheck extends Check {
                 && varDefAST.getType() != TokenTypes.ENUM_CONSTANT_DEF) {
             varDefAST = varDefAST.getParent();
         }
+        DetailAST constantDef = null;
 
         // no containing variable definition?
-        if (varDefAST == null) {
-            return null;
-        }
+        if (varDefAST != null) {
+            // implicit constant?
+            if (ScopeUtil.isInInterfaceOrAnnotationBlock(varDefAST)
+                    || varDefAST.getType() == TokenTypes.ENUM_CONSTANT_DEF) {
+                constantDef = varDefAST;
+            }
+            else {
+                // explicit constant
+                final DetailAST modifiersAST = varDefAST.findFirstToken(TokenTypes.MODIFIERS);
 
-        // implicit constant?
-        if (ScopeUtils.inInterfaceOrAnnotationBlock(varDefAST)
-            || varDefAST.getType() == TokenTypes.ENUM_CONSTANT_DEF) {
-            return varDefAST;
+                if (modifiersAST.findFirstToken(TokenTypes.FINAL) != null) {
+                    constantDef = varDefAST;
+                }
+            }
         }
-
-        // explicit constant
-        final DetailAST modifiersAST =
-                varDefAST.findFirstToken(TokenTypes.MODIFIERS);
-        if (modifiersAST.branchContains(TokenTypes.FINAL)) {
-            return varDefAST;
-        }
-
-        return null;
+        return constantDef;
     }
 
     /**
@@ -297,8 +294,7 @@ public class MagicNumberCheck extends Check {
             reportAST = parent;
             text = "+" + text;
         }
-        log(reportAST.getLineNo(),
-                reportAST.getColumnNo(),
+        log(reportAST,
                 MSG_KEY,
                 text);
     }
@@ -309,52 +305,46 @@ public class MagicNumberCheck extends Check {
      * {@code public int hashCode()}.
      *
      * @param ast the AST from which to search for an enclosing hash code
-     * method definition
+     *     method definition
      *
-     * @return {@code true} if {@code ast} is in the scope of a valid hash
-     * code method
+     * @return {@code true} if {@code ast} is in the scope of a valid hash code method.
      */
     private static boolean isInHashCodeMethod(DetailAST ast) {
+        boolean inHashCodeMethod = false;
+
         // if not in a code block, can't be in hashCode()
-        if (!ScopeUtils.inCodeBlock(ast)) {
-            return false;
-        }
+        if (ScopeUtil.isInCodeBlock(ast)) {
+            // find the method definition AST
+            DetailAST methodDefAST = ast.getParent();
+            while (methodDefAST != null
+                    && methodDefAST.getType() != TokenTypes.METHOD_DEF) {
+                methodDefAST = methodDefAST.getParent();
+            }
 
-        // find the method definition AST
-        DetailAST methodDefAST = ast.getParent();
-        while (methodDefAST != null
-                && methodDefAST.getType() != TokenTypes.METHOD_DEF) {
-            methodDefAST = methodDefAST.getParent();
-        }
+            if (methodDefAST != null) {
+                // Check for 'hashCode' name.
+                final DetailAST identAST = methodDefAST.findFirstToken(TokenTypes.IDENT);
 
-        if (methodDefAST == null) {
-            return false;
+                if ("hashCode".equals(identAST.getText())) {
+                    // Check for no arguments.
+                    final DetailAST paramAST = methodDefAST.findFirstToken(TokenTypes.PARAMETERS);
+                    // we are in a 'public int hashCode()' method! The compiler will ensure
+                    // the method returns an 'int' and is public.
+                    inHashCodeMethod = paramAST.getChildCount() == 0;
+                }
+            }
         }
-
-        // Check for 'hashCode' name.
-        final DetailAST identAST =
-            methodDefAST.findFirstToken(TokenTypes.IDENT);
-        if (!"hashCode".equals(identAST.getText())) {
-            return false;
-        }
-
-        // Check for no arguments.
-        final DetailAST paramAST =
-            methodDefAST.findFirstToken(TokenTypes.PARAMETERS);
-        // we are in a 'public int hashCode()' method! The compiler will ensure
-        // the method returns an 'int' and is public.
-        return paramAST.getChildCount() == 0;
+        return inHashCodeMethod;
     }
 
     /**
      * Decides whether the number of an AST is in the ignore list of this
      * check.
      * @param ast the AST to check
-     * @return true if the number of ast is in the ignore list of this
-     * check.
+     * @return true if the number of ast is in the ignore list of this check.
      */
-    private boolean inIgnoreList(DetailAST ast) {
-        double value = CheckUtils.parseDouble(ast.getText(), ast.getType());
+    private boolean isInIgnoreList(DetailAST ast) {
+        double value = CheckUtil.parseDouble(ast.getText(), ast.getType());
         final DetailAST parent = ast.getParent();
         if (parent.getType() == TokenTypes.UNARY_MINUS) {
             value = -1 * value;
@@ -363,7 +353,7 @@ public class MagicNumberCheck extends Check {
     }
 
     /**
-     * Determines whether or not the given AST is field declaration
+     * Determines whether or not the given AST is field declaration.
      *
      * @param ast AST from which to search for an enclosing field declaration
      *
@@ -383,13 +373,13 @@ public class MagicNumberCheck extends Check {
     }
 
     /**
-     * sets the tokens which are allowed between Magic Number and defined Object.
+     * Sets the tokens which are allowed between Magic Number and defined Object.
      * @param tokens The string representation of the tokens interested in
      */
     public void setConstantWaiverParentToken(String... tokens) {
         constantWaiverParentToken = new int[tokens.length];
         for (int i = 0; i < tokens.length; i++) {
-            constantWaiverParentToken[i] = Utils.getTokenId(tokens[i]);
+            constantWaiverParentToken[i] = TokenUtil.getTokenId(tokens[i]);
         }
         Arrays.sort(constantWaiverParentToken);
     }
@@ -401,7 +391,7 @@ public class MagicNumberCheck extends Check {
      */
     public void setIgnoreNumbers(double... list) {
         if (list.length == 0) {
-            ignoreNumbers = new double[0];
+            ignoreNumbers = CommonUtil.EMPTY_DOUBLE_ARRAY;
         }
         else {
             ignoreNumbers = new double[list.length];
@@ -413,7 +403,7 @@ public class MagicNumberCheck extends Check {
     /**
      * Set whether to ignore hashCode methods.
      * @param ignoreHashCodeMethod decide whether to ignore
-     * hash code methods
+     *     hash code methods
      */
     public void setIgnoreHashCodeMethod(boolean ignoreHashCodeMethod) {
         this.ignoreHashCodeMethod = ignoreHashCodeMethod;
@@ -430,7 +420,7 @@ public class MagicNumberCheck extends Check {
     /**
      * Set whether to ignore magic numbers in field declaration.
      * @param ignoreFieldDeclaration decide whether to ignore magic numbers
-     * in field declaration
+     *     in field declaration
      */
     public void setIgnoreFieldDeclaration(boolean ignoreFieldDeclaration) {
         this.ignoreFieldDeclaration = ignoreFieldDeclaration;
@@ -450,10 +440,12 @@ public class MagicNumberCheck extends Check {
         do {
             if (node.getType() == type) {
                 result = true;
+                break;
             }
             node = node.getParent();
-        } while (node != null && !result);
+        } while (node != null);
 
         return result;
     }
+
 }

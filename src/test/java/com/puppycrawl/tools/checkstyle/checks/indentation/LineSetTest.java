@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -27,12 +27,13 @@ public class LineSetTest {
 
     @Test
     public void testToStringShowingFirstAndLastLine() {
-        LineSet lineSet = new LineSet();
+        final LineSet lineSet = new LineSet();
         lineSet.addLineAndCol(0, 1);
         lineSet.addLineAndCol(2, 3);
 
-        String result = lineSet.toString();
+        final String result = lineSet.toString();
 
-        assertEquals("LineSet[firstLine=0, lastLine=2]", result);
+        assertEquals("Invalid toString result", "LineSet[firstLine=0, lastLine=2]", result);
     }
+
 }

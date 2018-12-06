@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,19 +20,37 @@
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
 import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
+import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class LocalVariableNameCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/naming/localvariablename";
+    }
+
+    @Test
+    public void testGetAcceptableTokens() {
+        final LocalVariableNameCheck localVariableNameCheck = new LocalVariableNameCheck();
+        final int[] expected = {TokenTypes.VARIABLE_DEF};
+
+        assertArrayEquals("Default acceptable tokens are invalid",
+                expected, localVariableNameCheck.getAcceptableTokens());
+    }
+
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalVariableNameCheck.class);
+            createModuleConfig(LocalVariableNameCheck.class);
 
         final String pattern = "^[a-z][a-zA-Z0-9]*$";
 
@@ -42,39 +60,23 @@ public class LocalVariableNameCheckTest
             "132:20: " + getCheckMessage(MSG_INVALID_PATTERN, "InnerBlockVariable", pattern),
             "207:21: " + getCheckMessage(MSG_INVALID_PATTERN, "O", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputLocalVariableName.java"), expected);
     }
 
     @Test
     public void testInnerClass()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalVariableNameCheck.class);
-        final String[] expected = {};
-        verify(checkConfig, getPath("InputInner.java"), expected);
-    }
-
-    @Test
-    public void testCatchParameter()
-        throws Exception {
-        final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalVariableNameCheck.class);
-        checkConfig.addAttribute("tokens", "PARAMETER_DEF");
-        checkConfig.addAttribute("format", "^e$");
-
-        final String pattern = "^e$";
-
-        final String[] expected = {
-            "74:24: " + getCheckMessage(MSG_INVALID_PATTERN, "ex", pattern),
-        };
-        verify(checkConfig, getPath("InputEmptyStatement.java"), expected);
+            createModuleConfig(LocalVariableNameCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputLocalVariableNameInnerClass.java"), expected);
     }
 
     @Test
     public void testLoopVariables()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(LocalVariableNameCheck.class);
+            createModuleConfig(LocalVariableNameCheck.class);
         checkConfig.addAttribute("format", "^[a-z]{2,}[a-zA-Z0-9]*$");
         checkConfig.addAttribute("allowOneCharVarInForLoop", "true");
 
@@ -84,6 +86,7 @@ public class LocalVariableNameCheckTest
             "19:21: " + getCheckMessage(MSG_INVALID_PATTERN, "i", pattern),
             "25:17: " + getCheckMessage(MSG_INVALID_PATTERN, "Index", pattern),
         };
-        verify(checkConfig, getPath("InputOneCharInintVarName.java"), expected);
+        verify(checkConfig, getPath("InputLocalVariableNameOneCharInitVarName.java"), expected);
     }
+
 }

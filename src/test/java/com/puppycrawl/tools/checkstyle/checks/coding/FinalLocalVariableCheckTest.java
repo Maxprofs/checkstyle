@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,22 +21,27 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import static com.puppycrawl.tools.checkstyle.checks.coding.FinalLocalVariableCheck.MSG_KEY;
 
-import java.io.File;
-
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class FinalLocalVariableCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/finallocalvariable";
+    }
+
     @Test
     public void testDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FinalLocalVariableCheck.class);
+            createModuleConfig(FinalLocalVariableCheck.class);
 
         final String[] expected = {
             "9:13: " + getCheckMessage(MSG_KEY, "i"),
@@ -57,14 +62,33 @@ public class FinalLocalVariableCheckTest
             "96:17: " + getCheckMessage(MSG_KEY, "weird"),
             "97:17: " + getCheckMessage(MSG_KEY, "j"),
             "98:17: " + getCheckMessage(MSG_KEY, "k"),
+            "185:13: " + getCheckMessage(MSG_KEY, "x"),
+            "190:17: " + getCheckMessage(MSG_KEY, "x"),
+            "210:17: " + getCheckMessage(MSG_KEY, "n"),
+            "216:13: " + getCheckMessage(MSG_KEY, "q"),
+            "217:13: " + getCheckMessage(MSG_KEY, "w"),
+            "226:21: " + getCheckMessage(MSG_KEY, "w"),
+            "227:21: " + getCheckMessage(MSG_KEY, "e"),
+            "247:17: " + getCheckMessage(MSG_KEY, "n"),
+            "259:17: " + getCheckMessage(MSG_KEY, "t"),
+            "269:21: " + getCheckMessage(MSG_KEY, "foo"),
+            "288:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "300:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "344:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "357:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "360:21: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "375:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "386:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "418:13: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
+            "421:21: " + getCheckMessage(MSG_KEY, "shouldBeFinal"),
         };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariable.java"), expected);
+        verify(checkConfig, getPath("InputFinalLocalVariable.java"), expected);
     }
 
     @Test
     public void testParameter() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FinalLocalVariableCheck.class);
+            createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "PARAMETER_DEF");
 
         final String[] expected = {
@@ -72,96 +96,173 @@ public class FinalLocalVariableCheckTest
             "149:36: " + getCheckMessage(MSG_KEY, "_o"),
             "154:37: " + getCheckMessage(MSG_KEY, "_o1"),
         };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariable.java"), expected);
+        verify(checkConfig, getPath("InputFinalLocalVariable.java"), expected);
     }
 
     @Test
     public void testNativeMethods() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FinalLocalVariableCheck.class);
+            createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "PARAMETER_DEF");
 
-        final String[] expected = {
-
-        };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariableNativeMethods.java"), expected);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputFinalLocalVariableNativeMethods.java"), expected);
     }
 
     @Test
     public void testFalsePositive() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FinalLocalVariableCheck.class);
+            createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "VARIABLE_DEF, PARAMETER_DEF");
 
-        final String[] expected = {
-
-        };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariableCheckFalsePositive.java"), expected);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputFinalLocalVariableFalsePositive.java"), expected);
     }
 
     @Test
     public void testEnhancedForLoopVariableTrue() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(FinalLocalVariableCheck.class);
+                createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "VARIABLE_DEF, PARAMETER_DEF");
         checkConfig.addAttribute("validateEnhancedForLoopVariable", "true");
         final String[] expected = {
-            "8:20: " + "Variable 'a' should be declared final.",
-            "15:13: " + "Variable 'x' should be declared final.",
+            "8:20: " + getCheckMessage(MSG_KEY, "a"),
+            "15:13: " + getCheckMessage(MSG_KEY, "x"),
         };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariableEnhancedForLoopVariable.java"), expected);
+        verify(checkConfig, getPath("InputFinalLocalVariableEnhancedForLoopVariable.java"),
+            expected);
     }
 
     @Test
     public void testEnhancedForLoopVariableFalse() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(FinalLocalVariableCheck.class);
+                createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "VARIABLE_DEF, PARAMETER_DEF");
         final String[] expected = {
-            "15:13: " + "Variable 'x' should be declared final.",
+            "15:13: " + getCheckMessage(MSG_KEY, "x"),
         };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariableEnhancedForLoopVariable.java"), expected);
+        verify(checkConfig, getPath("InputFinalLocalVariableEnhancedForLoopVariable.java"),
+            expected);
     }
 
     @Test
     public void testLambda()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FinalLocalVariableCheck.class);
+            createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "PARAMETER_DEF,VARIABLE_DEF");
-        final String[] expected = {};
-        verify(checkConfig, new File("src/test/resources-noncompilable/com/puppycrawl/"
-                + "tools/checkstyle/naming/InputFinalLocalVariableNameLambda.java")
-                .getCanonicalPath(), expected);
+        final String[] expected = {
+            "32:16: " + getCheckMessage(MSG_KEY, "result"),
+        };
+        verify(checkConfig, getPath("InputFinalLocalVariableNameLambda.java"),
+            expected);
     }
 
     @Test
     public void testVariableNameShadowing()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FinalLocalVariableCheck.class);
+            createModuleConfig(FinalLocalVariableCheck.class);
         checkConfig.addAttribute("tokens", "PARAMETER_DEF,VARIABLE_DEF");
 
         final String[] expected = {
-            "4:28: " + "Variable 'text' should be declared final.",
-            "17:13: " + "Variable 'x' should be declared final.",
+            "4:28: " + getCheckMessage(MSG_KEY, "text"),
+            "17:13: " + getCheckMessage(MSG_KEY, "x"),
         };
-        verify(checkConfig, getPath("coding/InputFinalLocalVariableNameShadowing.java"), expected);
+        verify(checkConfig, getPath("InputFinalLocalVariableNameShadowing.java"), expected);
     }
 
     @Test
-    public void testImproperToken() throws Exception {
-        FinalLocalVariableCheck check = new FinalLocalVariableCheck();
+    public void testImproperToken() {
+        final FinalLocalVariableCheck check = new FinalLocalVariableCheck();
 
-        DetailAST lambdaAst = new DetailAST();
+        final DetailAST lambdaAst = new DetailAST();
         lambdaAst.setType(TokenTypes.LAMBDA);
 
         try {
             check.visitToken(lambdaAst);
-            Assert.fail();
+            Assert.fail("IllegalStateException is expected");
         }
-        catch (IllegalStateException e) {
+        catch (IllegalStateException ex) {
             // it is OK
         }
     }
+
+    @Test
+    public void testVariableWhichIsAssignedMultipleTimes() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+
+        final String[] expected = {
+            "49:13: " + getCheckMessage(MSG_KEY, "i"),
+            "122:16: " + getCheckMessage(MSG_KEY, "path"),
+            "126:20: " + getCheckMessage(MSG_KEY, "relativePath"),
+            "202:17: " + getCheckMessage(MSG_KEY, "kind"),
+            "207:24: " + getCheckMessage(MSG_KEY, "m"),
+            "409:17: " + getCheckMessage(MSG_KEY, "increment"),
+        };
+        verify(checkConfig, getPath("InputFinalLocalVariableAssignedMultipleTimes.java"), expected);
+    }
+
+    @Test
+    public void testVariableIsAssignedInsideAndOutsideSwitchBlock() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        final String[] expected = {
+            "31:13: " + getCheckMessage(MSG_KEY, "b"),
+        };
+        verify(checkConfig, getPath("InputFinalLocalVariableAssignedInsideAndOutsideSwitch.java"),
+            expected);
+    }
+
+    @Test
+    public void testFinalLocalVariableFalsePositives() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        final String[] expected = {
+            "344:16: " + getCheckMessage(MSG_KEY, "c2"),
+            "2187:16: " + getCheckMessage(MSG_KEY, "b"),
+        };
+        verify(checkConfig, getPath("InputFinalLocalVariableFalsePositives.java"), expected);
+    }
+
+    @Test
+    public void testMultipleAndNestedConditions() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputFinalLocalVariableMultipleAndNestedConditions.java"),
+            expected);
+    }
+
+    @Test
+    public void testMultiTypeCatch() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        checkConfig.addAttribute("tokens", "PARAMETER_DEF,VARIABLE_DEF");
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputFinalLocalVariableMultiCatch.java"),
+                expected);
+    }
+
+    @Test
+    public void testLeavingSlistToken() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputFinalLocalVariableLeavingSlistToken.java"), expected);
+    }
+
+    @Test
+    public void testBreakOrReturn() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        final String[] expected = {
+            "7:19: " + getCheckMessage(MSG_KEY, "e"),
+        };
+        verify(checkConfig, getPath("InputFinalLocalVariableBreak.java"), expected);
+    }
+
+    @Test
+    public void testAnonymousClass() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(FinalLocalVariableCheck.class);
+        final String[] expected = {
+            "5:16: " + getCheckMessage(MSG_KEY, "testSupport"),
+        };
+        verify(checkConfig, getPath("InputFinalLocalVariableAnonymousClass.java"), expected);
+    }
+
 }

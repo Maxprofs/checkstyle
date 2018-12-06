@@ -1,53 +1,64 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter5naming.rule526parameternames;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.Map;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
-import com.puppycrawl.tools.checkstyle.checks.naming.ParameterNameCheck;
 
-public class ParameterNameTest extends BaseCheckTestSupport{
+public class ParameterNameTest extends AbstractModuleTestSupport {
 
-	private Class<ParameterNameCheck> clazz = ParameterNameCheck.class;
-	private String msgKey = "name.invalidPattern";
-	private static String format;
-	private static ConfigurationBuilder builder;
-	private static Configuration checkConfig;
+    private static final String MSG_KEY = "name.invalidPattern";
 
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
-        checkConfig = builder.getCheckConfig("ParameterName");
-        format = checkConfig.getAttribute("format");
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter5naming/rule526parameternames";
     }
 
     @Test
-    public void parameterNameTest() throws IOException, Exception {
-
+    public void testGeneralParameterName() throws Exception {
+        final Configuration config = getModuleConfig("ParameterName");
+        final String format = config.getAttribute("format");
+        final Map<String, String> messages = config.getMessages();
         final String[] expected = {
-            "8:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "$arg1", format),
-            "9:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "ar$g2", format),
-            "10:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "arg3$", format),
-            "11:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "a_rg4", format),
-            "12:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "_arg5", format),
-            "13:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "arg6_", format),
-            "14:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "aArg7", format),
-            "15:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "aArg8", format),
-            "16:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "aar_g", format),
-            "26:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "bB", format),
-            "49:22: " + getCheckMessage(checkConfig.getMessages(), msgKey, "llll_llll", format),
-            "50:21: " + getCheckMessage(checkConfig.getMessages(), msgKey, "bB", format),
+            "10:21: " + getCheckMessage(messages, MSG_KEY, "bB", format),
+            "33:22: " + getCheckMessage(messages, MSG_KEY, "llll_llll", format),
+            "34:21: " + getCheckMessage(messages, MSG_KEY, "bB", format),
+            "64:13: " + getCheckMessage(messages, MSG_KEY, "$arg1", format),
+            "65:13: " + getCheckMessage(messages, MSG_KEY, "ar$g2", format),
+            "66:13: " + getCheckMessage(messages, MSG_KEY, "arg3$", format),
+            "67:13: " + getCheckMessage(messages, MSG_KEY, "a_rg4", format),
+            "68:13: " + getCheckMessage(messages, MSG_KEY, "_arg5", format),
+            "69:13: " + getCheckMessage(messages, MSG_KEY, "arg6_", format),
+            "70:13: " + getCheckMessage(messages, MSG_KEY, "aArg7", format),
+            "71:13: " + getCheckMessage(messages, MSG_KEY, "aArg8", format),
+            "72:13: " + getCheckMessage(messages, MSG_KEY, "aar_g", format),
         };
 
-        String filePath = builder.getFilePath("ParameterNameInput_Simple");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
-        verify(checkConfig, filePath, expected, warnList);
+        final String filePath = getPath("InputParameterName.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
+        verify(config, filePath, expected, warnList);
     }
+
 }

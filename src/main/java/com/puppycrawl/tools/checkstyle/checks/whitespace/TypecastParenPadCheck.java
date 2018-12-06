@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -46,9 +46,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *     &lt;property name="option" value="space"/&gt;
  * &lt;/module&gt;
  * </pre>
- * @author Oliver Burn
  */
 public class TypecastParenPadCheck extends AbstractParenPadCheck {
+
     @Override
     public int[] getRequiredTokens() {
         return new int[] {TokenTypes.RPAREN, TokenTypes.TYPECAST};
@@ -61,7 +61,7 @@ public class TypecastParenPadCheck extends AbstractParenPadCheck {
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.RPAREN, TokenTypes.TYPECAST};
+        return getRequiredTokens();
     }
 
     @Override
@@ -76,4 +76,5 @@ public class TypecastParenPadCheck extends AbstractParenPadCheck {
             processRight(ast);
         }
     }
+
 }

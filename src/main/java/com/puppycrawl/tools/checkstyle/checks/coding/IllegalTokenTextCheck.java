@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,9 +21,11 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.checks.AbstractFormatCheck;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -48,10 +50,10 @@ import com.puppycrawl.tools.checkstyle.checks.AbstractFormatCheck;
  *     &lt;property name="ignoreCase" value="true"/&gt;
  * &lt;/module&gt;
  * </pre>
- * @author Rick Giles
  */
+@StatelessCheck
 public class IllegalTokenTextCheck
-    extends AbstractFormatCheck {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -65,41 +67,56 @@ public class IllegalTokenTextCheck
      */
     private String message = "";
 
-    /**
-     * Instantiates a new instance.
-     */
-    public IllegalTokenTextCheck() {
-        super("$^"); // the empty language
-    }
+    /** The format string of the regexp. */
+    private String formatString = "^$";
+
+    /** The regexp to match against. */
+    private Pattern format = Pattern.compile(formatString);
+
+    /** {@code true} if the casing should be ignored. */
+    private boolean ignoreCase;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[0];
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return Utils.getAllTokenIds();
+        return new int[] {
+            TokenTypes.NUM_DOUBLE,
+            TokenTypes.NUM_FLOAT,
+            TokenTypes.NUM_INT,
+            TokenTypes.NUM_LONG,
+            TokenTypes.IDENT,
+            TokenTypes.COMMENT_CONTENT,
+            TokenTypes.STRING_LITERAL,
+            TokenTypes.CHAR_LITERAL,
+        };
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return new int[0];
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
     }
 
     @Override
     public void visitToken(DetailAST ast) {
         final String text = ast.getText();
-        if (getRegexp().matcher(text).find()) {
-            String customMessage = getMessage();
+        if (format.matcher(text).find()) {
+            String customMessage = message;
             if (customMessage.isEmpty()) {
                 customMessage = MSG_KEY;
             }
             log(
-                ast.getLineNo(),
-                ast.getColumnNo(),
+                ast,
                 customMessage,
-                getFormat());
+                formatString);
         }
     }
 
@@ -109,16 +126,22 @@ public class IllegalTokenTextCheck
      *                 to report about violations.
      */
     public void setMessage(String message) {
-        this.message = message == null ? "" : message;
+        if (message == null) {
+            this.message = "";
+        }
+        else {
+            this.message = message;
+        }
     }
 
     /**
-     * Getter for message property.
-     * @return custom message which should be used
-     * to report about violations.
+     * Set the format to the specified regular expression.
+     * @param format a {@code String} value
+     * @throws org.apache.commons.beanutils.ConversionException unable to parse format
      */
-    public String getMessage() {
-        return message;
+    public void setFormat(String format) {
+        formatString = format;
+        updateRegexp();
     }
 
     /**
@@ -126,8 +149,23 @@ public class IllegalTokenTextCheck
      * @param caseInsensitive true if the match is case insensitive.
      */
     public void setIgnoreCase(boolean caseInsensitive) {
-        if (caseInsensitive) {
-            setCompileFlags(Pattern.CASE_INSENSITIVE);
-        }
+        ignoreCase = caseInsensitive;
+        updateRegexp();
     }
+
+    /**
+     * Updates the {@link #format} based on the values from {@link #formatString} and
+     * {@link #ignoreCase}.
+     */
+    private void updateRegexp() {
+        final int compileFlags;
+        if (ignoreCase) {
+            compileFlags = Pattern.CASE_INSENSITIVE;
+        }
+        else {
+            compileFlags = 0;
+        }
+        format = CommonUtil.createPattern(formatString, compileFlags);
+    }
+
 }

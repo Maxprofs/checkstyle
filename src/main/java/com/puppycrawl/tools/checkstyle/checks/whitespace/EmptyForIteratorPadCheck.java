@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,12 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
+import java.util.Locale;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.AbstractOptionCheck;
 
 /**
  * <p>Checks the padding of an empty for iterator; that is whether a
@@ -44,40 +47,56 @@ for (Iterator foo = very.long.line.iterator();
  * &lt;module name="EmptyForIteratorPad"/&gt;
  * </pre>
  *
- * @author Rick Giles
  */
+@StatelessCheck
 public class EmptyForIteratorPadCheck
-    extends AbstractOptionCheck<PadOption> {
+    extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WS_FOLLOWED = "ws.followed";
+    public static final String MSG_WS_FOLLOWED = "ws.followed";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String WS_NOT_FOLLOWED = "ws.notFollowed";
+    public static final String MSG_WS_NOT_FOLLOWED = "ws.notFollowed";
+
+    /** Semicolon literal. */
+    private static final String SEMICOLON = ";";
+
+    /** The policy to enforce. */
+    private PadOption option = PadOption.NOSPACE;
 
     /**
-     * Sets the paren pad otion to nospace.
+     * Set the option to enforce.
+     * @param optionStr string to decode option from
+     * @throws IllegalArgumentException if unable to decode
      */
-    public EmptyForIteratorPadCheck() {
-        super(PadOption.NOSPACE, PadOption.class);
+    public void setOption(String optionStr) {
+        try {
+            option = PadOption.valueOf(optionStr.trim().toUpperCase(Locale.ENGLISH));
+        }
+        catch (IllegalArgumentException iae) {
+            throw new IllegalArgumentException("unable to parse " + optionStr, iae);
+        }
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.FOR_ITERATOR,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.FOR_ITERATOR,
-        };
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.FOR_ITERATOR};
     }
 
     @Override
@@ -89,15 +108,16 @@ public class EmptyForIteratorPadCheck
             final int after = semi.getColumnNo() + 1;
             //don't check if at end of line
             if (after < line.length()) {
-                if (getAbstractOption() == PadOption.NOSPACE
+                if (option == PadOption.NOSPACE
                     && Character.isWhitespace(line.charAt(after))) {
-                    log(semi.getLineNo(), after, WS_FOLLOWED, ";");
+                    log(semi.getLineNo(), after, MSG_WS_FOLLOWED, SEMICOLON);
                 }
-                else if (getAbstractOption() == PadOption.SPACE
+                else if (option == PadOption.SPACE
                          && !Character.isWhitespace(line.charAt(after))) {
-                    log(semi.getLineNo(), after, WS_NOT_FOLLOWED, ";");
+                    log(semi.getLineNo(), after, MSG_WS_NOT_FOLLOWED, SEMICOLON);
                 }
             }
         }
     }
+
 }

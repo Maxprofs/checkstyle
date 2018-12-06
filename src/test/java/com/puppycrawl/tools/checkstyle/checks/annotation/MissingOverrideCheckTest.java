@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,24 +21,30 @@ package com.puppycrawl.tools.checkstyle.checks.annotation;
 
 import static com.puppycrawl.tools.checkstyle.checks.annotation.MissingOverrideCheck.MSG_KEY_ANNOTATION_MISSING_OVERRIDE;
 import static com.puppycrawl.tools.checkstyle.checks.annotation.MissingOverrideCheck.MSG_KEY_TAG_NOT_VALID_ON;
-
-import java.io.File;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class MissingOverrideCheckTest extends BaseCheckTestSupport {
+public class MissingOverrideCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/annotation/missingoverride";
+    }
+
     /**
      * This tests that classes not extending anything explicitly will be correctly
      * flagged for only including the inheritDoc tag.
      */
     @Test
     public void testBadOverrideFromObject() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "false");
 
         final String[] expected = {
@@ -48,7 +54,7 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
             "50: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
         };
 
-        verify(checkConfig, getPath("annotation" + File.separator + "BadOverrideFromObject.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideBadOverrideFromObject.java"), expected);
     }
 
     /**
@@ -56,8 +62,8 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * flagged for only including the inheritDoc tag even in Java 5 compatibility mode.
      */
     @Test
-    public void testBadOverrideFromObjectJ5Compat() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testBadOverrideFromObjectJ5Compatible() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "true");
 
         final String[] expected = {
@@ -67,7 +73,7 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
             "50: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
         };
 
-        verify(checkConfig, getPath("annotation" + File.separator + "BadOverrideFromObject.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideBadOverrideFromObject.java"), expected);
     }
 
     /**
@@ -76,7 +82,7 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      */
     @Test
     public void testBadOverrideFromOther() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         final String[] expected = {
             "10: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
             "26: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
@@ -87,7 +93,7 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
             "63: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
         };
 
-        verify(checkConfig, getPath("annotation" + File.separator + "BadOverrideFromOther.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideBadOverrideFromOther.java"), expected);
     }
 
     /**
@@ -95,14 +101,13 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * Java 5 compatibility mode.
      */
     @Test
-    public void testBadOverrideFromOtherJ5Compat() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testBadOverrideFromOtherJ5Compatible() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "true");
 
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "BadOverrideFromOther.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideBadOverrideFromOther.java"), expected);
     }
 
     /**
@@ -110,8 +115,8 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * for only including the inheritDoc tag.
      */
     @Test
-    public void testBadAnnonOverride() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testBadAnnotationOverride() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         final String[] expected = {
             "10: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
             "16: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
@@ -119,7 +124,7 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
             "35: " + getCheckMessage(MSG_KEY_ANNOTATION_MISSING_OVERRIDE),
         };
 
-        verify(checkConfig, getPath("annotation" + File.separator + "BadAnnonOverride.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideBadAnnotation.java"), expected);
     }
 
     /**
@@ -127,13 +132,12 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * Java 5 compatibility mode.
      */
     @Test
-    public void testBadAnnonOverrideJ5Compat() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testBadAnnotationOverrideJ5Compatible() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "true");
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "BadAnnonOverride.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideBadAnnotation.java"), expected);
     }
 
     /**
@@ -141,13 +145,13 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      */
     @Test
     public void testNotOverride() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         final String[] expected = {
             "8: " + getCheckMessage(MSG_KEY_TAG_NOT_VALID_ON, "{@inheritDoc}"),
             "15: " + getCheckMessage(MSG_KEY_TAG_NOT_VALID_ON, "{@inheritDoc}"),
         };
 
-        verify(checkConfig, getPath("annotation" + File.separator + "NotOverride.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideNotOverride.java"), expected);
     }
 
     /**
@@ -156,13 +160,12 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      */
     @Test
     public void testGoodOverrideFromObject() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "false");
 
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "GoodOverrideFromObject.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideGoodOverrideFromObject.java"), expected);
     }
 
     /**
@@ -170,14 +173,13 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * flagged for only including the inheritDoc tag even in Java 5 compatibility mode.
      */
     @Test
-    public void testGoodOverrideFromObjectJ5Compat() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testGoodOverrideFromObjectJ5Compatible() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "true");
 
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "GoodOverrideFromObject.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideGoodOverrideFromObject.java"), expected);
     }
 
     /**
@@ -186,11 +188,10 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      */
     @Test
     public void testGoodOverrideFromOther() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
-        final String[] expected = {
-        };
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "GoodOverrideFromOther.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideGoodOverrideFromOther.java"), expected);
     }
 
     /**
@@ -198,14 +199,13 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * Java 5 compatibility mode.
      */
     @Test
-    public void testGoodOverrideFromOtherJ5Compat() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testGoodOverrideFromOtherJ5Compatible() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "true");
 
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "GoodOverrideFromOther.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideGoodOverrideFromOther.java"), expected);
     }
 
     /**
@@ -213,12 +213,11 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * for only including the inheritDoc tag.
      */
     @Test
-    public void testGoodAnnonOverride() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
-        final String[] expected = {
-        };
+    public void testGoodAnnotationOverride() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "GoodAnnonOverride.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideGoodOverride.java"), expected);
     }
 
     /**
@@ -226,21 +225,21 @@ public class MissingOverrideCheckTest extends BaseCheckTestSupport {
      * Java 5 compatibility mode.
      */
     @Test
-    public void testGoodAnnonOverrideJ5Compat() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(MissingOverrideCheck.class);
+    public void testGoodAnnotationOverrideJ5Compatible() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(MissingOverrideCheck.class);
         checkConfig.addAttribute("javaFiveCompatibility", "true");
-        final String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation" + File.separator + "GoodAnnonOverride.java"), expected);
+        verify(checkConfig, getPath("InputMissingOverrideGoodOverride.java"), expected);
     }
 
     @Test
-    public void testGetAcceptableTockens() throws Exception {
-        int[] expectedTokens = {TokenTypes.METHOD_DEF };
-        MissingOverrideCheck check = new MissingOverrideCheck();
-        int[] actual = check.getAcceptableTokens();
-        Assert.assertTrue(actual.length == 1);
-        Assert.assertArrayEquals(expectedTokens, actual);
+    public void testGetAcceptableTokens() {
+        final int[] expectedTokens = {TokenTypes.METHOD_DEF };
+        final MissingOverrideCheck check = new MissingOverrideCheck();
+        final int[] actual = check.getAcceptableTokens();
+        assertEquals("Invalid acceptable token size", 1, actual.length);
+        Assert.assertArrayEquals("Default required tokens are invalid", expectedTokens, actual);
     }
+
 }

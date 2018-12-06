@@ -19,8 +19,8 @@ h4 {
   margin-right : 5%;
   padding-left: 2%;
   padding-right: 2%;
-  background-color: Silver;
-  color:Black;
+  background-color: #c0c0c0;
+  color: #000000;
   border: ridge;
 }
 
@@ -37,19 +37,33 @@ h4 {
   background: url("../images/header-background.png") repeat scroll 0 0 transparent;
 }
 
-.section {
-
-}
-
-a.dl-link {
+.dl-link {
   position: relative;
   float: right;
 }
 
-h2:hover .anchor {
-  display: inline-block;
+h2:hover .anchor, h3:hover .anchor {
+  visibility: visible;
 }
 
 .anchor {
-  display: none;
+  visibility: hidden;
+  display: inline-block;
+}
+
+.source {
+  width: 90%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.wrap-content {
+  white-space: pre-wrap !important;
+  white-space: -moz-pre-wrap !important;
+  white-space: -o-pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+.releaseDate {
+  float: right;
 }

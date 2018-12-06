@@ -1,31 +1,42 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter3filestructure.rule341onetoplevel;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.checks.design.OneTopLevelClassCheck;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class OneTopLevelClassTest extends BaseCheckTestSupport{
-    
-    static ConfigurationBuilder builder;
-    
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
+public class OneTopLevelClassTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter3filestructure/rule341onetoplevel";
     }
 
     @Test
-    public void badTest() throws IOException, Exception {
-        
-        Class<OneTopLevelClassCheck> clazz = OneTopLevelClassCheck.class;
-        String messageKey = "one.top.level.class";
+    public void testBad() throws Exception {
+        final Class<OneTopLevelClassCheck> clazz = OneTopLevelClassCheck.class;
+        final String messageKey = "one.top.level.class";
 
         final String[] expected = {
             "25: " + getCheckMessage(clazz, messageKey, "NoSuperClone"),
@@ -35,58 +46,56 @@ public class OneTopLevelClassTest extends BaseCheckTestSupport{
             "60: " + getCheckMessage(clazz, messageKey, "MyClassWithGenericSuperMethod"),
             "77: " + getCheckMessage(clazz, messageKey, "AnotherClass"),
         };
-        
-        Configuration checkConfig = builder.getCheckConfig("OneTopLevelClass");
-        String filePath = builder.getFilePath("OneTopLevelClassInput_Basic");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+
+        final Configuration checkConfig = getModuleConfig("OneTopLevelClass");
+        final String filePath = getPath("InputOneTopLevelClassBasic.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
 
     @Test
-    public void goodTest() throws IOException, Exception {
-        
-        final String[] expected = {};
-        
-        Configuration checkConfig = builder.getCheckConfig("OneTopLevelClass");
-        String filePath = builder.getFilePath("OneTopLevelClassInputGood");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+    public void testGood() throws Exception {
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+
+        final Configuration checkConfig = getModuleConfig("OneTopLevelClass");
+        final String filePath = getPath("InputOneTopLevelClassGood.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
-    
+
     @Test
-    public void bad2Test() throws IOException, Exception {
-    	
-    	Class<OneTopLevelClassCheck> clazz = OneTopLevelClassCheck.class;
-        String messageKey = "one.top.level.class";
-        
+    public void testBad1() throws Exception {
+        final Class<OneTopLevelClassCheck> clazz = OneTopLevelClassCheck.class;
+        final String messageKey = "one.top.level.class";
+
         final String[] expected = {
             "4: " + getCheckMessage(clazz, messageKey, "FooEnum"),
         };
-        
-        Configuration checkConfig = builder.getCheckConfig("OneTopLevelClass");
-        String filePath = builder.getFilePath("OneTopLevelClassBad2");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+
+        final Configuration checkConfig = getModuleConfig("OneTopLevelClass");
+        final String filePath = getPath("InputOneTopLevelClassBad1.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
-    
+
     @Test
-    public void bad3Test() throws IOException, Exception {
-        
-    	Class<OneTopLevelClassCheck> clazz = OneTopLevelClassCheck.class;
-        String messageKey = "one.top.level.class";
-        
+    public void testBad2() throws Exception {
+        final Class<OneTopLevelClassCheck> clazz = OneTopLevelClassCheck.class;
+        final String messageKey = "one.top.level.class";
+
         final String[] expected = {
-        	"5: " + getCheckMessage(clazz, messageKey, "FooIn"),
+            "5: " + getCheckMessage(clazz, messageKey, "FooIn"),
             "7: " + getCheckMessage(clazz, messageKey, "FooClass"),
         };
-        
-        Configuration checkConfig = builder.getCheckConfig("OneTopLevelClass");
-        String filePath = builder.getFilePath("OneTopLevelClassBad3");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+
+        final Configuration checkConfig = getModuleConfig("OneTopLevelClass");
+        final String filePath = getPath("InputOneTopLevelClassBad2.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
+
 }

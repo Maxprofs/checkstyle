@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,43 +20,45 @@
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
 import java.io.File;
-import java.util.List;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
 import com.puppycrawl.tools.checkstyle.api.AbstractFileSetCheck;
+import com.puppycrawl.tools.checkstyle.api.FileText;
 
 /**
  * Checks to see if a file contains a tab character.
- * @author oliverb
  */
+@StatelessCheck
 public class FileTabCharacterCheck extends AbstractFileSetCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String CONTAINS_TAB = "containsTab";
+    public static final String MSG_CONTAINS_TAB = "containsTab";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String FILE_CONTAINS_TAB = "file.containsTab";
+    public static final String MSG_FILE_CONTAINS_TAB = "file.containsTab";
 
     /** Indicates whether to report once per file, or for each line. */
     private boolean eachLine;
 
     @Override
-    protected void processFiltered(File file, List<String> lines) {
+    protected void processFiltered(File file, FileText fileText) {
         int lineNum = 0;
-        for (final String line : lines) {
+        for (int index = 0; index < fileText.size(); index++) {
+            final String line = fileText.get(index);
             lineNum++;
             final int tabPosition = line.indexOf('\t');
             if (tabPosition != -1) {
                 if (eachLine) {
-                    log(lineNum, tabPosition + 1, CONTAINS_TAB);
+                    log(lineNum, tabPosition + 1, MSG_CONTAINS_TAB);
                 }
                 else {
-                    log(lineNum, tabPosition + 1, FILE_CONTAINS_TAB);
+                    log(lineNum, tabPosition + 1, MSG_FILE_CONTAINS_TAB);
                     break;
                 }
             }
@@ -70,4 +72,5 @@ public class FileTabCharacterCheck extends AbstractFileSetCheck {
     public void setEachLine(boolean eachLine) {
         this.eachLine = eachLine;
     }
+
 }

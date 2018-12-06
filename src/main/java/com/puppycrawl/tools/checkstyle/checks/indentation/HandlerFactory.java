@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,29 +20,27 @@
 package com.puppycrawl.tools.checkstyle.checks.indentation;
 
 import java.lang.reflect.Constructor;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.Maps;
-import com.puppycrawl.tools.checkstyle.Utils;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Factory for handlers. Looks up constructor via reflection.
  *
- * @author jrichard
  */
 public class HandlerFactory {
+
     /**
      * Registered handlers.
      */
-    private final Map<Integer, Constructor<?>> typeHandlers =
-        Maps.newHashMap();
+    private final Map<Integer, Constructor<?>> typeHandlers = new HashMap<>();
 
-    /** cache for created method call handlers */
-    private final Map<DetailAST, AbstractExpressionHandler> createdHandlers =
-        Maps.newHashMap();
+    /** Cache for created method call handlers. */
+    private final Map<DetailAST, AbstractExpressionHandler> createdHandlers = new HashMap<>();
 
     /** Creates a HandlerFactory. */
     public HandlerFactory() {
@@ -68,6 +66,7 @@ public class HandlerFactory {
         register(TokenTypes.ARRAY_INIT, ArrayInitHandler.class);
         register(TokenTypes.METHOD_CALL, MethodCallHandler.class);
         register(TokenTypes.CTOR_CALL, MethodCallHandler.class);
+        register(TokenTypes.SUPER_CTOR_CALL, MethodCallHandler.class);
         register(TokenTypes.LABELED_STAT, LabelHandler.class);
         register(TokenTypes.STATIC_INIT, StaticInitHandler.class);
         register(TokenTypes.INSTANCE_INIT, SlistHandler.class);
@@ -75,21 +74,27 @@ public class HandlerFactory {
         register(TokenTypes.LITERAL_NEW, NewHandler.class);
         register(TokenTypes.INDEX_OP, IndexHandler.class);
         register(TokenTypes.LITERAL_SYNCHRONIZED, SynchronizedHandler.class);
+        register(TokenTypes.LAMBDA, LambdaHandler.class);
+        register(TokenTypes.ANNOTATION_DEF, ClassDefHandler.class);
+        register(TokenTypes.ANNOTATION_FIELD_DEF, MethodDefHandler.class);
     }
 
     /**
-     * registers a handler
+     * Registers a handler.
      *
      * @param type
      *                type from TokenTypes
      * @param handlerClass
      *                the handler to register
+     * @param <T> type of the handler class object.
      */
-    private void register(int type, Class<?> handlerClass) {
-        final Constructor<?> ctor = Utils.getConstructor(handlerClass,
+    private <T> void register(int type, Class<T> handlerClass) {
+        final Constructor<T> ctor = CommonUtil.getConstructor(handlerClass,
                 IndentationCheck.class,
-                DetailAST.class, // current AST
-                AbstractExpressionHandler.class // parent
+                // current AST
+                DetailAST.class,
+                // parent
+                AbstractExpressionHandler.class
         );
         typeHandlers.put(type, ctor);
     }
@@ -133,20 +138,21 @@ public class HandlerFactory {
      */
     public AbstractExpressionHandler getHandler(IndentationCheck indentCheck,
         DetailAST ast, AbstractExpressionHandler parent) {
+        final AbstractExpressionHandler resultHandler;
         final AbstractExpressionHandler handler =
             createdHandlers.get(ast);
         if (handler != null) {
-            return handler;
+            resultHandler = handler;
         }
-
-        if (ast.getType() == TokenTypes.METHOD_CALL) {
-            return createMethodCallHandler(indentCheck, ast, parent);
+        else if (ast.getType() == TokenTypes.METHOD_CALL) {
+            resultHandler = createMethodCallHandler(indentCheck, ast, parent);
         }
-
-        final Constructor<?> handlerCtor =
-            typeHandlers.get(ast.getType());
-        return (AbstractExpressionHandler) Utils.invokeConstructor(
-            handlerCtor, indentCheck, ast, parent);
+        else {
+            final Constructor<?> handlerCtor = typeHandlers.get(ast.getType());
+            resultHandler = (AbstractExpressionHandler) CommonUtil.invokeConstructor(
+                handlerCtor, indentCheck, ast, parent);
+        }
+        return resultHandler;
     }
 
     /**
@@ -158,13 +164,13 @@ public class HandlerFactory {
      *
      * @return new instance.
      */
-    AbstractExpressionHandler createMethodCallHandler(IndentationCheck indentCheck,
+    private AbstractExpressionHandler createMethodCallHandler(IndentationCheck indentCheck,
         DetailAST ast, AbstractExpressionHandler parent) {
-        AbstractExpressionHandler theParent = parent;
         DetailAST astNode = ast.getFirstChild();
         while (astNode.getType() == TokenTypes.DOT) {
             astNode = astNode.getFirstChild();
         }
+        AbstractExpressionHandler theParent = parent;
         if (isHandledType(astNode.getType())) {
             theParent = getHandler(indentCheck, astNode, theParent);
             createdHandlers.put(astNode, theParent);
@@ -173,7 +179,8 @@ public class HandlerFactory {
     }
 
     /** Clears cache of created handlers. */
-    void clearCreatedHandlers() {
+    public void clearCreatedHandlers() {
         createdHandlers.clear();
     }
+
 }

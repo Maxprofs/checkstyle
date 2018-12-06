@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,35 +19,48 @@
 
 package com.puppycrawl.tools.checkstyle.filters;
 
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.ExternalResourceHolder;
 import com.puppycrawl.tools.checkstyle.api.Filter;
 import com.puppycrawl.tools.checkstyle.api.FilterSet;
+import com.puppycrawl.tools.checkstyle.utils.FilterUtil;
 
 /**
  * <p>
  * This filter accepts AuditEvents according to file, check, line, and
  * column, as specified in a suppression file.
  * </p>
- * @author Rick Giles
+ * @noinspection NonFinalFieldReferenceInEquals, NonFinalFieldReferencedInHashCode
  */
-public class SuppressionFilter
-    extends AutomaticBean
-    implements Filter {
-    /** set of individual suppresses */
+public class SuppressionFilter extends AutomaticBean implements Filter, ExternalResourceHolder {
+
+    /** Filename of suppression file. */
+    private String file;
+    /** Tells whether config file existence is optional. */
+    private boolean optional;
+    /** Set of individual suppresses. */
     private FilterSet filters = new FilterSet();
 
     /**
-     * Loads the suppressions for a file.
+     * Sets name of the suppression file.
      * @param fileName name of the suppressions file.
-     * @throws CheckstyleException if there is an error.
      */
-    public void setFile(String fileName)
-        throws CheckstyleException {
-        filters = SuppressionsLoader.loadSuppressions(fileName);
+    public void setFile(String fileName) {
+        file = fileName;
+    }
+
+    /**
+     * Sets whether config file existence is optional.
+     * @param optional tells if config file existence is optional.
+     */
+    public void setOptional(boolean optional) {
+        this.optional = optional;
     }
 
     @Override
@@ -71,4 +84,27 @@ public class SuppressionFilter
     public int hashCode() {
         return Objects.hash(filters);
     }
+
+    @Override
+    protected void finishLocalSetup() throws CheckstyleException {
+        if (file != null) {
+            if (optional) {
+                if (FilterUtil.isFileExists(file)) {
+                    filters = SuppressionsLoader.loadSuppressions(file);
+                }
+                else {
+                    filters = new FilterSet();
+                }
+            }
+            else {
+                filters = SuppressionsLoader.loadSuppressions(file);
+            }
+        }
+    }
+
+    @Override
+    public Set<String> getExternalResourceLocations() {
+        return Collections.singleton(file);
+    }
+
 }

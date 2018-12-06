@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,25 +19,25 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * Detects inline conditionals.
  *
- * An example inline conditional is this:
+ * <p>An example inline conditional is this:
  * <pre>
  * String a = getParameter("a");
  * String b = (a==null || a.length&lt;1) ? null : a.substring(1);
  * </pre>
- *
  * Rationale: Some developers find inline conditionals hard to read,
  * so their company's coding standards forbids them.
  *
- * @author lkuehne
  */
-public class AvoidInlineConditionalsCheck extends Check {
+@StatelessCheck
+public class AvoidInlineConditionalsCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -47,17 +47,17 @@ public class AvoidInlineConditionalsCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[]{TokenTypes.QUESTION};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
+        return new int[] {TokenTypes.QUESTION};
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[]{TokenTypes.QUESTION};
+        return getRequiredTokens();
     }
 
     @Override
@@ -65,6 +65,7 @@ public class AvoidInlineConditionalsCheck extends Check {
         // the only place a QUESTION token can occur is in inline conditionals
         // so no need to do any further tricks here - pretty trivial Check!
 
-        log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY);
+        log(ast, MSG_KEY);
     }
+
 }

@@ -4,14 +4,10 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
 
-  <properties>
-    <title>Standard Checks</title>
-    <author>Checkstyle Development Team</author>
-  </properties>
-
   <head>
-    <title>Standard Checks</title>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"/>
+    <title>Checks</title>
+    <script type="text/javascript"
+            src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"/>
     <script type="text/javascript" src="js/anchors.js"/>
     <script type="text/javascript" src="js/google-analytics.js"/>
     <link rel="icon" href="images/favicon.png" type="image/x-icon" />
@@ -19,7 +15,7 @@
   </head>
 
   <body>
-    <section name="Checks">
+    <section name="Standard Checks">
     <p>
       The Standard Checkstyle Checks are applicable to general Java coding style
       and require no external libraries. The standard checks are included in
@@ -44,13 +40,18 @@
       <tr>
         <td><a href="config_naming.html#AbstractClassName">AbstractClassName</a></td>
         <td>
-          Ensures that the names of abstract classes conforming to some
-          regular expression.
+          Ensures that the names of abstract classes conforming to some regular expression and
+          check that <code>abstract</code> modifier exists.
         </td>
       </tr>
       <tr>
         <td><a href="config_annotation.html#AnnotationLocation">AnnotationLocation</a></td>
         <td>Check location of annotation on language elements.</td>
+      </tr>
+      <tr>
+        <td><a href="config_annotation.html#AnnotationOnSameLine">AnnotationOnSameLine</a></td>
+        <td>The check does verifying that annotations are located on the same line with their
+            targets.</td>
       </tr>
       <tr>
         <td><a href="config_annotation.html#AnnotationUseStyle">AnnotationUseStyle</a></td>
@@ -73,7 +74,8 @@
         <td>Checks the order of at-clauses.</td>
       </tr>
       <tr>
-        <td><a href="config_misc.html#AvoidEscapedUnicodeCharacters">AvoidEscapedUnicodeCharacters</a></td>
+        <td><a href="config_misc.html#AvoidEscapedUnicodeCharacters">
+          AvoidEscapedUnicodeCharacters</a></td>
         <td>Restrict using Unicode escapes.</td>
       </tr>
       <tr>
@@ -93,34 +95,42 @@
         <td>Check that finds static imports.</td>
       </tr>
       <tr>
-        <td><a href="config_metrics.html#BooleanExpressionComplexity">BooleanExpressionComplexity</a></td>
+        <td><a href="config_metrics.html#BooleanExpressionComplexity">
+          BooleanExpressionComplexity</a></td>
         <td>
           Restricts nested boolean operators (&amp;&amp;, ||, &amp;, |
           and ^) to a specified depth (default = 3).
         </td>
       </tr>
       <tr>
-        <td><a href="config_metrics.html#ClassDataAbstractionCoupling">ClassDataAbstractionCoupling</a></td>
-        <td>This metric measures the number of instantiations of other classes within the given class.</td>
+        <td><a href="config_naming.html#CatchParameterName">CatchParameterName</a></td>
+        <td>Checks that <code>catch</code> parameter names conform to a format specified by the
+            format property.</td>
+      </tr>
+      <tr>
+        <td><a href="config_metrics.html#ClassDataAbstractionCoupling">
+          ClassDataAbstractionCoupling</a></td>
+        <td>This metric measures the number of instantiations of other classes within the given
+            class.</td>
       </tr>
       <tr>
         <td><a href="config_metrics.html#ClassFanOutComplexity">ClassFanOutComplexity</a></td>
         <td>The number of other classes a given class relies on.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">ClassTypeParameterName</a></td>
+        <td><a href="config_naming.html#ClassTypeParameterName">ClassTypeParameterName</a></td>
         <td>
           Checks that class type parameter names conform to a format
           specified by the format property.
         </td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">ConstantName</a></td>
-        <td>Checks that constant names conform to a format specified by the format property.</td>
-      </tr>
-      <tr>
         <td><a href="config_misc.html#CommentsIndentation">CommentsIndentation</a></td>
         <td>Controls the indentation between comments and surrounding code.</td>
+      </tr>
+      <tr>
+        <td><a href="config_naming.html#ConstantName">ConstantName</a></td>
+        <td>Checks that constant names conform to a format specified by the format property.</td>
       </tr>
       <tr>
         <td><a href="config_coding.html#CovariantEquals">CovariantEquals</a></td>
@@ -145,7 +155,7 @@
         <td>
           Checks that the parts of a class or interface declaration
           appear in the order suggested by the <a
-          href="http://www.oracle.com/technetwork/java/javase/documentation/codeconventions-141855.html#1852"
+          href="https://www.oracle.com/technetwork/java/javase/documentation/codeconventions-141855.html#1852"
           >Code Conventions for the Java Programming Language</a>.
         </td>
       </tr>
@@ -166,7 +176,7 @@
       </tr>
       <tr>
         <td><a href="config_blocks.html#EmptyBlock">EmptyBlock</a></td>
-        <td>Checks for empty blocks.</td>
+        <td>Checks for empty blocks but does not validate sequential blocks.</td>
       </tr>
       <tr>
         <td><a href="config_blocks.html#EmptyCatchBlock">EmptyCatchBlock</a></td>
@@ -196,8 +206,8 @@
       <tr>
         <td><a href="config_coding.html#EqualsAvoidNull">EqualsAvoidNull</a></td>
         <td>
-          Checks that any combination of String literals with optional
-        assignment is on the left side of an equals() comparison.</td>
+          Checks that any combination of String literals
+          is on the left side of an equals() comparison.</td>
       </tr>
       <tr>
         <td><a href="config_coding.html#EqualsHashCode">EqualsHashCode</a></td>
@@ -238,7 +248,7 @@
       <tr>
         <td><a href="config_design.html#FinalClass">FinalClass</a></td>
         <td>
-          Checks that class which has only private ctors
+          Checks that class which has only private constructors
         is declared as final.</td>
       </tr>
       <tr>
@@ -266,7 +276,8 @@
         a field that is defined in the same class.</td>
       </tr>
       <tr>
-        <td><a href="config_design.html#HideUtilityClassConstructor">HideUtilityClassConstructor</a></td>
+        <td><a href="config_design.html#HideUtilityClassConstructor">
+          HideUtilityClassConstructor</a></td>
         <td>Make sure that utility classes (classes that contain only static methods)
         do not have a public constructor.</td>
       </tr>
@@ -303,12 +314,11 @@
       <tr>
         <td><a href="config_coding.html#IllegalType">IllegalType</a></td>
         <td>
-          Checks that particular class are never used as types in variable
-        declarations, return values or parameters.</td>
+          Checks that particular classes or interfaces are never used.</td>
       </tr>
       <tr>
         <td><a href="config_imports.html#ImportControl">ImportControl</a></td>
-        <td>Check that controls what packages can be imported in each package.</td>
+        <td>Check that controls what can be imported in each package and file.</td>
       </tr>
       <tr>
         <td><a href="config_imports.html#ImportOrder">ImportOrder</a></td>
@@ -336,15 +346,17 @@
         Use Interfaces only to define types.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">InterfaceTypeParameterName</a></td>
+        <td><a href="config_modifier.html#InterfaceMemberImpliedModifier">
+          InterfaceMemberImpliedModifier</a></td>
+        <td>
+          Checks for implicit modifiers on interface members and nested types.</td>
+      </tr>
+      <tr>
+        <td><a href="config_naming.html#InterfaceTypeParameterName">
+          InterfaceTypeParameterName</a></td>
         <td>
           Checks that interface type parameter names conform to a format specified
         by the format property.</td>
-      </tr>
-      <tr>
-        <td><a href="config_metrics.html#JavaNCSS">JavaNCSS</a></td>
-        <td>This check calculates the Non Commenting Source Statements (NCSS) metric for
-        Java source files and methods.</td>
       </tr>
       <tr>
         <td><a href="config_javadoc.html#JavadocMethod">JavadocMethod</a></td>
@@ -355,10 +367,6 @@
         <td>Checks that all packages have a package documentation.</td>
       </tr>
       <tr>
-        <td><a href="config_javadoc.html#JavadocTagContinuationIndentation">JavadocTagContinuationIndentation</a></td>
-        <td>Checks the indentation of the continuation lines in at-clauses.</td>
-      </tr>
-      <tr>
         <td><a href="config_javadoc.html#JavadocParagraph">JavadocParagraph</a></td>
         <td>Checks Javadoc paragraphs.</td>
       </tr>
@@ -367,12 +375,26 @@
         <td>Custom Checkstyle Check to validate Javadoc.</td>
       </tr>
       <tr>
+        <td><a href="config_javadoc.html#JavadocTagContinuationIndentation">
+          JavadocTagContinuationIndentation</a></td>
+        <td>Checks the indentation of the continuation lines in at-clauses.</td>
+      </tr>
+      <tr>
         <td><a href="config_javadoc.html#JavadocType">JavadocType</a></td>
         <td>Checks the Javadoc of a type.</td>
       </tr>
       <tr>
         <td><a href="config_javadoc.html#JavadocVariable">JavadocVariable</a></td>
         <td>Checks that a variable has Javadoc comment.</td>
+      </tr>
+      <tr>
+        <td><a href="config_metrics.html#JavaNCSS">JavaNCSS</a></td>
+        <td>This check calculates the Non Commenting Source Statements (NCSS) metric for
+        Java source files and methods.</td>
+      </tr>
+      <tr>
+        <td><a href="config_naming.html#LambdaParameterName">LambdaParameterName</a></td>
+        <td>Check to verify lambda parameter names.</td>
       </tr>
       <tr>
         <td><a href="config_blocks.html#LeftCurly">LeftCurly</a></td>
@@ -386,7 +408,7 @@
         <td>Checks for long lines.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">LocalFinalVariableName</a></td>
+        <td><a href="config_naming.html#LocalFinalVariableName">LocalFinalVariableName</a></td>
         <td>
           Checks that local final variable names conform to a format specified
         by the format property.</td>
@@ -403,14 +425,15 @@
         Checks for magic numbers.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">MemberName</a></td>
+        <td><a href="config_naming.html#MemberName">MemberName</a></td>
         <td>
           Checks that instance variable names conform to a format specified
         by the format property.</td>
       </tr>
       <tr>
         <td><a href="config_sizes.html#MethodCount">MethodCount</a></td>
-        <td>Checks the number of methods declared in each type.</td>
+        <td>Checks the number of methods declared in each type declaration by access modifier
+        or total count.</td>
       </tr>
       <tr>
         <td><a href="config_sizes.html#MethodLength">MethodLength</a></td>
@@ -431,7 +454,7 @@
         and the left parenthesis of the parameter list.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">MethodTypeParameterName</a></td>
+        <td><a href="config_naming.html#MethodTypeParameterName">MethodTypeParameterName</a></td>
         <td>
           Checks that class type parameter names conform to a format specified
         by the format property.</td>
@@ -471,7 +494,7 @@
         <td>
           Checks that the order of modifiers conforms to the suggestions in the
           <a
-              href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html">
+              href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html">
         Java Language specification, sections 8.1.1, 8.3.1 and 8.4.3</a>.</td>
       </tr>
       <tr>
@@ -480,7 +503,8 @@
         single file.</td>
       </tr>
       <tr>
-        <td><a href="config_coding.html#MultipleVariableDeclarations">MultipleVariableDeclarations</a></td>
+        <td><a href="config_coding.html#MultipleVariableDeclarations">
+          MultipleVariableDeclarations</a></td>
         <td>
           Checks that each variable declaration is in its own statement
         and on its own line.</td>
@@ -489,10 +513,6 @@
         <td><a href="config_design.html#MutableException">MutableException</a></td>
         <td> Ensures that exceptions (defined as any class name conforming
         to some regular expression) are immutable.</td>
-      </tr>
-      <tr>
-        <td><a href="config_metrics.html#NPathComplexity">NPathComplexity</a></td>
-        <td>Checks the npath complexity against a specified limit (default = 200).</td>
       </tr>
       <tr>
         <td><a href="config_blocks.html#NeedBraces">NeedBraces</a></td>
@@ -528,14 +548,15 @@
         using the name <em>finalize</em>.</td>
       </tr>
       <tr>
-        <td><a href="config_javadoc.html#NonEmptyAtclauseDescription">NonEmptyAtclauseDescription</a></td>
-        <td>
-        Checks that the at-clause tag is followed by description .</td>
-      </tr>
-      <tr>
         <td><a href="config_whitespace.html#NoLineWrap">NoLineWrap</a></td>
         <td>
         Checks that chosen statements are not line-wrapped.</td>
+      </tr>
+      <tr>
+        <td><a href="config_javadoc.html#NonEmptyAtclauseDescription">
+          NonEmptyAtclauseDescription</a></td>
+        <td>
+        Checks that the at-clause tag is followed by description .</td>
       </tr>
       <tr>
         <td><a href="config_whitespace.html#NoWhitespaceAfter">NoWhitespaceAfter</a></td>
@@ -548,12 +569,17 @@
         Checks that there is no whitespace before a token.</td>
       </tr>
       <tr>
+        <td><a href="config_metrics.html#NPathComplexity">NPathComplexity</a></td>
+        <td>Checks the npath complexity against a specified limit (default = 200).</td>
+      </tr>
+      <tr>
         <td><a href="config_coding.html#OneStatementPerLine">OneStatementPerLine</a></td>
         <td>Checks that there is only one statement per line.</td>
       </tr>
       <tr>
         <td><a href="config_design.html#OneTopLevelClass">OneTopLevelClass</a></td>
-        <td>Checks that each top-level class, interfaces or enum resides in a source file of its own.</td>
+        <td>Checks that each top-level class, interfaces or enum resides in a source file of
+            its own.</td>
       </tr>
       <tr>
         <td><a href="config_whitespace.html#OperatorWrap">OperatorWrap</a></td>
@@ -569,7 +595,8 @@
         <td>Checks for the number of defined types at the "outer" level.</td>
       </tr>
       <tr>
-        <td><a href="config_coding.html#OverloadMethodsDeclarationOrder">OverloadMethodsDeclarationOrder</a></td>
+        <td><a href="config_coding.html#OverloadMethodsDeclarationOrder">
+          OverloadMethodsDeclarationOrder</a></td>
         <td>Checks that overload methods are grouped together.</td>
       </tr>
       <tr>
@@ -582,7 +609,7 @@
         <td>Ensures there is a package declaration and (optionally) in the correct directory.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">PackageName</a></td>
+        <td><a href="config_naming.html#PackageName">PackageName</a></td>
         <td>
           Checks that package names conform to a format specified
         by the format property.</td>
@@ -593,7 +620,7 @@
         Disallow assignment of parameters.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">ParameterName</a></td>
+        <td><a href="config_naming.html#ParameterName">ParameterName</a></td>
         <td>
           Checks that parameter names conform to a format specified
         by the format property.</td>
@@ -617,7 +644,11 @@
       </tr>
       <tr>
         <td><a href="config_modifier.html#RedundantModifier">RedundantModifier</a></td>
-        <td>Checks for redundant modifiers in interface and annotation definitions.</td>
+        <td>Checks for redundant modifiers in interface and annotation definitions,
+          final modifier on methods of final classes, inner <code>interface</code>
+          declarations that are declared as <code>static</code>, non public class
+          constructors and enum constructors, nested enum definitions that are declared
+          as <code>static</code>.</td>
       </tr>
       <tr>
         <td><a href="config_regexp.html#Regexp">Regexp</a></td>
@@ -633,6 +664,10 @@
         <td><a href="config_regexp.html#RegexpMultiline">RegexpMultiline</a></td>
         <td>Implementation of a check that looks that matches across multiple lines in
         any file type.</td>
+      </tr>
+      <tr>
+        <td><a href="config_regexp.html#RegexpOnFilename">RegexpOnFilename</a></td>
+        <td>Implementation of a check that matches based on file and/or folder path.</td>
       </tr>
       <tr>
         <td><a href="config_regexp.html#RegexpSingleline">RegexpSingleline</a></td>
@@ -662,12 +697,8 @@
         Checks line wrapping with separators.</td>
       </tr>
       <tr>
-        <td><a href="config_javadoc.html#SingleLineJavadoc">SingleLineJavadoc</a></td>
-        <td>
-         Checks that a JavaDoc block which can fit on a single line and doesn't contain at-clauses</td>
-      </tr>
-      <tr>
-        <td><a href="config_coding.html#SimplifyBooleanExpression">SimplifyBooleanExpression</a></td>
+        <td><a href="config_coding.html#SimplifyBooleanExpression">
+          SimplifyBooleanExpression</a></td>
         <td>
         Checks for overly complicated boolean expressions.</td>
       </tr>
@@ -677,7 +708,18 @@
         Checks for overly complicated boolean return statements.</td>
       </tr>
       <tr>
-        <td><a href="config_naming.html#Modules">StaticVariableName</a></td>
+        <td><a href="config_javadoc.html#SingleLineJavadoc">SingleLineJavadoc</a></td>
+        <td>
+         Checks that a JavaDoc block which can fit on a single line and doesn't contain
+         at-clauses</td>
+      </tr>
+      <tr>
+        <td><a href="config_whitespace.html#SingleSpaceSeparator">SingleSpaceSeparator</a></td>
+        <td>
+         Checks that non-whitespace characters are separated by no more than one whitespace.</td>
+      </tr>
+      <tr>
+        <td><a href="config_naming.html#StaticVariableName">StaticVariableName</a></td>
         <td>
           Checks that static, non-final variable names conform to a format specified
         by the format property.</td>
@@ -690,7 +732,8 @@
       <tr>
         <td><a href="config_javadoc.html#SummaryJavadoc">SummaryJavadoc</a></td>
         <td>
-        Checks that Javadoc summary sentence does not contain phrases that are not recommended to use.</td>
+        Checks that Javadoc summary sentence does not contain phrases that are not recommended
+        to use.</td>
       </tr>
       <tr>
         <td><a href="config_coding.html#SuperClone">SuperClone</a></td>
@@ -706,12 +749,6 @@
         <td><a href="config_annotation.html#SuppressWarnings">SuppressWarnings</a></td>
         <td>
           This check allows you to specify what warnings that
-        </td>
-      </tr>
-      <tr>
-        <td><a href="config_annotation.html#SuppressWarningsHolder">SuppressWarningsHolder</a></td>
-        <td>
-          This check allows for finding code that should not be reported by Checkstyle
         </td>
       </tr>
       <tr>
@@ -736,14 +773,14 @@
         checking property files for consistency regarding their keys.</td>
       </tr>
       <tr>
+        <td><a href="config_whitespace.html#TypecastParenPad">TypecastParenPad</a></td>
+        <td>Checks the padding of parentheses for typecasts.</td>
+      </tr>
+      <tr>
         <td><a href="config_naming.html#TypeName">TypeName</a></td>
         <td>
           Checks that type names conform to a format specified
         by the format property.</td>
-      </tr>
-      <tr>
-        <td><a href="config_whitespace.html#TypecastParenPad">TypecastParenPad</a></td>
-        <td>Checks the padding of parentheses for typecasts.</td>
       </tr>
       <tr>
         <td><a href="config_misc.html#UncommentedMain">UncommentedMain</a></td>
@@ -768,7 +805,8 @@
         <td>Checks that long constants are defined with an upper ell.</td>
       </tr>
       <tr>
-        <td><a href="config_coding.html#VariableDeclarationUsageDistance">VariableDeclarationUsageDistance</a></td>
+        <td><a href="config_coding.html#VariableDeclarationUsageDistance">
+          VariableDeclarationUsageDistance</a></td>
         <td>Checks the distance between declaration of variable and its first usage.</td>
       </tr>
       <tr>
@@ -790,6 +828,22 @@
         <td><a href="config_javadoc.html#WriteTag">WriteTag</a></td>
         <td>
         Outputs a JavaDoc tag as information.</td>
+      </tr>
+    </table>
+    </section>
+
+    <section name="Holder Checks">
+    <p>
+      These checks aren't normal checks and are usually associated with a specialized filter
+      to gather information the filter can't get on it's own.
+    </p>
+
+    <table>
+      <tr>
+        <td><a href="config_annotation.html#SuppressWarningsHolder">SuppressWarningsHolder</a></td>
+        <td>
+          Maintains a set of check suppressions from <code>SuppressWarnings</code> annotations.
+        </td>
       </tr>
     </table>
     </section>

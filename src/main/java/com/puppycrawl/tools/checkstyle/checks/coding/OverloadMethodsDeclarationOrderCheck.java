@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,8 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -45,9 +46,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <pre>
  * &lt;module name="OverloadMethodsDeclarationOrder"/&gt;
  * </pre>
- * @author maxvetrenko
  */
-public class OverloadMethodsDeclarationOrderCheck extends Check {
+@StatelessCheck
+public class OverloadMethodsDeclarationOrderCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -57,13 +58,16 @@ public class OverloadMethodsDeclarationOrderCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.OBJBLOCK,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.OBJBLOCK,
         };
@@ -98,8 +102,8 @@ public class OverloadMethodsDeclarationOrderCheck extends Check {
                 final String methodName =
                         currentToken.findFirstToken(TokenTypes.IDENT).getText();
                 if (methodIndexMap.containsKey(methodName)) {
-                    final int priviousIndex = methodIndexMap.get(methodName);
-                    if (currentIndex - priviousIndex > allowedDistance) {
+                    final int previousIndex = methodIndexMap.get(methodName);
+                    if (currentIndex - previousIndex > allowedDistance) {
                         final int previousLineWithOverloadMethod =
                                 methodLineNumberMap.get(methodName);
                         log(currentToken.getLineNo(), MSG_KEY,
@@ -112,4 +116,5 @@ public class OverloadMethodsDeclarationOrderCheck extends Check {
             currentToken = currentToken.getNextSibling();
         }
     }
+
 }

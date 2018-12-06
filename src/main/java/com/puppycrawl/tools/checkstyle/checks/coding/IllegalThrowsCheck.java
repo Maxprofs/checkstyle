@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,14 +19,18 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.Sets;
-import com.puppycrawl.tools.checkstyle.AnnotationUtility;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * <p>
@@ -45,11 +49,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *  or java.lang.Override annotation) default value is <b>true</b>.
  * </p>
  *
- * @author Oliver Burn
- * @author John Sirois
- * @author <a href="mailto:nesterenko-aleksey@list.ru">Aleksey Nesterenko</a>
  */
-public final class IllegalThrowsCheck extends AbstractIllegalCheck {
+@StatelessCheck
+public final class IllegalThrowsCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -57,49 +59,56 @@ public final class IllegalThrowsCheck extends AbstractIllegalCheck {
      */
     public static final String MSG_KEY = "illegal.throw";
 
-    /** Default ignored method names. */
-    private static final String[] DEFAULT_IGNORED_METHOD_NAMES = {
-        "finalize",
-    };
+    /** Methods which should be ignored. */
+    private final Set<String> ignoredMethodNames =
+        Arrays.stream(new String[] {"finalize", }).collect(Collectors.toSet());
 
-    /** property for ignoring overridden methods. */
+    /** Illegal class names. */
+    private final Set<String> illegalClassNames = Arrays.stream(
+        new String[] {"Error", "RuntimeException", "Throwable", "java.lang.Error",
+                      "java.lang.RuntimeException", "java.lang.Throwable", })
+        .collect(Collectors.toSet());
+
+    /** Property for ignoring overridden methods. */
     private boolean ignoreOverriddenMethods = true;
 
-    /** methods which should be ignored. */
-    private final Set<String> ignoredMethodNames = Sets.newHashSet();
-
-    /** Creates new instance of the check. */
-    public IllegalThrowsCheck() {
-        super("Error", "RuntimeException", "Throwable", "java.lang.Error",
-                "java.lang.RuntimeException", "java.lang.Throwable");
-        setIgnoredMethodNames(DEFAULT_IGNORED_METHOD_NAMES);
+    /**
+     * Set the list of illegal classes.
+     *
+     * @param classNames
+     *            array of illegal exception classes
+     */
+    public void setIllegalClassNames(final String... classNames) {
+        illegalClassNames.clear();
+        illegalClassNames.addAll(
+                CheckUtil.parseClassNames(classNames));
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.LITERAL_THROWS};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
+        return new int[] {TokenTypes.LITERAL_THROWS};
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.LITERAL_THROWS};
+        return getRequiredTokens();
     }
 
     @Override
     public void visitToken(DetailAST detailAST) {
         final DetailAST methodDef = detailAST.getParent();
-        DetailAST token = detailAST.getFirstChild();
         // Check if the method with the given name should be ignored.
         if (!isIgnorableMethod(methodDef)) {
+            DetailAST token = detailAST.getFirstChild();
             while (token != null) {
                 if (token.getType() != TokenTypes.COMMA) {
                     final FullIdent ident = FullIdent.createFullIdent(token);
-                    if (isIllegalClassName(ident.getText())) {
+                    if (illegalClassNames.contains(ident.getText())) {
                         log(token, MSG_KEY, ident.getText());
                     }
                 }
@@ -116,12 +125,12 @@ public final class IllegalThrowsCheck extends AbstractIllegalCheck {
     private boolean isIgnorableMethod(DetailAST methodDef) {
         return shouldIgnoreMethod(methodDef.findFirstToken(TokenTypes.IDENT).getText())
             || ignoreOverriddenMethods
-               && (AnnotationUtility.containsAnnotation(methodDef, "Override")
-                  || AnnotationUtility.containsAnnotation(methodDef, "java.lang.Override"));
+               && (AnnotationUtil.containsAnnotation(methodDef, "Override")
+                  || AnnotationUtil.containsAnnotation(methodDef, "java.lang.Override"));
     }
 
     /**
-     * Check if the method is specified in the ignore method list
+     * Check if the method is specified in the ignore method list.
      * @param name the name to check
      * @return whether the method with the passed name should be ignored
      */
@@ -145,4 +154,5 @@ public final class IllegalThrowsCheck extends AbstractIllegalCheck {
     public void setIgnoreOverriddenMethods(boolean ignoreOverriddenMethods) {
         this.ignoreOverriddenMethods = ignoreOverriddenMethods;
     }
+
 }

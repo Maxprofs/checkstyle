@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,10 +21,12 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.regex.Pattern;
 
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.AbstractFormatCheck;
 
 /**
  * <p>
@@ -32,35 +34,49 @@ import com.puppycrawl.tools.checkstyle.checks.AbstractFormatCheck;
  * (2 by default). Ignores specified methods ({@code equals()} by default).
  * </p>
  * <p>
+ * <b>max</b> property will only check returns in methods and lambdas that
+ * return a specific value (Ex: 'return 1;').
+ * </p>
+ * <p>
+ * <b>maxForVoid</b> property will only check returns in methods, constructors,
+ * and lambdas that have no return type (IE 'return;'). It will only count
+ * visible return statements. Return statements not normally written, but
+ * implied, at the end of the method/constructor definition will not be taken
+ * into account. To disallow "return;" in void return type methods, use a value
+ * of 0.
+ * </p>
+ * <p>
  * Rationale: Too many return points can be indication that code is
  * attempting to do too much or may be difficult to understand.
  * </p>
  *
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
  */
-public final class ReturnCountCheck extends AbstractFormatCheck {
+@FileStatefulCheck
+public final class ReturnCountCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
     public static final String MSG_KEY = "return.count";
-
-    /** Default allowed number of return statements. */
-    private static final int DEFAULT_MAX = 2;
+    /**
+     * A key pointing to the warning message text in "messages.properties"
+     * file.
+     */
+    public static final String MSG_KEY_VOID = "return.countVoid";
 
     /** Stack of method contexts. */
     private final Deque<Context> contextStack = new ArrayDeque<>();
-    /** Maximum allowed number of return stmts. */
-    private int max;
+
+    /** The regexp to match against. */
+    private Pattern format = Pattern.compile("^equals$");
+
+    /** Maximum allowed number of return statements. */
+    private int max = 2;
+    /** Maximum allowed number of return statements for void methods. */
+    private int maxForVoid = 1;
     /** Current method context. */
     private Context context;
-
-    /** Creates new instance of the checks. */
-    public ReturnCountCheck() {
-        super("^equals$");
-        setMax(DEFAULT_MAX);
-    }
 
     @Override
     public int[] getDefaultTokens() {
@@ -74,9 +90,7 @@ public final class ReturnCountCheck extends AbstractFormatCheck {
 
     @Override
     public int[] getRequiredTokens() {
-        return new int[]{
-            TokenTypes.LITERAL_RETURN,
-        };
+        return new int[] {TokenTypes.LITERAL_RETURN};
     }
 
     @Override
@@ -90,11 +104,11 @@ public final class ReturnCountCheck extends AbstractFormatCheck {
     }
 
     /**
-     * Getter for max property.
-     * @return maximum allowed number of return statements.
+     * Set the format for the specified regular expression.
+     * @param pattern a pattern.
      */
-    public int getMax() {
-        return max;
+    public void setFormat(Pattern pattern) {
+        format = pattern;
     }
 
     /**
@@ -103,6 +117,14 @@ public final class ReturnCountCheck extends AbstractFormatCheck {
      */
     public void setMax(int max) {
         this.max = max;
+    }
+
+    /**
+     * Setter for maxForVoid property.
+     * @param maxForVoid maximum allowed number of return statements for void methods.
+     */
+    public void setMaxForVoid(int maxForVoid) {
+        this.maxForVoid = maxForVoid;
     }
 
     @Override
@@ -122,7 +144,7 @@ public final class ReturnCountCheck extends AbstractFormatCheck {
                 visitLambda();
                 break;
             case TokenTypes.LITERAL_RETURN:
-                context.visitLiteralReturn();
+                visitReturn(ast);
                 break;
             default:
                 throw new IllegalStateException(ast.toString());
@@ -152,7 +174,7 @@ public final class ReturnCountCheck extends AbstractFormatCheck {
     private void visitMethodDef(DetailAST ast) {
         contextStack.push(context);
         final DetailAST methodNameAST = ast.findFirstToken(TokenTypes.IDENT);
-        final boolean check = !getRegexp().matcher(methodNameAST.getText()).find();
+        final boolean check = !format.matcher(methodNameAST.getText()).find();
         context = new Context(check);
     }
 
@@ -174,39 +196,72 @@ public final class ReturnCountCheck extends AbstractFormatCheck {
     }
 
     /**
+     * Examines the return statement and tells context about it.
+     * @param ast return statement to check.
+     */
+    private void visitReturn(DetailAST ast) {
+        // we can't identify which max to use for lambdas, so we can only assign
+        // after the first return statement is seen
+        if (ast.getFirstChild().getType() == TokenTypes.SEMI) {
+            context.visitLiteralReturn(maxForVoid, true);
+        }
+        else {
+            context.visitLiteralReturn(max, false);
+        }
+    }
+
+    /**
      * Class to encapsulate information about one method.
-     * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
      */
     private class Context {
+
         /** Whether we should check this method or not. */
         private final boolean checking;
         /** Counter for return statements. */
         private int count;
+        /** Maximum allowed number of return statements. */
+        private Integer maxAllowed;
+        /** Identifies if context is void. */
+        private boolean isVoidContext;
 
         /**
          * Creates new method context.
          * @param checking should we check this method or not.
          */
-        public Context(boolean checking) {
+        Context(boolean checking) {
             this.checking = checking;
-            count = 0;
         }
 
-        /** Increase number of return statements. */
-        public void visitLiteralReturn() {
+        /**
+         * Increase the number of return statements and set context return type.
+         * @param maxAssigned Maximum allowed number of return statements.
+         * @param voidReturn Identifies if context is void.
+         */
+        public void visitLiteralReturn(int maxAssigned, Boolean voidReturn) {
+            isVoidContext = voidReturn;
+            if (maxAllowed == null) {
+                maxAllowed = maxAssigned;
+            }
+
             ++count;
         }
 
         /**
-         * Checks if number of return statements in method more
+         * Checks if number of return statements in the method are more
          * than allowed.
          * @param ast method def associated with this context.
          */
         public void checkCount(DetailAST ast) {
-            if (checking && count > getMax()) {
-                log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY,
-                    count, getMax());
+            if (checking && maxAllowed != null && count > maxAllowed) {
+                if (isVoidContext) {
+                    log(ast, MSG_KEY_VOID, count, maxAllowed);
+                }
+                else {
+                    log(ast, MSG_KEY, count, maxAllowed);
+                }
             }
         }
+
     }
+
 }

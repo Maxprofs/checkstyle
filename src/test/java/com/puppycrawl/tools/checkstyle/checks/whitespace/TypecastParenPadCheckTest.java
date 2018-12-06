@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,71 +19,77 @@
 
 package com.puppycrawl.tools.checkstyle.checks.whitespace;
 
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.WS_FOLLOWED;
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.WS_NOT_FOLLOWED;
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.WS_NOT_PRECEDED;
-import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.WS_PRECEDED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.MSG_WS_FOLLOWED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.MSG_WS_NOT_FOLLOWED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.MSG_WS_NOT_PRECEDED;
+import static com.puppycrawl.tools.checkstyle.checks.whitespace.AbstractParenPadCheck.MSG_WS_PRECEDED;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class TypecastParenPadCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/whitespace/typecastparenpad";
+    }
+
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(TypecastParenPadCheck.class);
+            createModuleConfig(TypecastParenPadCheck.class);
         final String[] expected = {
-            "89:14: " + getCheckMessage(WS_FOLLOWED, "("),
-            "89:21: " + getCheckMessage(WS_PRECEDED, ")"),
+            "89:14: " + getCheckMessage(MSG_WS_FOLLOWED, "("),
+            "89:21: " + getCheckMessage(MSG_WS_PRECEDED, ")"),
         };
-        verify(checkConfig, getPath("InputWhitespace.java"), expected);
+        verify(checkConfig, getPath("InputTypecastParenPadWhitespace.java"), expected);
     }
 
     @Test
     public void testSpace()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(TypecastParenPadCheck.class);
+            createModuleConfig(TypecastParenPadCheck.class);
         checkConfig.addAttribute("option", PadOption.SPACE.toString());
         final String[] expected = {
-            "87:21: " + getCheckMessage(WS_NOT_FOLLOWED, "("),
-            "87:27: " + getCheckMessage(WS_NOT_PRECEDED, ")"),
-            "88:14: " + getCheckMessage(WS_NOT_FOLLOWED, "("),
-            "88:20: " + getCheckMessage(WS_NOT_PRECEDED, ")"),
-            "90:14: " + getCheckMessage(WS_NOT_FOLLOWED, "("),
-            "90:20: " + getCheckMessage(WS_NOT_PRECEDED, ")"),
-            "241:18: " + getCheckMessage(WS_NOT_FOLLOWED, "("),
-            "241:21: " + getCheckMessage(WS_NOT_PRECEDED, ")"),
+            "87:21: " + getCheckMessage(MSG_WS_NOT_FOLLOWED, "("),
+            "87:27: " + getCheckMessage(MSG_WS_NOT_PRECEDED, ")"),
+            "88:14: " + getCheckMessage(MSG_WS_NOT_FOLLOWED, "("),
+            "88:20: " + getCheckMessage(MSG_WS_NOT_PRECEDED, ")"),
+            "90:14: " + getCheckMessage(MSG_WS_NOT_FOLLOWED, "("),
+            "90:20: " + getCheckMessage(MSG_WS_NOT_PRECEDED, ")"),
+            "241:18: " + getCheckMessage(MSG_WS_NOT_FOLLOWED, "("),
+            "241:21: " + getCheckMessage(MSG_WS_NOT_PRECEDED, ")"),
         };
-        verify(checkConfig, getPath("InputWhitespace.java"), expected);
+        verify(checkConfig, getPath("InputTypecastParenPadWhitespace.java"), expected);
     }
 
     @Test
     public void test1322879() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(TypecastParenPadCheck.class);
+            createModuleConfig(TypecastParenPadCheck.class);
         checkConfig.addAttribute("option", PadOption.SPACE.toString());
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("whitespace/InputWhitespaceAround.java"),
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputTypecastParenPadWhitespaceAround.java"),
                expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        TypecastParenPadCheck typecastParenPadCheckObj = new TypecastParenPadCheck();
-        int[] actual = typecastParenPadCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final TypecastParenPadCheck typecastParenPadCheckObj = new TypecastParenPadCheck();
+        final int[] actual = typecastParenPadCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.RPAREN,
             TokenTypes.TYPECAST,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        Assert.assertArrayEquals("Invalid acceptable tokens", expected, actual);
     }
+
 }

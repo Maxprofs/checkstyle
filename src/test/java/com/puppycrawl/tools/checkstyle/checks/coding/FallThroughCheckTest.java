@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,19 +22,22 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 import static com.puppycrawl.tools.checkstyle.checks.coding.FallThroughCheck.MSG_FALL_THROUGH;
 import static com.puppycrawl.tools.checkstyle.checks.coding.FallThroughCheck.MSG_FALL_THROUGH_LAST;
 
-import java.io.File;
-
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 
-public class FallThroughCheckTest extends BaseCheckTestSupport {
+public class FallThroughCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/fallthrough";
+    }
 
     @Test
     public void testDefault() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(FallThroughCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(FallThroughCheck.class);
         final String[] expected = {
             "14:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "38:13: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -42,7 +45,6 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "53:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "70:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "87:13: " + getCheckMessage(MSG_FALL_THROUGH),
-            "105:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "123:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "179:11: " + getCheckMessage(MSG_FALL_THROUGH),
             "369:11: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -52,16 +54,18 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "424:9: " + getCheckMessage(MSG_FALL_THROUGH),
             "436:9: " + getCheckMessage(MSG_FALL_THROUGH),
             "446:9: " + getCheckMessage(MSG_FALL_THROUGH),
-
+            "555:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "556:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "557:9: " + getCheckMessage(MSG_FALL_THROUGH),
         };
         verify(checkConfig,
-               getPath("coding" + File.separator + "InputFallThrough.java"),
+               getPath("InputFallThrough.java"),
                expected);
     }
 
     @Test
     public void testLastCaseGroup() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(FallThroughCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(FallThroughCheck.class);
         checkConfig.addAttribute("checkLastCaseGroup", "true");
         final String[] expected = {
             "14:13: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -70,7 +74,6 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "53:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "70:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "87:13: " + getCheckMessage(MSG_FALL_THROUGH),
-            "105:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "123:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "123:13: " + getCheckMessage(MSG_FALL_THROUGH_LAST),
             "179:11: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -82,18 +85,20 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "424:9: " + getCheckMessage(MSG_FALL_THROUGH),
             "436:9: " + getCheckMessage(MSG_FALL_THROUGH),
             "446:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "555:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "556:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "557:9: " + getCheckMessage(MSG_FALL_THROUGH),
         };
         verify(checkConfig,
-               getPath("coding" + File.separator + "InputFallThrough.java"),
+               getPath("InputFallThrough.java"),
                expected);
     }
 
     @Test
     public void testOwnPattern() throws Exception {
-        final String ownPattern = "Continue with next case";
         final DefaultConfiguration checkConfig =
-            createCheckConfig(FallThroughCheck.class);
-        checkConfig.addAttribute("reliefPattern", ownPattern);
+            createModuleConfig(FallThroughCheck.class);
+        checkConfig.addAttribute("reliefPattern", "Continue with next case");
 
         final String[] expected = {
             "14:13: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -102,7 +107,6 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "53:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "70:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "87:13: " + getCheckMessage(MSG_FALL_THROUGH),
-            "105:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "123:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "145:11: " + getCheckMessage(MSG_FALL_THROUGH),
             "170:11: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -110,7 +114,6 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "186:11: " + getCheckMessage(MSG_FALL_THROUGH),
             "204:11: " + getCheckMessage(MSG_FALL_THROUGH),
             "222:11: " + getCheckMessage(MSG_FALL_THROUGH),
-            "241:11: " + getCheckMessage(MSG_FALL_THROUGH),
             "252:26: " + getCheckMessage(MSG_FALL_THROUGH),
             "266:11: " + getCheckMessage(MSG_FALL_THROUGH),
             "281:11: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -130,24 +133,32 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "424:9: " + getCheckMessage(MSG_FALL_THROUGH),
             "436:9: " + getCheckMessage(MSG_FALL_THROUGH),
             "446:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "491:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "495:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "501:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "507:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "514:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "546:12: " + getCheckMessage(MSG_FALL_THROUGH),
+            "555:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "556:9: " + getCheckMessage(MSG_FALL_THROUGH),
+            "557:9: " + getCheckMessage(MSG_FALL_THROUGH),
         };
         verify(checkConfig,
-               getPath("coding" + File.separator + "InputFallThrough.java"),
+               getPath("InputFallThrough.java"),
                expected);
-
     }
 
     @Test
     public void testTokensNotNull() {
-        FallThroughCheck check = new FallThroughCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final FallThroughCheck check = new FallThroughCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Rrequired tokens should not be null", check.getRequiredTokens());
     }
 
     @Test
     public void testFallThroughNoElse() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(FallThroughCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(FallThroughCheck.class);
         final String[] expected = {
             "20:13: " + getCheckMessage(MSG_FALL_THROUGH),
             "35:13: " + getCheckMessage(MSG_FALL_THROUGH),
@@ -160,7 +171,8 @@ public class FallThroughCheckTest extends BaseCheckTestSupport {
             "88:13: " + getCheckMessage(MSG_FALL_THROUGH),
         };
         verify(checkConfig,
-            getPath("coding" + File.separator + "InputFallThrough2.java"),
+            getPath("InputFallThrough2.java"),
             expected);
     }
+
 }

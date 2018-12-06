@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,8 +22,11 @@ package com.puppycrawl.tools.checkstyle.checks.javadoc;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailNode;
 import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
 
 /**
  * <p>
@@ -38,9 +41,9 @@ import com.puppycrawl.tools.checkstyle.api.JavadocTokenTypes;
  * &lt;/module&gt;
  * </pre>
  *
- * @author max
  *
  */
+@StatelessCheck
 public class JavadocTagContinuationIndentationCheck extends AbstractJavadocCheck {
 
     /**
@@ -49,7 +52,7 @@ public class JavadocTagContinuationIndentationCheck extends AbstractJavadocCheck
      */
     public static final String MSG_KEY = "tag.continuation.indent";
 
-    /** Default tag continuation indentation */
+    /** Default tag continuation indentation. */
     private static final int DEFAULT_INDENTATION = 4;
 
     /**
@@ -71,19 +74,24 @@ public class JavadocTagContinuationIndentationCheck extends AbstractJavadocCheck
     }
 
     @Override
+    public int[] getRequiredJavadocTokens() {
+        return getAcceptableJavadocTokens();
+    }
+
+    @Override
     public void visitJavadocToken(DetailNode ast) {
-        if (isInlineDescription(ast)) {
-            return;
-        }
-        final List<DetailNode> textNodes = getAllNewlineNodes(ast);
-        for (DetailNode newlineNode : textNodes) {
-            final DetailNode textNode = JavadocUtils.getNextSibling(JavadocUtils
-                    .getNextSibling(newlineNode));
-            if (textNode != null && textNode.getType() == JavadocTokenTypes.TEXT
-                    && textNode.getChildren().length > 1) {
-                final DetailNode whitespace = JavadocUtils.getFirstChild(textNode);
-                if (whitespace.getText().length() - 1 < offset) {
-                    log(textNode.getLineNumber(), MSG_KEY, offset);
+        if (!isInlineDescription(ast)) {
+            final List<DetailNode> textNodes = getAllNewlineNodes(ast);
+            for (DetailNode newlineNode : textNodes) {
+                final DetailNode textNode = JavadocUtil.getNextSibling(JavadocUtil
+                        .getNextSibling(newlineNode));
+                if (textNode != null && textNode.getType() == JavadocTokenTypes.TEXT) {
+                    final String text = textNode.getText();
+                    if (!CommonUtil.isBlank(text.trim())
+                            && (text.length() <= offset
+                                    || !text.substring(1, offset + 1).trim().isEmpty())) {
+                        log(textNode.getLineNumber(), MSG_KEY, offset);
+                    }
                 }
             }
         }
@@ -96,12 +104,12 @@ public class JavadocTagContinuationIndentationCheck extends AbstractJavadocCheck
      */
     private static List<DetailNode> getAllNewlineNodes(DetailNode descriptionNode) {
         final List<DetailNode> textNodes = new ArrayList<>();
-        DetailNode node = JavadocUtils.getFirstChild(descriptionNode);
-        while (JavadocUtils.getNextSibling(node) != null) {
+        DetailNode node = JavadocUtil.getFirstChild(descriptionNode);
+        while (JavadocUtil.getNextSibling(node) != null) {
             if (node.getType() == JavadocTokenTypes.NEWLINE) {
                 textNodes.add(node);
             }
-            node = JavadocUtils.getNextSibling(node);
+            node = JavadocUtil.getNextSibling(node);
         }
         return textNodes;
     }
@@ -112,13 +120,16 @@ public class JavadocTagContinuationIndentationCheck extends AbstractJavadocCheck
      * @return true, if description node is a description of in-line tag.
      */
     private static boolean isInlineDescription(DetailNode description) {
+        boolean isInline = false;
         DetailNode inlineTag = description.getParent();
         while (inlineTag != null) {
             if (inlineTag.getType() == JavadocTokenTypes.JAVADOC_INLINE_TAG) {
-                return true;
+                isInline = true;
+                break;
             }
             inlineTag = inlineTag.getParent();
         }
-        return false;
+        return isInline;
     }
+
 }

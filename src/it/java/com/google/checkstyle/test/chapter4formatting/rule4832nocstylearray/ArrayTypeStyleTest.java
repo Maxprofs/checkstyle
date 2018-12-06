@@ -1,44 +1,55 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter4formatting.rule4832nocstylearray;
 
-import java.io.File;
-import java.io.IOException;
+import static com.puppycrawl.tools.checkstyle.checks.ArrayTypeStyleCheck.MSG_KEY;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.checks.ArrayTypeStyleCheck;
 
-public class ArrayTypeStyleTest extends BaseCheckTestSupport{
-    
-    static ConfigurationBuilder builder;
-    
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
+public class ArrayTypeStyleTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter4formatting/rule4832nocstylearray";
     }
 
     @Test
-    public void arrayTypeStyleTest() throws IOException, Exception {
-        
-        String msg = getCheckMessage(ArrayTypeStyleCheck.class, "array.type.style");
-
+    public void testArrayTypeStyle() throws Exception {
         final String[] expected = {
-            "9:23: " + msg,
-            "15:44: " + msg,
-            "21:20: " + msg,
-            "22:23: " + msg,
-            "41:16: " + msg,
-            "42:19: " + msg,
+            "9:23: " + getCheckMessage(ArrayTypeStyleCheck.class, MSG_KEY),
+            "15:44: " + getCheckMessage(ArrayTypeStyleCheck.class, MSG_KEY),
+            "21:20: " + getCheckMessage(ArrayTypeStyleCheck.class, MSG_KEY),
+            "22:23: " + getCheckMessage(ArrayTypeStyleCheck.class, MSG_KEY),
+            "41:16: " + getCheckMessage(ArrayTypeStyleCheck.class, MSG_KEY),
+            "42:19: " + getCheckMessage(ArrayTypeStyleCheck.class, MSG_KEY),
         };
-        
-        Configuration checkConfig = builder.getCheckConfig("ArrayTypeStyle");
-        String filePath = builder.getFilePath("ArrayTypeStyleInput");
-        
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+
+        final Configuration checkConfig = getModuleConfig("ArrayTypeStyle");
+        final String filePath = getPath("InputArrayTypeStyle.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
+
 }

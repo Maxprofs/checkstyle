@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,61 +19,98 @@
 
 package com.puppycrawl.tools.checkstyle.filters;
 
+import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Locale;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import org.apache.commons.beanutils.ConversionException;
 import org.junit.Assert;
 import org.junit.Test;
+import org.powermock.reflect.Whitebox;
 
-import com.google.common.collect.Lists;
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
-import com.puppycrawl.tools.checkstyle.Checker;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
-import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.TreeWalkerAuditEvent;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.LocalizedMessage;
-import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
-import com.puppycrawl.tools.checkstyle.checks.FileContentsHolder;
 import com.puppycrawl.tools.checkstyle.checks.coding.IllegalCatchCheck;
+import com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck;
 import com.puppycrawl.tools.checkstyle.checks.naming.ConstantNameCheck;
 import com.puppycrawl.tools.checkstyle.checks.naming.MemberNameCheck;
-
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.EqualsVerifierReport;
 
 public class SuppressionCommentFilterTest
-    extends BaseCheckTestSupport {
-    private static String[] sAllMessages = {
-        "13:17: Name 'I' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "16:17: Name 'J' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "19:17: Name 'K' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "22:17: Name 'L' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "23:30: Name 'm' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
-        "27:17: Name 'M2' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "28:30: Name 'n' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
-        "32:17: Name 'P' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "35:17: Name 'Q' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "38:17: Name 'R' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "39:30: Name 's' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
-        "43:17: Name 'T' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-        "64:23: Catching 'Exception' is not allowed.",
-        "71:11: Catching 'Exception' is not allowed.",
-        "77:11: Catching 'RuntimeException' is not allowed.",
-        "78:11: Catching 'Exception' is not allowed.",
-        "86:31: Catching 'Exception' is not allowed.",
+    extends AbstractModuleTestSupport {
+
+    private static final String[] ALL_MESSAGES = {
+        "13:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "I", "^[a-z][a-zA-Z0-9]*$"),
+        "16:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "J", "^[a-z][a-zA-Z0-9]*$"),
+        "19:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "K", "^[a-z][a-zA-Z0-9]*$"),
+        "22:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "L", "^[a-z][a-zA-Z0-9]*$"),
+        "23:30: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "m", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
+        "27:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "M2", "^[a-z][a-zA-Z0-9]*$"),
+        "28:30: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "n", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
+        "32:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "P", "^[a-z][a-zA-Z0-9]*$"),
+        "35:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "Q", "^[a-z][a-zA-Z0-9]*$"),
+        "38:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "R", "^[a-z][a-zA-Z0-9]*$"),
+        "39:30: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "s", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
+        "43:17: "
+            + getCheckMessage(AbstractNameCheck.class,
+                MSG_INVALID_PATTERN, "T", "^[a-z][a-zA-Z0-9]*$"),
+        "64:23: "
+            + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
+        "71:11: "
+            + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
+        "77:11: "
+            + getCheckMessage(IllegalCatchCheck.class,
+                IllegalCatchCheck.MSG_KEY, "RuntimeException"),
+        "78:11: "
+            + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
+        "86:31: "
+            + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
     };
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/filters/suppressioncommentfilter";
+    }
 
     @Test
     public void testNone() throws Exception {
         final DefaultConfiguration filterConfig = null;
-        final String[] suppressed = {
-        };
+        final String[] suppressed = CommonUtil.EMPTY_STRING_ARRAY;
         verifySuppressed(filterConfig, suppressed);
     }
 
@@ -81,13 +118,20 @@ public class SuppressionCommentFilterTest
     @Test
     public void testDefault() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         final String[] suppressed = {
-            "16:17: Name 'J' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "43:17: Name 'T' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "64:23: Catching 'Exception' is not allowed.",
-            "71:11: Catching 'Exception' is not allowed.",
-            "86:31: Catching 'Exception' is not allowed.",
+            "16:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "J", "^[a-z][a-zA-Z0-9]*$"),
+            "43:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "T", "^[a-z][a-zA-Z0-9]*$"),
+            "64:23: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
+            "71:11: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
+            "86:31: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
@@ -95,24 +139,31 @@ public class SuppressionCommentFilterTest
     @Test
     public void testCheckC() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("checkC", "false");
         final String[] suppressed = {
-            "43:17: Name 'T' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "64:23: Catching 'Exception' is not allowed.",
-            "71:11: Catching 'Exception' is not allowed.",
+            "43:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "T", "^[a-z][a-zA-Z0-9]*$"),
+            "64:23: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
+            "71:11: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
 
     @Test
-    public void testCheckCPP() throws Exception {
+    public void testCheckCpp() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("checkCPP", "false");
         final String[] suppressed = {
-            "16:17: Name 'J' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "86:31: Catching 'Exception' is not allowed.",
+            "16:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "J", "^[a-z][a-zA-Z0-9]*$"),
+            "86:31: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
@@ -121,14 +172,22 @@ public class SuppressionCommentFilterTest
     @Test
     public void testOffFormat() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("offCommentFormat", "CS_OFF");
         filterConfig.addAttribute("onCommentFormat", "CS_ON");
         final String[] suppressed = {
-            "32:17: Name 'P' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "38:17: Name 'R' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "39:30: Name 's' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
-            "42:17: Name 'T' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
+            "32:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "P", "^[a-z][a-zA-Z0-9]*$"),
+            "38:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "R", "^[a-z][a-zA-Z0-9]*$"),
+            "39:30: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "s", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
+            "42:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "T", "^[a-z][a-zA-Z0-9]*$"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
@@ -138,12 +197,14 @@ public class SuppressionCommentFilterTest
     @Test
     public void testOffFormatCheck() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("offCommentFormat", "CS_OFF");
         filterConfig.addAttribute("onCommentFormat", "CS_ON");
         filterConfig.addAttribute("checkFormat", "ConstantNameCheck");
         final String[] suppressed = {
-            "39:30: Name 's' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
+            "39:30: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "s", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
@@ -151,13 +212,17 @@ public class SuppressionCommentFilterTest
     @Test
     public void testArgumentSuppression() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("offCommentFormat", "IllegalCatchCheck OFF\\: (\\w+)");
         filterConfig.addAttribute("onCommentFormat", "IllegalCatchCheck ON\\: (\\w+)");
         filterConfig.addAttribute("checkFormat", "IllegalCatchCheck");
-        filterConfig.addAttribute("messageFormat", "^Catching '$1' is not allowed.*$");
+        // -@cs[CheckstyleTestMakeup] need to test dynamic property
+        filterConfig.addAttribute("messageFormat",
+                "^" + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "$1")
+                        + "*$");
         final String[] suppressed = {
-            "78:11: Catching 'Exception' is not allowed.",
+            "78:11: "
+                + getCheckMessage(IllegalCatchCheck.class, IllegalCatchCheck.MSG_KEY, "Exception"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
@@ -165,14 +230,20 @@ public class SuppressionCommentFilterTest
     @Test
     public void testExpansion() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("offCommentFormat", "CSOFF\\: ([\\w\\|]+)");
         filterConfig.addAttribute("onCommentFormat", "CSON\\: ([\\w\\|]+)");
         filterConfig.addAttribute("checkFormat", "$1");
         final String[] suppressed = {
-            "22:17: Name 'L' must match pattern '^[a-z][a-zA-Z0-9]*$'.",
-            "23:30: Name 'm' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
-            "28:30: Name 'n' must match pattern '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.",
+            "22:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "L", "^[a-z][a-zA-Z0-9]*$"),
+            "23:30: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "m", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
+            "28:30: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "n", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
         };
         verifySuppressed(filterConfig, suppressed);
     }
@@ -180,109 +251,180 @@ public class SuppressionCommentFilterTest
     @Test
     public void testMessage() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("onCommentFormat", "UNUSED ON\\: (\\w+)");
         filterConfig.addAttribute("offCommentFormat", "UNUSED OFF\\: (\\w+)");
         filterConfig.addAttribute("checkFormat", "Unused");
         filterConfig.addAttribute("messageFormat", "^Unused \\w+ '$1'.$");
-        final String[] suppressed = {
-            "47:34: Unused parameter 'aInt'.",
-        };
+        final String[] suppressed = CommonUtil.EMPTY_STRING_ARRAY;
         verifySuppressed(filterConfig, suppressed);
     }
 
-    public static DefaultConfiguration createFilterConfig(Class<?> aClass) {
-        return new DefaultConfiguration(aClass.getName());
+    private void verifySuppressed(Configuration moduleConfig,
+            String... aSuppressed)
+            throws Exception {
+        verifySuppressed(moduleConfig, getPath("InputSuppressionCommentFilter.java"),
+               ALL_MESSAGES, aSuppressed);
     }
 
-    protected void verifySuppressed(Configuration aFilterConfig,
-                                    String[] aSuppressed)
-        throws Exception {
-        verify(createChecker(aFilterConfig),
-               getPath("filters/InputSuppressionCommentFilter.java"),
-               removeSuppressed(sAllMessages, aSuppressed));
-    }
+    private void verifySuppressed(Configuration moduleConfig, String fileName,
+            String[] expectedViolations, String... suppressedViolations) throws Exception {
+        final DefaultConfiguration memberNameCheckConfig =
+                createModuleConfig(MemberNameCheck.class);
+        memberNameCheckConfig.addAttribute("id", "ignore");
 
-    @Override
-    protected Checker createChecker(Configuration aFilterConfig)
-            throws CheckstyleException, UnsupportedEncodingException {
-        final DefaultConfiguration checkerConfig =
-            new DefaultConfiguration("configuration");
-        final DefaultConfiguration checksConfig = createCheckConfig(TreeWalker.class);
-        checksConfig.addChild(createCheckConfig(FileContentsHolder.class));
-        checksConfig.addChild(createCheckConfig(MemberNameCheck.class));
-        checksConfig.addChild(createCheckConfig(ConstantNameCheck.class));
-        checksConfig.addChild(createCheckConfig(IllegalCatchCheck.class));
-        checkerConfig.addChild(checksConfig);
-        if (aFilterConfig != null) {
-            checkerConfig.addChild(aFilterConfig);
+        final DefaultConfiguration constantNameCheckConfig =
+            createModuleConfig(ConstantNameCheck.class);
+        constantNameCheckConfig.addAttribute("id", null);
+
+        final DefaultConfiguration treewalkerConfig = createModuleConfig(TreeWalker.class);
+        treewalkerConfig.addChild(memberNameCheckConfig);
+        treewalkerConfig.addChild(constantNameCheckConfig);
+        treewalkerConfig.addChild(createModuleConfig(IllegalCatchCheck.class));
+
+        if (moduleConfig != null) {
+            treewalkerConfig.addChild(moduleConfig);
         }
-        final Checker checker = new Checker();
-        final Locale locale = Locale.ROOT;
-        checker.setLocaleCountry(locale.getCountry());
-        checker.setLocaleLanguage(locale.getLanguage());
-        checker.setModuleClassLoader(Thread.currentThread().getContextClassLoader());
-        checker.configure(checkerConfig);
-        checker.addListener(new BriefLogger(stream));
-        return checker;
+
+        final DefaultConfiguration checkerConfig = createRootConfig(treewalkerConfig);
+
+        verify(checkerConfig, fileName,
+                removeSuppressed(expectedViolations, suppressedViolations));
     }
 
-    private String[] removeSuppressed(String[] from, String[] remove) {
-        final Collection<String> coll =
-            Lists.newArrayList(Arrays.asList(from));
+    private static String[] removeSuppressed(String[] from, String... remove) {
+        final Collection<String> coll = Arrays.stream(from).collect(Collectors.toList());
         coll.removeAll(Arrays.asList(remove));
-        return coll.toArray(new String[coll.size()]);
+        return coll.toArray(CommonUtil.EMPTY_STRING_ARRAY);
     }
 
     @Test
     public void testEqualsAndHashCodeOfTagClass() {
-        EqualsVerifier.forClass(SuppressionCommentFilter.Tag.class).usingGetClass().verify();
+        final EqualsVerifierReport ev = EqualsVerifier.forClass(SuppressionCommentFilter.Tag.class)
+                .usingGetClass().report();
+        assertEquals("Error: " + ev.getMessage(), EqualsVerifierReport.SUCCESS, ev);
     }
 
     @Test
     public void testToStringOfTagClass() {
-        SuppressionCommentFilter.Tag tag = new SuppressionCommentFilter.Tag(
-                0, 1, "text", false, new SuppressionCommentFilter()
+        final SuppressionCommentFilter.Tag tag = new SuppressionCommentFilter.Tag(
+                0, 1, "text",
+                SuppressionCommentFilter.TagType.OFF, new SuppressionCommentFilter()
         );
 
-        assertEquals("Tag[line=0; col=1; on=false; text='text']", tag.toString());
+        assertEquals("Invalid toString result",
+            "Tag[text='text', line=0, column=1, type=OFF,"
+                    + " tagCheckRegexp=.*, tagMessageRegexp=null]", tag.toString());
     }
 
-    @Test(expected = ConversionException.class)
+    @Test
     public void testInvalidCheckFormat() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("checkFormat", "e[l");
-        final String[] suppressed = {
-        };
-        verifySuppressed(filterConfig, suppressed);
+
+        try {
+            final String[] suppressed = CommonUtil.EMPTY_STRING_ARRAY;
+            verifySuppressed(filterConfig, suppressed);
+            fail("Exception is expected");
+        }
+        catch (CheckstyleException ex) {
+            final IllegalArgumentException cause = (IllegalArgumentException) ex.getCause();
+            assertEquals("Invalid exception message",
+                "unable to parse expanded comment e[l", cause.getMessage());
+        }
     }
 
-    @Test(expected = ConversionException.class)
+    @Test
     public void testInvalidMessageFormat() throws Exception {
         final DefaultConfiguration filterConfig =
-            createFilterConfig(SuppressionCommentFilter.class);
+            createModuleConfig(SuppressionCommentFilter.class);
         filterConfig.addAttribute("messageFormat", "e[l");
-        final String[] suppressed = {
-        };
-        verifySuppressed(filterConfig, suppressed);
+
+        try {
+            final String[] suppressed = CommonUtil.EMPTY_STRING_ARRAY;
+            verifySuppressed(filterConfig, suppressed);
+            fail("Exception is expected");
+        }
+        catch (CheckstyleException ex) {
+            final IllegalArgumentException cause = (IllegalArgumentException) ex.getCause();
+            assertEquals("Invalid exception message",
+                "unable to parse expanded comment e[l", cause.getMessage());
+        }
     }
 
     @Test
     public void testAcceptNullLocalizedMessage() {
         final SuppressionCommentFilter filter = new SuppressionCommentFilter();
-        final AuditEvent auditEvent = new AuditEvent(this);
-        Assert.assertTrue(filter.accept(auditEvent));
+        final TreeWalkerAuditEvent auditEvent = new TreeWalkerAuditEvent(null, null, null, null);
+        Assert.assertTrue("Filter should accept audit event", filter.accept(auditEvent));
+        Assert.assertNull("File name should not be null", auditEvent.getFileName());
     }
 
     @Test
-    public void testAcceptNullFileContents() {
-        final LocalizedMessage message =
-            new LocalizedMessage(1, 1,
-                "messages.properties", "key", null, SeverityLevel.ERROR, null,
-                this.getClass(), null);
-        final AuditEvent auditEvent = new AuditEvent(this, "Test.java", message);
-        SuppressionCommentFilter filter = new SuppressionCommentFilter();
-        Assert.assertTrue(filter.accept(auditEvent));
+    public void testSuppressById() throws Exception {
+        final DefaultConfiguration filterConfig =
+            createModuleConfig(SuppressionCommentFilter.class);
+        filterConfig.addAttribute("offCommentFormat", "CSOFF (\\w+) \\(\\w+\\)");
+        filterConfig.addAttribute("onCommentFormat", "CSON (\\w+)");
+        filterConfig.addAttribute("checkFormat", "$1");
+        final String[] suppressedViolationMessages = {
+            "6:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "A1", "^[a-z][a-zA-Z0-9]*$"),
+            "12:9: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "line_length", "^[a-z][a-zA-Z0-9]*$"),
+            };
+        final String[] expectedViolationMessages = {
+            "6:17: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "A1", "^[a-z][a-zA-Z0-9]*$"),
+            "9:30: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "abc", "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"),
+            "12:9: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "line_length", "^[a-z][a-zA-Z0-9]*$"),
+            "15:18: "
+                + getCheckMessage(AbstractNameCheck.class,
+                    MSG_INVALID_PATTERN, "ID", "^[a-z][a-zA-Z0-9]*$"),
+            };
+
+        verifySuppressed(filterConfig, getPath("InputSuppressionCommentFilterSuppressById.java"),
+                expectedViolationMessages, suppressedViolationMessages);
     }
+
+    @Test
+    public void testFindNearestMatchDontAllowSameColumn() {
+        final SuppressionCommentFilter suppressionCommentFilter = new SuppressionCommentFilter();
+        final FileContents contents =
+                new FileContents("filename", "//CHECKSTYLE:OFF: ConstantNameCheck", "line2");
+        contents.reportSingleLineComment(1, 0);
+        final TreeWalkerAuditEvent dummyEvent = new TreeWalkerAuditEvent(contents, "filename",
+                new LocalizedMessage(1, null, null, null, null, Object.class, null), null);
+        final boolean result = suppressionCommentFilter.accept(dummyEvent);
+        assertFalse("Filter should not accept event", result);
+    }
+
+    @Test
+    public void testTagsAreClearedEachRun() {
+        final SuppressionCommentFilter suppressionCommentFilter = new SuppressionCommentFilter();
+        final FileContents contents =
+                new FileContents("filename", "//CHECKSTYLE:OFF", "line2");
+        contents.reportSingleLineComment(1, 0);
+        final TreeWalkerAuditEvent dummyEvent = new TreeWalkerAuditEvent(contents, "filename",
+                new LocalizedMessage(1, null, null, null, null, Object.class, null), null);
+        suppressionCommentFilter.accept(dummyEvent);
+        final FileContents contents2 =
+                new FileContents("filename2", "some line", "//CHECKSTYLE:OFF");
+        contents2.reportSingleLineComment(2, 0);
+        final TreeWalkerAuditEvent dummyEvent2 = new TreeWalkerAuditEvent(contents2, "filename",
+                new LocalizedMessage(1, null, null, null, null, Object.class, null), null);
+        suppressionCommentFilter.accept(dummyEvent2);
+        final List<SuppressionCommentFilter.Tag> tags =
+                Whitebox.getInternalState(suppressionCommentFilter, "tags");
+        assertEquals("Invalid tags size", 1, tags.size());
+    }
+
 }

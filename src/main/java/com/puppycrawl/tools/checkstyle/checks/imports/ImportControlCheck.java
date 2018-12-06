@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,19 +19,21 @@
 
 package com.puppycrawl.tools.checkstyle.checks.imports;
 
-import java.io.File;
+import java.net.URI;
+import java.util.Collections;
+import java.util.Set;
+import java.util.regex.Pattern;
 
-import org.apache.commons.beanutils.ConversionException;
-import org.apache.commons.lang3.StringUtils;
-
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.ExternalResourceHolder;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
- * Check that controls what packages can be imported in each package. Useful
+ * Check that controls what can be imported in each package and file. Useful
  * for ensuring that application layering is not violated. Ideas on how the
  * check can be improved include support for:
  * <ul>
@@ -41,9 +43,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </li>
  * </ul>
  *
- * @author Oliver Burn
  */
-public class ImportControlCheck extends Check {
+@FileStatefulCheck
+public class ImportControlCheck extends AbstractCheck implements ExternalResourceHolder {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -63,85 +65,145 @@ public class ImportControlCheck extends Check {
      */
     public static final String MSG_DISALLOWED = "import.control.disallowed";
 
+    /**
+     * A part of message for exception.
+     */
+    private static final String UNABLE_TO_LOAD = "Unable to load ";
+
+    /** Location of import control file. */
+    private URI file;
+
+    /** The filepath pattern this check applies to. */
+    private Pattern path = Pattern.compile(".*");
+    /** Whether to process the current file. */
+    private boolean processCurrentFile;
+
     /** The root package controller. */
-    private PkgControl root;
+    private PkgImportControl root;
     /** The package doing the import. */
-    private String inPkg;
+    private String packageName;
+    /** The file name doing the import. */
+    private String fileName;
 
     /**
      * The package controller for the current file. Used for performance
      * optimisation.
      */
-    private PkgControl currentLeaf;
+    private AbstractImportControl currentImportControl;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.PACKAGE_DEF, TokenTypes.IMPORT,
-                          TokenTypes.STATIC_IMPORT, };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[] {TokenTypes.PACKAGE_DEF, TokenTypes.IMPORT,
-                          TokenTypes.STATIC_IMPORT, };
+        return getRequiredTokens();
     }
 
     @Override
-    public void beginTree(final DetailAST rootAST) {
-        currentLeaf = null;
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.PACKAGE_DEF, TokenTypes.IMPORT, TokenTypes.STATIC_IMPORT, };
     }
 
     @Override
-    public void visitToken(final DetailAST ast) {
-        if (ast.getType() == TokenTypes.PACKAGE_DEF) {
-            final DetailAST nameAST = ast.getLastChild().getPreviousSibling();
-            final FullIdent full = FullIdent.createFullIdent(nameAST);
-            if (root == null) {
-                log(nameAST, MSG_MISSING_FILE);
+    public void beginTree(DetailAST rootAST) {
+        currentImportControl = null;
+        processCurrentFile = path.matcher(getFileContents().getFileName()).find();
+        fileName = getFileContents().getText().getFile().getName();
+
+        final int period = fileName.lastIndexOf('.');
+
+        if (period != -1) {
+            fileName = fileName.substring(0, period);
+        }
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (processCurrentFile) {
+            if (ast.getType() == TokenTypes.PACKAGE_DEF) {
+                if (root == null) {
+                    log(ast, MSG_MISSING_FILE);
+                }
+                else {
+                    packageName = getPackageText(ast);
+                    currentImportControl = root.locateFinest(packageName, fileName);
+                    if (currentImportControl == null) {
+                        log(ast, MSG_UNKNOWN_PKG);
+                    }
+                }
             }
-            else {
-                inPkg = full.getText();
-                currentLeaf = root.locateFinest(inPkg);
-                if (currentLeaf == null) {
-                    log(nameAST, MSG_UNKNOWN_PKG);
+            else if (currentImportControl != null) {
+                final String importText = getImportText(ast);
+                final AccessResult access = currentImportControl.checkAccess(packageName, fileName,
+                        importText);
+                if (access != AccessResult.ALLOWED) {
+                    log(ast, MSG_DISALLOWED, importText);
                 }
             }
         }
-        else if (currentLeaf != null) {
-            final FullIdent imp;
-            if (ast.getType() == TokenTypes.IMPORT) {
-                imp = FullIdent.createFullIdentBelow(ast);
+    }
+
+    @Override
+    public Set<String> getExternalResourceLocations() {
+        return Collections.singleton(file.toString());
+    }
+
+    /**
+     * Returns package text.
+     * @param ast PACKAGE_DEF ast node
+     * @return String that represents full package name
+     */
+    private static String getPackageText(DetailAST ast) {
+        final DetailAST nameAST = ast.getLastChild().getPreviousSibling();
+        return FullIdent.createFullIdent(nameAST).getText();
+    }
+
+    /**
+     * Returns import text.
+     * @param ast ast node that represents import
+     * @return String that represents importing class
+     */
+    private static String getImportText(DetailAST ast) {
+        final FullIdent imp;
+        if (ast.getType() == TokenTypes.IMPORT) {
+            imp = FullIdent.createFullIdentBelow(ast);
+        }
+        else {
+            // know it is a static import
+            imp = FullIdent.createFullIdent(ast
+                    .getFirstChild().getNextSibling());
+        }
+        return imp.getText();
+    }
+
+    /**
+     * Set the name for the file containing the import control
+     * configuration. It can also be a URL or resource in the classpath.
+     * It will cause the file to be loaded.
+     * @param uri the uri of the file to load.
+     * @throws IllegalArgumentException on error loading the file.
+     */
+    public void setFile(URI uri) {
+        // Handle empty param
+        if (uri != null) {
+            try {
+                root = ImportControlLoader.load(uri);
+                file = uri;
             }
-            else {
-                // know it is a static import
-                imp = FullIdent.createFullIdent(ast
-                        .getFirstChild().getNextSibling());
-            }
-            final AccessResult access = currentLeaf.checkAccess(imp.getText(),
-                    inPkg);
-            if (access != AccessResult.ALLOWED) {
-                log(ast, MSG_DISALLOWED, imp.getText());
+            catch (CheckstyleException ex) {
+                throw new IllegalArgumentException(UNABLE_TO_LOAD + uri, ex);
             }
         }
     }
 
     /**
-     * Set the pnameter for the file containing the import control
-     * configuration. It will cause the file to be loaded.
-     * @param name the name of the file to load.
-     * @throws ConversionException on error loading the file.
+     * Set the file path pattern that this check applies to.
+     * @param pattern the file path regex this check should apply to.
      */
-    public void setFile(final String name) {
-        // Handle empty param
-        if (StringUtils.isBlank(name)) {
-            return;
-        }
-
-        try {
-            root = ImportControlLoader.load(new File(name).toURI());
-        }
-        catch (final CheckstyleException ex) {
-            throw new ConversionException("Unable to load " + name, ex);
-        }
+    public void setPath(Pattern pattern) {
+        path = pattern;
     }
+
 }

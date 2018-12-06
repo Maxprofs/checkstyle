@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,40 +20,59 @@
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
 import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
-import java.io.File;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class ConstantNameCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/naming/constantname";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final ConstantNameCheck checkObj = new ConstantNameCheck();
+        final int[] expected = {TokenTypes.VARIABLE_DEF};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testIllegalRegexp()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ConstantNameCheck.class);
+            createModuleConfig(ConstantNameCheck.class);
         checkConfig.addAttribute("format", "\\");
         try {
             createChecker(checkConfig);
-            fail();
+            fail("CheckstyleException is expected");
         }
         catch (CheckstyleException ex) {
-            // expected exception
+            assertEquals("Invalid exception message", "cannot initialize module"
+                    + " com.puppycrawl.tools.checkstyle.TreeWalker - illegal value"
+                    + " '\\' for property 'format' of module"
+                    + " com.puppycrawl.tools.checkstyle.checks.naming.ConstantNameCheck",
+                    ex.getMessage());
         }
     }
 
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ConstantNameCheck.class);
+            createModuleConfig(ConstantNameCheck.class);
 
         final String pattern = "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$";
 
@@ -61,14 +80,14 @@ public class ConstantNameCheckTest
             "25:29: " + getCheckMessage(MSG_INVALID_PATTERN, "badConstant", pattern),
             "142:30: " + getCheckMessage(MSG_INVALID_PATTERN, "BAD__NAME", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputConstantNameSimple.java"), expected);
     }
 
     @Test
     public void testAccessControlTuning()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ConstantNameCheck.class);
+            createModuleConfig(ConstantNameCheck.class);
         checkConfig.addAttribute("applyToPublic", "false");
         checkConfig.addAttribute("applyToProtected", "false");
         checkConfig.addAttribute("applyToPackage", "false");
@@ -78,14 +97,14 @@ public class ConstantNameCheckTest
         final String[] expected = {
             "142:30: " + getCheckMessage(MSG_INVALID_PATTERN, "BAD__NAME", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputConstantNameSimple.java"), expected);
     }
 
     @Test
     public void testInterfaceAndAnnotation()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ConstantNameCheck.class);
+            createModuleConfig(ConstantNameCheck.class);
 
         final String pattern = "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$";
 
@@ -93,23 +112,22 @@ public class ConstantNameCheckTest
             "24:16: " + getCheckMessage(MSG_INVALID_PATTERN, "data", pattern),
             "64:16: " + getCheckMessage(MSG_INVALID_PATTERN, "data", pattern),
         };
-        verify(checkConfig, getPath("InputInner.java"), expected);
+        verify(checkConfig, getPath("InputConstantNameInner.java"), expected);
     }
 
     @Test
     public void testDefault1()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(ConstantNameCheck.class);
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("naming" + File.separator + "InputConstantNames.java"), expected);
+            createModuleConfig(ConstantNameCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputConstantName.java"), expected);
     }
 
     @Test
     public void testIntoInterface() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(ConstantNameCheck.class);
+                createModuleConfig(ConstantNameCheck.class);
 
         final String pattern = "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$";
 
@@ -123,30 +141,27 @@ public class ConstantNameCheckTest
             "52:9: " + getCheckMessage(MSG_INVALID_PATTERN, "_package", pattern),
             "53:9: " + getCheckMessage(MSG_INVALID_PATTERN, "_private", pattern),
         };
-        verify(checkConfig, getPath("naming" + File.separator + "InputMemberNameExtended.java"), expected);
+        verify(checkConfig, getPath("InputConstantNameMemberExtended.java"), expected);
     }
 
     @Test
     public void testStaticMethodInInterface()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(ConstantNameCheck.class);
-        final String[] expected = {
-        };
-        verify(checkConfig,
-                new File("src/test/resources-noncompilable/com/puppycrawl/tools/"
-                        + "checkstyle/InputStaticModifierInInterface.java").getCanonicalPath(),
-                expected);
+                createModuleConfig(ConstantNameCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputConstantNameStaticModifierInInterface.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        ConstantNameCheck constantNameCheckObj = new ConstantNameCheck();
-        int[] actual = constantNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final ConstantNameCheck constantNameCheckObj = new ConstantNameCheck();
+        final int[] actual = constantNameCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.VARIABLE_DEF,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        Assert.assertNotNull("Default acceptable should not be null", actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
+
 }

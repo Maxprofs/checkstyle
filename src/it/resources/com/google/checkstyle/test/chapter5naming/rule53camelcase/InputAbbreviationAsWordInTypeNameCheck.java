@@ -1,6 +1,6 @@
 package com.google.checkstyle.test.chapter5naming.rule53camelcase;
 
-class AbbrevationsCorrect {
+class AbbreviationsCorrect {
     
     int newCustomerId;
     
@@ -29,7 +29,7 @@ class AbbrevationsCorrect {
         void YoutubeImporter() {}
     }
     
-        AbbrevationsCorrect anonumousGood = new AbbrevationsCorrect() {
+        AbbreviationsCorrect anonymousGood = new AbbreviationsCorrect() {
         
             int newCustomerId;
         
@@ -45,9 +45,9 @@ class AbbrevationsCorrect {
     };
 }
 
-class AbbrevationsIncorrect {
+class AbbreviationsIncorrect {
     
-    int newCustomerID; //warn
+    int newCustomerID;
     
     boolean supportsIPv6OnIOS; //warn
     
@@ -55,16 +55,16 @@ class AbbrevationsIncorrect {
     
     class InnerBad {
         
-        int newCustomerID; //warn
+        int newCustomerID;
         
         boolean supportsIPv6OnIOS; //warn
         
         void XMLHTTPRequest() {} //warn
     }
     
-        AbbrevationsCorrect anonumousBad = new AbbrevationsCorrect() {
+        AbbreviationsCorrect anonymousBad = new AbbreviationsCorrect() {
         
-            int newCustomerID; //warn
+            int newCustomerID;
             
             boolean supportsIPv6OnIOS; //warn
             

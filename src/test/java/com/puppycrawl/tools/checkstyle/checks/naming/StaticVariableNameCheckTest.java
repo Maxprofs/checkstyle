@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,23 +20,36 @@
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
 import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
+import static org.junit.Assert.assertArrayEquals;
 
-import java.io.File;
-
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class StaticVariableNameCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/naming/staticvariablename";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final StaticVariableNameCheck checkObj = new StaticVariableNameCheck();
+        final int[] expected = {TokenTypes.VARIABLE_DEF};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testSpecified()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(StaticVariableNameCheck.class);
+            createModuleConfig(StaticVariableNameCheck.class);
         checkConfig.addAttribute("format", "^s[A-Z][a-zA-Z0-9]*$");
 
         final String pattern = "^s[A-Z][a-zA-Z0-9]*$";
@@ -44,42 +57,40 @@ public class StaticVariableNameCheckTest
         final String[] expected = {
             "30:24: " + getCheckMessage(MSG_INVALID_PATTERN, "badStatic", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputStaticVariableName1.java"), expected);
     }
 
     @Test
     public void testAccessTuning()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(StaticVariableNameCheck.class);
+            createModuleConfig(StaticVariableNameCheck.class);
         checkConfig.addAttribute("format", "^s[A-Z][a-zA-Z0-9]*$");
-        checkConfig.addAttribute("applyToPrivate", "false"); // allow method names and class names to equal
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+
+        // allow method names and class names to equal
+        checkConfig.addAttribute("applyToPrivate", "false");
+
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputStaticVariableName1.java"), expected);
     }
 
     @Test
     public void testInterfaceOrAnnotationBlock()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(StaticVariableNameCheck.class);
-        final String[] expected = {
-        };
-        verify(checkConfig,
-                new File("src/test/resources/com/puppycrawl/tools/"
-                        + "checkstyle/naming/InputStaticVariableName.java").getCanonicalPath(),
-                expected);
+                createModuleConfig(StaticVariableNameCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputStaticVariableName.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        StaticVariableNameCheck staticVariableNameCheckObj = new StaticVariableNameCheck();
-        int[] actual = staticVariableNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final StaticVariableNameCheck staticVariableNameCheckObj = new StaticVariableNameCheck();
+        final int[] actual = staticVariableNameCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.VARIABLE_DEF,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
+
 }

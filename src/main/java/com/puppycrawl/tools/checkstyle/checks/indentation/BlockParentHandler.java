@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -32,16 +32,16 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <UL>
  *   <LI>template method to get the lcurly</LI>
  *   <LI>template method to get the rcurly</LI>
- *   <LI>if curlys aren't present, then template method to get expressions
+ *   <LI>if curlies aren't present, then template method to get expressions
  *       is called</LI>
- *   <LI>now all the repetitous code which checks for BOL, if curlys are on
+ *   <LI>now all the repetitious code which checks for BOL, if curlies are on
  *       same line, etc. can be collapsed into the superclass</LI>
  * </UL>
  *
  *
- * @author jrichard
  */
 public class BlockParentHandler extends AbstractExpressionHandler {
+
     /**
      * Children checked by parent handlers.
      */
@@ -53,6 +53,8 @@ public class BlockParentHandler extends AbstractExpressionHandler {
         TokenTypes.LITERAL_RETURN,
         TokenTypes.LITERAL_THROW,
         TokenTypes.LITERAL_CONTINUE,
+        TokenTypes.CTOR_CALL,
+        TokenTypes.SUPER_CTOR_CALL,
     };
 
     /**
@@ -63,6 +65,7 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      * @param name          the name of the handler
      * @param ast           the abstract syntax tree
      * @param parent        the parent handler
+     * @noinspection WeakerAccess
      */
     public BlockParentHandler(IndentationCheck indentCheck,
         String name, DetailAST ast, AbstractExpressionHandler parent) {
@@ -70,7 +73,7 @@ public class BlockParentHandler extends AbstractExpressionHandler {
     }
 
     /**
-     * Returns array of token types which should be checked among childrens.
+     * Returns array of token types which should be checked among children.
      * @return array of token types to check.
      */
     protected int[] getCheckedChildren() {
@@ -82,43 +85,21 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return the top level expression
      */
-    protected DetailAST getToplevelAST() {
+    protected DetailAST getTopLevelAst() {
         return getMainAst();
     }
 
     /**
      * Check the indent of the top level token.
      */
-    protected void checkToplevelToken() {
-        final DetailAST toplevel = getToplevelAST();
+    protected void checkTopLevelToken() {
+        final DetailAST topLevel = getTopLevelAst();
 
-        if (toplevel == null
-            || getLevel().accept(expandedTabsColumnNo(toplevel)) || hasLabelBefore()) {
-            return;
+        if (topLevel != null
+                && !getIndent().isAcceptable(expandedTabsColumnNo(topLevel))
+                && isOnStartOfLine(topLevel)) {
+            logError(topLevel, "", expandedTabsColumnNo(topLevel));
         }
-        if (!toplevelMustStartLine() && !startsLine(toplevel)) {
-            return;
-        }
-        logError(toplevel, "", expandedTabsColumnNo(toplevel));
-    }
-
-    /**
-     * Check if the top level token has label before.
-     * @return true if the top level token has label before.
-     */
-    protected boolean hasLabelBefore() {
-        final DetailAST parent = getToplevelAST().getParent();
-        return parent.getType() == TokenTypes.LABELED_STAT
-            && parent.getLineNo() == getToplevelAST().getLineNo();
-    }
-
-    /**
-     * Determines if the top level token must start the line.
-     *
-     * @return true
-     */
-    protected boolean toplevelMustStartLine() {
-        return true;
     }
 
     /**
@@ -126,8 +107,8 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return true if curly braces are present, false otherwise
      */
-    protected boolean hasCurlys() {
-        return getLCurly() != null && getRCurly() != null;
+    private boolean hasCurlies() {
+        return getLeftCurly() != null && getRightCurly() != null;
     }
 
     /**
@@ -135,7 +116,7 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return the left curly brace expression
      */
-    protected DetailAST getLCurly() {
+    protected DetailAST getLeftCurly() {
         return getMainAst().findFirstToken(TokenTypes.SLIST);
     }
 
@@ -144,7 +125,7 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return the right curly brace expression
      */
-    protected DetailAST getRCurly() {
+    protected DetailAST getRightCurly() {
         final DetailAST slist = getMainAst().findFirstToken(TokenTypes.SLIST);
         return slist.findFirstToken(TokenTypes.RCURLY);
     }
@@ -152,17 +133,15 @@ public class BlockParentHandler extends AbstractExpressionHandler {
     /**
      * Check the indentation of the left curly brace.
      */
-    protected void checkLCurly() {
+    private void checkLeftCurly() {
         // the lcurly can either be at the correct indentation, or nested
         // with a previous expression
-        final DetailAST lcurly = getLCurly();
+        final DetailAST lcurly = getLeftCurly();
         final int lcurlyPos = expandedTabsColumnNo(lcurly);
 
-        if (curlyLevel().accept(lcurlyPos) || !startsLine(lcurly)) {
-            return;
+        if (!curlyIndent().isAcceptable(lcurlyPos) && isOnStartOfLine(lcurly)) {
+            logError(lcurly, "lcurly", lcurlyPos, curlyIndent());
         }
-
-        logError(lcurly, "lcurly", lcurlyPos);
     }
 
     /**
@@ -170,17 +149,8 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return the curly brace indentation level
      */
-    protected IndentLevel curlyLevel() {
-        return new IndentLevel(getLevel(), getBraceAdjustment());
-    }
-
-    /**
-     * Determines if the right curly brace must be at the start of the line.
-     *
-     * @return true
-     */
-    protected boolean rcurlyMustStart() {
-        return true;
+    protected IndentLevel curlyIndent() {
+        return new IndentLevel(getIndent(), getBraceAdjustment());
     }
 
     /**
@@ -188,26 +158,21 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return false
      */
-    protected boolean childrenMayNest() {
+    protected boolean canChildrenBeNested() {
         return false;
     }
 
     /**
      * Check the indentation of the right curly brace.
      */
-    protected void checkRCurly() {
-        // the rcurly can either be at the correct indentation, or
-        // on the same line as the lcurly
-        final DetailAST lcurly = getLCurly();
-        final DetailAST rcurly = getRCurly();
+    private void checkRightCurly() {
+        final DetailAST rcurly = getRightCurly();
         final int rcurlyPos = expandedTabsColumnNo(rcurly);
 
-        if (curlyLevel().accept(rcurlyPos)
-            || !rcurlyMustStart() && !startsLine(rcurly)
-            || areOnSameLine(rcurly, lcurly)) {
-            return;
+        if (!curlyIndent().isAcceptable(rcurlyPos)
+                && isOnStartOfLine(rcurly)) {
+            logError(rcurly, "rcurly", rcurlyPos, curlyIndent());
         }
-        logError(rcurly, "rcurly", rcurlyPos, curlyLevel());
     }
 
     /**
@@ -215,21 +180,19 @@ public class BlockParentHandler extends AbstractExpressionHandler {
      *
      * @return the non-list child element
      */
-    protected DetailAST getNonlistChild() {
+    protected DetailAST getNonListChild() {
         return getMainAst().findFirstToken(TokenTypes.RPAREN).getNextSibling();
     }
 
     /**
      * Check the indentation level of a child that is not a list of statements.
      */
-    private void checkNonlistChild() {
-        final DetailAST nonlist = getNonlistChild();
-        if (nonlist == null) {
-            return;
+    private void checkNonListChild() {
+        final DetailAST nonList = getNonListChild();
+        if (nonList != null) {
+            final IndentLevel expected = new IndentLevel(getIndent(), getBasicOffset());
+            checkExpressionSubtree(nonList, expected, false, false);
         }
-
-        final IndentLevel expected = new IndentLevel(getLevel(), getBasicOffset());
-        checkExpressionSubtree(nonlist, expected, false, false);
     }
 
     /**
@@ -244,70 +207,73 @@ public class BlockParentHandler extends AbstractExpressionHandler {
     /**
      * Get the right parenthesis portion of the expression we are handling.
      *
-     * @return the right parenthis expression
+     * @return the right parenthesis expression
      */
-    protected DetailAST getRParen() {
+    private DetailAST getRightParen() {
         return getMainAst().findFirstToken(TokenTypes.RPAREN);
     }
 
     /**
      * Get the left parenthesis portion of the expression we are handling.
      *
-     * @return the left parenthis expression
+     * @return the left parenthesis expression
      */
-    protected DetailAST getLParen() {
+    private DetailAST getLeftParen() {
         return getMainAst().findFirstToken(TokenTypes.LPAREN);
     }
 
     @Override
     public void checkIndentation() {
-        checkToplevelToken();
-        // seperate to allow for eventual configuration
-        checkLParen(getLParen());
-        checkRParen(getLParen(), getRParen());
-        if (hasCurlys()) {
-            checkLCurly();
-            checkRCurly();
+        checkTopLevelToken();
+        // separate to allow for eventual configuration
+        checkLeftParen(getLeftParen());
+        checkRightParen(getLeftParen(), getRightParen());
+        if (hasCurlies()) {
+            checkLeftCurly();
+            checkRightCurly();
         }
         final DetailAST listChild = getListChild();
-        if (listChild != null) {
-            // NOTE: switch statements usually don't have curlys
-            if (!hasCurlys() || !areOnSameLine(getLCurly(), getRCurly())) {
-                checkChildren(listChild,
-                              getCheckedChildren(),
-                              getChildrenExpectedLevel(),
-                              true,
-                              childrenMayNest());
-            }
+        if (listChild == null) {
+            checkNonListChild();
         }
         else {
-            checkNonlistChild();
+            // NOTE: switch statements usually don't have curlies
+            if (!hasCurlies() || !areOnSameLine(getLeftCurly(), getRightCurly())) {
+                checkChildren(listChild,
+                        getCheckedChildren(),
+                        getChildrenExpectedIndent(),
+                        true,
+                        canChildrenBeNested());
+            }
         }
     }
 
     /**
+     * Gets indentation level expected for children.
      * @return indentation level expected for children
      */
-    protected IndentLevel getChildrenExpectedLevel() {
+    protected IndentLevel getChildrenExpectedIndent() {
+        IndentLevel indentLevel = new IndentLevel(getIndent(), getBasicOffset());
         // if we have multileveled expected level then we should
         // try to suggest single level to children using curlies'
         // levels.
-        if (getLevel().isMultiLevel() && hasCurlys()) {
-            if (startsLine(getLCurly())) {
-                return new IndentLevel(expandedTabsColumnNo(getLCurly()) + getBasicOffset());
+        if (getIndent().isMultiLevel() && hasCurlies()) {
+            if (isOnStartOfLine(getLeftCurly())) {
+                indentLevel = new IndentLevel(expandedTabsColumnNo(getLeftCurly())
+                        + getBasicOffset());
             }
-            else if (startsLine(getRCurly())) {
-                final IndentLevel level = new IndentLevel(curlyLevel(), getBasicOffset());
+            else if (isOnStartOfLine(getRightCurly())) {
+                final IndentLevel level = new IndentLevel(curlyIndent(), getBasicOffset());
                 level.addAcceptedIndent(level.getFirstIndentLevel() + getLineWrappingIndent());
-                return level;
+                indentLevel = level;
             }
         }
-        return new IndentLevel(getLevel(), getBasicOffset());
+        return indentLevel;
     }
 
     @Override
-    public IndentLevel suggestedChildLevel(AbstractExpressionHandler child) {
-        return getChildrenExpectedLevel();
+    public IndentLevel getSuggestedChildIndent(AbstractExpressionHandler child) {
+        return getChildrenExpectedIndent();
     }
 
     /**
@@ -318,4 +284,5 @@ public class BlockParentHandler extends AbstractExpressionHandler {
     private int getLineWrappingIndent() {
         return getIndentCheck().getLineWrappingIndentation();
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,10 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
-import com.puppycrawl.tools.checkstyle.Utils;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.DescendantTokenCheck;
 
 /**
  * <p>
@@ -36,9 +36,9 @@ import com.puppycrawl.tools.checkstyle.checks.DescendantTokenCheck;
  * &lt;module name="MissingCtor"/&gt;
  * </pre>
  *
- * @author o_sukhodolsky
  */
-public class MissingCtorCheck extends DescendantTokenCheck {
+@StatelessCheck
+public class MissingCtorCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -46,34 +46,29 @@ public class MissingCtorCheck extends DescendantTokenCheck {
      */
     public static final String MSG_KEY = "missing.ctor";
 
-    /** Creates new instance of the check. */
-    public MissingCtorCheck() {
-        setLimitedTokens(Utils.getTokenName(TokenTypes.CTOR_DEF));
-        setMinimumNumber(1);
-        setMaximumDepth(2);
-        setMinimumMessage(MSG_KEY);
-    }
-
     @Override
     public int[] getDefaultTokens() {
-        return new int[]{TokenTypes.CLASS_DEF};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
-        return getDefaultTokens();
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
+        return new int[] {TokenTypes.CLASS_DEF};
     }
 
     @Override
     public void visitToken(DetailAST ast) {
         final DetailAST modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
-        if (!modifiers.branchContains(TokenTypes.ABSTRACT)) {
-            super.visitToken(ast);
+        if (modifiers.findFirstToken(TokenTypes.ABSTRACT) == null
+                && ast.findFirstToken(TokenTypes.OBJBLOCK)
+                    .findFirstToken(TokenTypes.CTOR_DEF) == null) {
+            log(ast.getLineNo(), MSG_KEY);
         }
     }
+
 }

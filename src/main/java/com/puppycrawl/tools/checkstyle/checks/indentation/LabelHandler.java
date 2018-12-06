@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for labels.
  *
- * @author jrichard
  */
 public class LabelHandler extends AbstractExpressionHandler {
+
     /**
      * The types of expressions that are children of a label.
      */
@@ -49,9 +49,9 @@ public class LabelHandler extends AbstractExpressionHandler {
     }
 
     @Override
-    protected IndentLevel getLevelImpl() {
-        final IndentLevel level = new IndentLevel(super.getLevelImpl(), -getBasicOffset());
-        level.addAcceptedIndent(super.getLevelImpl());
+    protected IndentLevel getIndentImpl() {
+        final IndentLevel level = new IndentLevel(super.getIndentImpl(), -getBasicOffset());
+        level.addAcceptedIndent(super.getIndentImpl());
         return level;
     }
 
@@ -59,7 +59,7 @@ public class LabelHandler extends AbstractExpressionHandler {
      * Check the indentation of the label.
      */
     private void checkLabel() {
-        checkChildren(getMainAst(), LABEL_CHILDREN, getLevel(), true, false);
+        checkChildren(getMainAst(), LABEL_CHILDREN, getIndent(), true, false);
     }
 
     @Override
@@ -69,8 +69,9 @@ public class LabelHandler extends AbstractExpressionHandler {
         final DetailAST parent = getMainAst().getFirstChild().getNextSibling();
 
         final IndentLevel expected =
-            new IndentLevel(getLevel(), getBasicOffset());
+            new IndentLevel(getIndent(), getBasicOffset());
 
         checkExpressionSubtree(parent, expected, true, false);
     }
+
 }

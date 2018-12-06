@@ -4,14 +4,10 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
 
-  <properties>
-    <title>Property Types</title>
-    <author>Oliver Burn</author>
-  </properties>
-
   <head>
     <title>Property Types</title>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"/>
+    <script type="text/javascript"
+            src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"/>
     <script type="text/javascript" src="js/anchors.js"/>
     <script type="text/javascript" src="js/google-analytics.js"/>
     <link rel="icon" href="images/favicon.png" type="image/x-icon" />
@@ -26,31 +22,32 @@
       </macro>
     </section>
 
-    <section name="Property Types">
+    <section name="Overview">
     <p>
       Checkstyle is configured using properties, which are string
       representations. This document describes how these string
       representations are mapped to typed properties.
     </p>
+    </section>
 
-    <subsection name="integer">
+    <section name="integer">
       <p>
         This property represents an integer. The string representation is
         parsed using the <code>java.lang.Integer</code> class.
       </p>
-    </subsection>
+    </section>
 
-    <subsection name="string">
+    <section name="string">
       <p>
         This property represents a string. The literal string representation
         is used.
       </p>
-    </subsection>
+    </section>
 
-    <subsection name="boolean">
+    <section name="boolean">
       <p>
-        This property represents a boolean. The default value is <code>false</code>. The following string representations will
-        map to <code>true</code>:
+        This property represents a boolean. The default value is <code>false</code>.
+        The following string representations will map to <code>true</code>:
       </p>
 
       <ul>
@@ -60,9 +57,9 @@
       </ul>
 
       <p>Anything else will map to <code>false</code>.</p>
-    </subsection>
+    </section>
 
-    <subsection name="stringSet">
+    <section name="stringSet">
       <p>
         This property represents a set of strings. The string representation
         is parsed as a set of comma (',') separated strings.
@@ -80,9 +77,9 @@
 &lt;property name=&quot;tokens&quot; value=&quot;DIV_ASSIGN&quot;/&gt;
 &lt;property name=&quot;tokens&quot; value=&quot;PLUS_ASSIGN&quot;/&gt;
       </source>
-    </subsection>
+    </section>
 
-    <subsection name="intSet">
+    <section name="intSet">
       <p>
         This property represents a set of integers. The string representation
         is parsed as a set of comma (',') separated integers that are parsed
@@ -101,18 +98,62 @@
 &lt;property name=&quot;tokens&quot; value=&quot;42&quot;/&gt;
 &lt;property name=&quot;tokens&quot; value=&quot;666&quot;/&gt;
       </source>
-    </subsection>
+    </section>
 
-    <subsection name="regexp">
+    <section name="regexp">
       <p>
         This property represents a regular expression. The string
         representation is parsed using <a
-        href="http://docs.oracle.com/javase/7/docs/api/index.html?java/util/regex/package-summary.html">java.util.regex
+        href="https://docs.oracle.com/javase/7/docs/api/index.html?java/util/regex/package-summary.html">java.util.regex
         package</a>.
       </p>
-    </subsection>
+    </section>
 
-    <subsection name="parenPad">
+    <section name="uri">
+      <p>
+        This property represents a URI. The string representation is parsed using a custom
+        routine to analyze what type of URI the string is.
+        It can be a URL, regular file, or a resource path. It will try loading the path as
+        a URL first, then as a file that must exist, and then finally as a resource on the
+        classpath.
+      </p>
+    </section>
+
+    <section name="lineSeparator">
+      <p>
+        This property represents the policy for line returns. The
+        following table describes the valid options:
+      </p>
+
+      <table summary="line separator options">
+        <tr>
+          <td>Option</td>
+          <td>Definition</td>
+        </tr>
+        <tr>
+          <td><code>crlf</code></td>
+          <td>Windows-style</td>
+        </tr>
+        <tr>
+          <td><code>cr</code></td>
+          <td>Mac-style</td>
+        </tr>
+        <tr>
+          <td><code>lf</code></td>
+          <td>Unix-style</td>
+        </tr>
+        <tr>
+          <td><code>lf_cr_crlf</code></td>
+          <td>lf, cr or crlf</td>
+        </tr>
+        <tr>
+          <td><code>system</code></td>
+          <td>system default</td>
+        </tr>
+      </table>
+    </section>
+
+    <section name="parenPad">
       <p>
         This property represents the policy for padding with white space. The
         following table describes the valid options:
@@ -137,9 +178,9 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="wrapOp">
+    <section name="wrapOp">
       <p>
         This property represents the policy for wrapping lines.
         The following table describes the valid options:
@@ -171,9 +212,9 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="block">
+    <section name="block">
       <p>
         This property represents the policy for checking block statements. The
         following table describes the valid options:
@@ -196,7 +237,7 @@
           </td>
         </tr>
         <tr>
-          <td><code>stmt</code></td>
+          <td><code>statement</code></td>
           <td>
             Require that there is a statement in the block. For example:
             <pre>
@@ -207,9 +248,9 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="lcurly">
+    <section name="lcurly">
       <p>
         This property represents the policy for checking the placement of a
         left curly brace (<code>'{'</code>). The following table
@@ -248,11 +289,10 @@
         <tr>
           <td><code>nlow</code></td>
           <td>
-            If the brace will fit on the first line of the statement,
-            then apply <code>eol</code> rule. Otherwise apply the
-            <code>nl</code> rule. <code>nlow</code> is a
-            mnemonic for "new line on wrap". For the example above Checkstyle
-            will enforce:
+            If the statement/expression/declaration connected to the brace spans multiple lines,
+            than apply <code>nl</code> rule. Otherwise apply the <code>eol</code> rule.
+            <code>nlow</code> is a mnemonic for "new line on wrap".
+            For the example above Checkstyle will enforce:
             <pre>
     if (condition) {
         ...
@@ -268,13 +308,15 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="rcurly">
+    <section name="rcurly">
       <p>
         This property represents the policy for checking the placement of a
-        right curly brace (<code>'}'</code>). The following table
-        describes the valid options:
+        right curly brace (<code>'}'</code>) in blocks but not blocks of expressions.
+        For right curly brace of expression blocks please follow issue
+        <a href="https://github.com/checkstyle/checkstyle/issues/5945">#5945</a>. The following
+        table describes the valid options:
       </p>
 
       <table summary="right curly options">
@@ -284,59 +326,112 @@
         </tr>
 
         <tr>
-          <td><code>same</code></td>
-          <td>
-            The brace must be on the same line as the next part of
-            a multi-block statement (one that directly contains
-            multiple blocks: if/else-if/else or try/catch/finally. For
-            example:
-            <pre>
-    try {
-        ...
-    } finally {
-            </pre>
-          </td>
-        </tr>
-
-        <tr>
           <td><code>alone</code></td>
           <td>
             The brace must be alone on the line. For example:
             <pre>
     try {
         ...
-    }
+    <b>}</b>
     finally {
         ...
-    }
+    <b>}</b>
             </pre>
           </td>
         </tr>
 
-          <tr>
-              <td><code>alone_or_singleline</code></td>
-              <td>
+        <tr>
+          <td><code>alone_or_singleline</code></td>
+          <td>
                   The brace must be alone on the line, yet
                   single-line format of block is allowed.
                   For example:
-                  <pre>
+            <pre>
     // Brace is alone on the line
     try {
         ...
-    }
+    <b>}</b>
     finally {
+        ...
+    <b>}</b>
+
+    // Single-line format of block
+    public long getId() { return id; <b>}</b>
+            </pre>
+          </td>
+        </tr>
+
+        <tr>
+          <td><code>same</code></td>
+          <td>
+            Works like <code>alone_or_singleline</code> but the brace should be on the same line
+            as the next part of a multi-block statement
+            (one that directly contains multiple blocks: if/else-if/else or try/catch/finally).
+            If no next part of a multi-block statement present, brace must be alone on line.
+            It also allows single-line format of multi-block statements.
+
+            <p>Examples:</p>
+
+              <pre>
+    public long getId() {return id;<b>}</b> // this is OK, it is single line
+
+    // try-catch-finally blocks
+    try {
+        ...
+    <b>}</b> catch (Exception ex) { // this is OK
+        ...
+    <b>}</b> finally { // this is OK
         ...
     }
 
-    // Single-line format of block
-    private int foo() { return 1; }
-                  </pre>
-              </td>
-          </tr>
-      </table>
-    </subsection>
+    try {
+        ...
+    <b>}</b> // this is NOT OK, not on the same line as the next part of a multi-block statement
+    catch (Exception ex) {
+          ...
+    <b>}</b> // this is NOT OK, not on the same line as the next part of a multi-block statement
+    finally {
+          ...
+    }
 
-    <subsection name="scope">
+    // if-else blocks
+    if (a &#62; 0) {
+       ...
+    <b>}</b> else { // this is OK
+       ...
+    }
+
+    if (a &#62; 0) {
+       ...
+    <b>}</b> // this is NOT OK, not on the same line as the next part of a multi-block statement
+    else {
+       ...
+    }
+
+    if (a &#62; 0) {
+       ...
+    <b>}</b> int i = 5; // NOT OK, no next part of a multi-block statement, so should be alone
+
+    Thread t = new Thread(new Runnable() {
+       @Override
+       public void run() {
+                  ...
+       <b>}</b> // this is OK, should be alone as next part of a multi-block statement is absent
+    <b>}</b>); // this case is out of scope of RightCurly Check (see issue #5945)
+
+    if (a &#62; 0) { ... <b>}</b> // OK, single-line multi-block statement
+    if (a &#62; 0) { ... } else { ... <b>}</b> // OK, single-line multi-block statement
+    if (a &#62; 0) {
+        ...
+    } else { ... <b>}</b> // OK, single-line multi-block statement
+              </pre>
+          </td>
+        </tr>
+
+      </table>
+    </section>
+
+    <section name="scope">
       <p>This property represents a Java scope. The scope is treated
       inclusively (as javadoc does): 'package' means all 'package', 'protected'
       and 'public' methods/fields/classes. The valid options are:</p>
@@ -349,9 +444,20 @@
         <li><code>private</code></li>
         <li><code>anoninner</code></li>
       </ul>
-    </subsection>
+    </section>
 
-    <subsection name="severity">
+      <section name="access_modifiers">
+          <p>This property represents Java access modifiers.</p>
+
+          <ul>
+              <li><code>public</code></li>
+              <li><code>protected</code></li>
+              <li><code>package</code></li>
+              <li><code>private</code></li>
+          </ul>
+      </section>
+
+    <section name="severity">
       <p>
         This property represents the severity level of a check violation. The
         valid options are:
@@ -363,9 +469,9 @@
         <li><code>warning</code></li>
         <li><code>error</code></li>
       </ul>
-    </subsection>
+    </section>
 
-    <subsection name="importOrder">
+    <section name="importOrder">
       <p>
         This property represents the policy for checking imports order.
         The following table describes the valid options:
@@ -379,7 +485,10 @@
 
         <tr>
           <td><code>top</code></td>
-          <td>All static imports are at the top. For example:
+          <td>All static imports are at the top.
+              Groups for static import are defined by the property 'staticGroups'.
+              The blank line between groups is driven by the property 'separatedStaticGroups'.
+              For example:
               <pre>
     import static a.b.C.*;
     import static x.y.Z.*;
@@ -428,7 +537,10 @@
 
         <tr>
           <td><code>bottom</code></td>
-          <td>All static imports are at the bottom. For example:
+          <td>All static imports are at the bottom.
+              Groups for static import are defined by the property 'staticGroups'.
+              The blank line between groups is driven by the property 'separatedStaticGroups'.
+              For example:
               <pre>
     import a.b.D;
     import x.y.Z;
@@ -438,9 +550,9 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="elementStyle">
+    <section name="elementStyle">
       <p>
         This property represents the policy for the styles for defining
         elements in an annotation. The following table
@@ -494,9 +606,9 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="closingParens">
+    <section name="closingParens">
       <p>
         This property represents the policy for the styles for the ending
         parenthesis. The following table describes the valid options:
@@ -531,9 +643,9 @@
           </td>
         </tr>
       </table>
-    </subsection>
+    </section>
 
-    <subsection name="trailingArrayComma">
+    <section name="trailingArrayComma">
       <p>
         This property represents the policy for the styles for the trailing
         array comma. The following table describes the valid options:
@@ -568,7 +680,6 @@
           </td>
         </tr>
       </table>
-    </subsection>
     </section>
   </body>
 </document>

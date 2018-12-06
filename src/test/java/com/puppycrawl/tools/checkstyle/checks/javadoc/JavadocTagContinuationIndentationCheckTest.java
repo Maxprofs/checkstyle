@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,27 +20,46 @@
 package com.puppycrawl.tools.checkstyle.checks.javadoc;
 
 import static com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTagContinuationIndentationCheck.MSG_KEY;
+import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class JavadocTagContinuationIndentationCheckTest
-        extends BaseCheckTestSupport {
+        extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/javadoc/javadoctagcontinuationindentation";
+    }
+
     @Test
-    public void testFP() throws Exception {
+    public void testGetRequiredTokens() {
+        final JavadocTagContinuationIndentationCheck checkObj =
+            new JavadocTagContinuationIndentationCheck();
+        final int[] expected = {TokenTypes.BLOCK_COMMENT_BEGIN };
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
+    @Test
+    public void testFp() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(JavadocTagContinuationIndentationCheck.class);
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("javadoc/GuavaFP.java"), expected);
+                createModuleConfig(JavadocTagContinuationIndentationCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig,
+               getPath("InputJavadocTagContinuationIndentationGuavaFalsePositive.java"),
+               expected);
     }
 
     @Test
     public void testCheck() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(JavadocTagContinuationIndentationCheck.class);
+                createModuleConfig(JavadocTagContinuationIndentationCheck.class);
         final String[] expected = {
             "47: " + getCheckMessage(MSG_KEY, 4),
             "109: " + getCheckMessage(MSG_KEY, 4),
@@ -54,21 +73,23 @@ public class JavadocTagContinuationIndentationCheckTest
             "290: " + getCheckMessage(MSG_KEY, 4),
             "310: " + getCheckMessage(MSG_KEY, 4),
             "322: " + getCheckMessage(MSG_KEY, 4),
+            "324: " + getCheckMessage(MSG_KEY, 4),
         };
-        verify(checkConfig, getPath("javadoc/InputJavaDocTagContinuationIndentation.java"),
+        verify(checkConfig, getPath("InputJavadocTagContinuationIndentation.java"),
                 expected);
     }
 
     @Test
     public void testCheckWithOffset3() throws Exception {
         final DefaultConfiguration checkConfig =
-                createCheckConfig(JavadocTagContinuationIndentationCheck.class);
+                createModuleConfig(JavadocTagContinuationIndentationCheck.class);
         checkConfig.addAttribute("offset", "3");
         final String[] expected = {
             "7: " + getCheckMessage(MSG_KEY, 3),
             "19: " + getCheckMessage(MSG_KEY, 3),
         };
-        verify(checkConfig, getPath("javadoc/InputJavaDocTagContinuationIndentationOffset3.java"),
+        verify(checkConfig, getPath("InputJavadocTagContinuationIndentationOffset3.java"),
                 expected);
     }
+
 }

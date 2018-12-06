@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,11 +24,11 @@ import com.puppycrawl.tools.checkstyle.api.FileContents;
 /**
  * Implementation of a {@link MatchSuppressor} that suppresses based on
  * whether in a comment.
- * @author Oliver Burn
  */
 class CommentSuppressor implements MatchSuppressor {
+
     /** File contents to check for comments. */
-    private FileContents currentContents;
+    private final FileContents currentContents;
 
     /**
      * Constructor for this suppressor.
@@ -36,7 +36,7 @@ class CommentSuppressor implements MatchSuppressor {
      * @param currentContents
      *            content of checked file.
      **/
-    public CommentSuppressor(FileContents currentContents) {
+    CommentSuppressor(FileContents currentContents) {
         this.currentContents = currentContents;
     }
 

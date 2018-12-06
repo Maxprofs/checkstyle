@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,31 +20,27 @@
 package com.puppycrawl.tools.checkstyle.filters;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.commons.beanutils.ConversionException;
-
-import com.google.common.collect.Lists;
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.TreeWalkerAuditEvent;
+import com.puppycrawl.tools.checkstyle.TreeWalkerFilter;
 import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
-import com.puppycrawl.tools.checkstyle.api.Filter;
 import com.puppycrawl.tools.checkstyle.api.TextBlock;
-import com.puppycrawl.tools.checkstyle.checks.FileContentsHolder;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
  * A filter that uses nearby comments to suppress audit events.
  * </p>
- * <p>
- * This check is philosophically similar to {@link SuppressionCommentFilter}.
+ *
+ * <p>This check is philosophically similar to {@link SuppressionCommentFilter}.
  * Unlike {@link SuppressionCommentFilter}, this filter does not require
  * pairs of comments.  This check may be used to suppress warnings in the
  * current line:
@@ -62,22 +58,19 @@ import com.puppycrawl.tools.checkstyle.checks.FileContentsHolder;
  * <pre>
  *   try {
  *     thirdPartyLibrary.method();
- *   } catch (RuntimeException e) {
+ *   } catch (RuntimeException ex) {
  *     // ALLOW ILLEGAL CATCH BECAUSE third party API wraps everything
  *     // in RuntimeExceptions.
  *     ...
  *   }
  * </pre>
  *
- * <p>
- * See {@link SuppressionCommentFilter} for usage notes.
+ * <p>See {@link SuppressionCommentFilter} for usage notes.
  *
- *
- * @author Mick Killianey
  */
 public class SuppressWithNearbyCommentFilter
     extends AutomaticBean
-    implements Filter {
+    implements TreeWalkerFilter {
 
     /** Format to turns checkstyle reporting off. */
     private static final String DEFAULT_COMMENT_FORMAT =
@@ -89,64 +82,58 @@ public class SuppressWithNearbyCommentFilter
     /** Default regex for lines that should be suppressed. */
     private static final String DEFAULT_INFLUENCE_FORMAT = "0";
 
+    /** Tagged comments. */
+    private final List<Tag> tags = new ArrayList<>();
+
     /** Whether to look for trigger in C-style comments. */
     private boolean checkC = true;
 
     /** Whether to look for trigger in C++-style comments. */
+    // -@cs[AbbreviationAsWordInName] We can not change it as,
+    // check's property is a part of API (used in configurations).
     private boolean checkCPP = true;
 
     /** Parsed comment regexp that marks checkstyle suppression region. */
-    private Pattern commentRegexp;
+    private Pattern commentFormat = Pattern.compile(DEFAULT_COMMENT_FORMAT);
 
     /** The comment pattern that triggers suppression. */
-    private String checkFormat;
+    private String checkFormat = DEFAULT_CHECK_FORMAT;
 
     /** The message format to suppress. */
     private String messageFormat;
 
     /** The influence of the suppression comment. */
-    private String influenceFormat;
-
-    /** Tagged comments */
-    private final List<Tag> tags = Lists.newArrayList();
+    private String influenceFormat = DEFAULT_INFLUENCE_FORMAT;
 
     /**
      * References the current FileContents for this filter.
      * Since this is a weak reference to the FileContents, the FileContents
      * can be reclaimed as soon as the strong references in TreeWalker
-     * and FileContentsHolder are reassigned to the next FileContents,
-     * at which time filtering for the current FileContents is finished.
+     * are reassigned to the next FileContents, at which time filtering for
+     * the current FileContents is finished.
      */
     private WeakReference<FileContents> fileContentsReference = new WeakReference<>(null);
 
     /**
-     * Constructs a SuppressionCommentFilter.
-     * Initializes comment on, comment off, and check formats
-     * to defaults.
+     * Set the format for a comment that turns off reporting.
+     * @param pattern a pattern.
      */
-    public SuppressWithNearbyCommentFilter() {
-        setCommentFormat(DEFAULT_COMMENT_FORMAT);
-        setCheckFormat(DEFAULT_CHECK_FORMAT);
-        setInfluenceFormat(DEFAULT_INFLUENCE_FORMAT);
+    public final void setCommentFormat(Pattern pattern) {
+        commentFormat = pattern;
     }
 
     /**
-     * Set the format for a comment that turns off reporting.
-     * @param format a {@code String} value.
-     * @throws ConversionException if unable to create Pattern object.
+     * Returns FileContents for this filter.
+     * @return the FileContents for this filter.
      */
-    public final void setCommentFormat(String format) {
-        commentRegexp = Utils.createPattern(format);
-    }
-
-    /** @return the FileContents for this filter. */
-    public FileContents getFileContents() {
+    private FileContents getFileContents() {
         return fileContentsReference.get();
     }
 
     /**
      * Set the FileContents for this filter.
      * @param fileContents the FileContents for this filter.
+     * @noinspection WeakerAccess
      */
     public void setFileContents(FileContents fileContents) {
         fileContentsReference = new WeakReference<>(fileContents);
@@ -178,10 +165,12 @@ public class SuppressWithNearbyCommentFilter
 
     /**
      * Set whether to look in C++ comments.
-     * @param checkCPP {@code true} if C++ comments are checked.
+     * @param checkCpp {@code true} if C++ comments are checked.
      */
-    public void setCheckCPP(boolean checkCPP) {
-        this.checkCPP = checkCPP;
+    // -@cs[AbbreviationAsWordInName] We can not change it as,
+    // check's property is a part of API (used in configurations).
+    public void setCheckCPP(boolean checkCpp) {
+        checkCPP = checkCpp;
     }
 
     /**
@@ -193,28 +182,44 @@ public class SuppressWithNearbyCommentFilter
     }
 
     @Override
-    public boolean accept(AuditEvent event) {
-        if (event.getLocalizedMessage() == null) {
-            return true;        // A special event.
-        }
+    protected void finishLocalSetup() {
+        // No code by default
+    }
 
-        // Lazy update. If the first event for the current file, update file
-        // contents and tag suppressions
-        final FileContents currentContents = FileContentsHolder.getContents();
-        if (currentContents == null) {
-            // we have no contents, so we can not filter.
-            return true;
-        }
-        if (getFileContents() != currentContents) {
-            setFileContents(currentContents);
-            tagSuppressions();
-        }
-        for (final Tag tag : tags) {
-            if (tag.isMatch(event)) {
-                return false;
+    @Override
+    public boolean accept(TreeWalkerAuditEvent event) {
+        boolean accepted = true;
+
+        if (event.getLocalizedMessage() != null) {
+            // Lazy update. If the first event for the current file, update file
+            // contents and tag suppressions
+            final FileContents currentContents = event.getFileContents();
+
+            if (getFileContents() != currentContents) {
+                setFileContents(currentContents);
+                tagSuppressions();
+            }
+            if (matchesTag(event)) {
+                accepted = false;
             }
         }
-        return true;
+        return accepted;
+    }
+
+    /**
+     * Whether current event matches any tag from {@link #tags}.
+     * @param event TreeWalkerAuditEvent to test match on {@link #tags}.
+     * @return true if event matches any tag from {@link #tags}, false otherwise.
+     */
+    private boolean matchesTag(TreeWalkerAuditEvent event) {
+        boolean result = false;
+        for (final Tag tag : tags) {
+            if (tag.isMatch(event)) {
+                result = true;
+                break;
+            }
+        }
+        return result;
     }
 
     /**
@@ -225,16 +230,13 @@ public class SuppressWithNearbyCommentFilter
         tags.clear();
         final FileContents contents = getFileContents();
         if (checkCPP) {
-            tagSuppressions(contents.getCppComments().values());
+            tagSuppressions(contents.getSingleLineComments().values());
         }
         if (checkC) {
             final Collection<List<TextBlock>> cComments =
-                contents.getCComments().values();
-            for (final List<TextBlock> element : cComments) {
-                tagSuppressions(element);
-            }
+                contents.getBlockComments().values();
+            cComments.forEach(this::tagSuppressions);
         }
-        Collections.sort(tags);
     }
 
     /**
@@ -260,7 +262,7 @@ public class SuppressWithNearbyCommentFilter
      * @param line the line number of text.
      */
     private void tagCommentLine(String text, int line) {
-        final Matcher matcher = commentRegexp.matcher(text);
+        final Matcher matcher = commentFormat.matcher(text);
         if (matcher.find()) {
             addTag(matcher.group(0), line);
         }
@@ -279,7 +281,8 @@ public class SuppressWithNearbyCommentFilter
     /**
      * A Tag holds a suppression comment and its location.
      */
-    public static class Tag implements Comparable<Tag> {
+    public static class Tag {
+
         /** The text of the tag. */
         private final String text;
 
@@ -300,8 +303,7 @@ public class SuppressWithNearbyCommentFilter
          * @param text the text of the suppression.
          * @param line the line number.
          * @param filter the {@code SuppressWithNearbyCommentFilter} with the context
-         * @throws ConversionException if unable to parse expanded text.
-         * on.
+         * @throws IllegalArgumentException if unable to parse expanded text.
          */
         public Tag(String text, int line, SuppressWithNearbyCommentFilter filter) {
             this.text = text;
@@ -310,31 +312,26 @@ public class SuppressWithNearbyCommentFilter
             //Does not intern Patterns with Utils.getPattern()
             String format = "";
             try {
-                format = expandFrocomment(text, filter.checkFormat, filter.commentRegexp);
+                format = CommonUtil.fillTemplateWithStringsByRegexp(
+                        filter.checkFormat, text, filter.commentFormat);
                 tagCheckRegexp = Pattern.compile(format);
-                if (filter.messageFormat != null) {
-                    format = expandFrocomment(
-                         text, filter.messageFormat, filter.commentRegexp);
-                    tagMessageRegexp = Pattern.compile(format);
-                }
-                else {
+                if (filter.messageFormat == null) {
                     tagMessageRegexp = null;
                 }
-                format = expandFrocomment(
-                    text, filter.influenceFormat, filter.commentRegexp);
-                int influence;
-                try {
-                    if (Utils.startsWithChar(format, '+')) {
-                        format = format.substring(1);
-                    }
-                    influence = Integer.parseInt(format);
+                else {
+                    format = CommonUtil.fillTemplateWithStringsByRegexp(
+                            filter.messageFormat, text, filter.commentFormat);
+                    tagMessageRegexp = Pattern.compile(format);
                 }
-                catch (final NumberFormatException e) {
-                    throw new ConversionException(
-                        "unable to parse influence from '" + text
-                            + "' using " + filter.influenceFormat, e);
+                format = CommonUtil.fillTemplateWithStringsByRegexp(
+                        filter.influenceFormat, text, filter.commentFormat);
+
+                if (CommonUtil.startsWithChar(format, '+')) {
+                    format = format.substring(1);
                 }
-                if (influence >= 0) {
+                final int influence = parseInfluence(format, filter.influenceFormat, text);
+
+                if (influence >= 1) {
                     firstLine = line;
                     lastLine = line + influence;
                 }
@@ -343,54 +340,39 @@ public class SuppressWithNearbyCommentFilter
                     lastLine = line;
                 }
             }
-            catch (final PatternSyntaxException e) {
-                throw new ConversionException(
-                    "unable to parse expanded comment " + format,
-                    e);
+            catch (final PatternSyntaxException ex) {
+                throw new IllegalArgumentException(
+                    "unable to parse expanded comment " + format, ex);
             }
-        }
-
-        /** @return the text of the tag. */
-        public String getText() {
-            return text;
-        }
-
-        /** @return the line number of the first suppressed line. */
-        public int getFirstLine() {
-            return firstLine;
-        }
-
-        /** @return the line number of the last suppressed line. */
-        public int getLastLine() {
-            return lastLine;
         }
 
         /**
-         * Compares the position of this tag in the file
-         * with the position of another tag.
-         * @param other the tag to compare with this one.
-         * @return a negative number if this tag is before the other tag,
-         * 0 if they are at the same position, and a positive number if this
-         * tag is after the other tag.
+         * Gets influence from suppress filter influence format param.
+         *
+         * @param format          influence format to parse
+         * @param influenceFormat raw influence format
+         * @param text            text of the suppression
+         * @return parsed influence
          */
-        @Override
-        public int compareTo(Tag other) {
-            if (firstLine == other.firstLine) {
-                return Integer.compare(lastLine, other.lastLine);
+        private static int parseInfluence(String format, String influenceFormat, String text) {
+            try {
+                return Integer.parseInt(format);
             }
-
-            return Integer.compare(firstLine, other.firstLine);
+            catch (final NumberFormatException ex) {
+                throw new IllegalArgumentException("unable to parse influence from '" + text
+                        + "' using " + influenceFormat, ex);
+            }
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) {
+        public boolean equals(Object other) {
+            if (this == other) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (other == null || getClass() != other.getClass()) {
                 return false;
             }
-            final Tag tag = (Tag) o;
+            final Tag tag = (Tag) other;
             return Objects.equals(firstLine, tag.firstLine)
                     && Objects.equals(lastLine, tag.lastLine)
                     && Objects.equals(text, tag.text)
@@ -406,58 +388,43 @@ public class SuppressWithNearbyCommentFilter
         /**
          * Determines whether the source of an audit event
          * matches the text of this tag.
-         * @param event the {@code AuditEvent} to check.
+         * @param event the {@code TreeWalkerAuditEvent} to check.
          * @return true if the source of event matches the text of this tag.
          */
-        public boolean isMatch(AuditEvent event) {
+        public boolean isMatch(TreeWalkerAuditEvent event) {
             final int line = event.getLine();
-            if (line < firstLine) {
-                return false;
-            }
-            if (line > lastLine) {
-                return false;
-            }
-            final Matcher tagMatcher =
-                tagCheckRegexp.matcher(event.getSourceName());
-            if (tagMatcher.find()) {
-                return true;
-            }
-            if (tagMessageRegexp != null) {
-                final Matcher messageMatcher =
-                    tagMessageRegexp.matcher(event.getMessage());
-                return messageMatcher.find();
-            }
-            return false;
-        }
+            boolean match = false;
 
-        /**
-         * Expand based on a matching comment.
-         * @param comment the comment.
-         * @param stringToExpand the string to expand.
-         * @param regexp the parsed expander.
-         * @return the expanded string
-         */
-        private static String expandFrocomment(
-            String comment,
-            String stringToExpand,
-            Pattern regexp) {
-            final Matcher matcher = regexp.matcher(comment);
-            // Match primarily for effect.
-            if (!matcher.find()) {
-                return stringToExpand;
+            if (line >= firstLine && line <= lastLine) {
+                final Matcher tagMatcher = tagCheckRegexp.matcher(event.getSourceName());
+
+                if (tagMatcher.find()) {
+                    match = true;
+                }
+                else if (tagMessageRegexp == null) {
+                    if (event.getModuleId() != null) {
+                        final Matcher idMatcher = tagCheckRegexp.matcher(event.getModuleId());
+                        match = idMatcher.find();
+                    }
+                }
+                else {
+                    final Matcher messageMatcher = tagMessageRegexp.matcher(event.getMessage());
+                    match = messageMatcher.find();
+                }
             }
-            String result = stringToExpand;
-            for (int i = 0; i <= matcher.groupCount(); i++) {
-                // $n expands comment match like in Pattern.subst().
-                result = result.replaceAll("\\$" + i, matcher.group(i));
-            }
-            return result;
+            return match;
         }
 
         @Override
-        public final String toString() {
-            return "Tag[lines=[" + getFirstLine() + " to " + getLastLine()
-                + "]; text='" + getText() + "']";
+        public String toString() {
+            return "Tag[text='" + text + '\''
+                    + ", firstLine=" + firstLine
+                    + ", lastLine=" + lastLine
+                    + ", tagCheckRegexp=" + tagCheckRegexp
+                    + ", tagMessageRegexp=" + tagMessageRegexp
+                    + ']';
         }
+
     }
+
 }

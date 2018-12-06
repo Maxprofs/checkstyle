@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -27,13 +27,15 @@ package com.puppycrawl.tools.checkstyle.api;
  * The general idea of
  * Configuration/Configurable was taken from <a target="_top"
  * href="http://avalon.apache.org/closed.html">Jakarta's Avalon framework</a>.
- * @author lkuehne
  */
+@FunctionalInterface
 public interface Configurable {
+
     /**
      * Configures this component.
      * @param configuration the configuration to use.
      * @throws CheckstyleException if there is a configuration error.
      */
     void configure(Configuration configuration) throws CheckstyleException;
+
 }

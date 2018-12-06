@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,50 +19,65 @@
 
 package com.puppycrawl.tools.checkstyle.checks.naming;
 
-import static com.puppycrawl.tools.checkstyle.checks.naming.AbstractNameCheck.MSG_INVALID_PATTERN;
+import static com.puppycrawl.tools.checkstyle.checks.naming.PackageNameCheck.MSG_KEY;
+import static org.junit.Assert.assertArrayEquals;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class PackageNameCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/naming/packagename";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final PackageNameCheck checkObj = new PackageNameCheck();
+        final int[] expected = {TokenTypes.PACKAGE_DEF};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testSpecified()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(PackageNameCheck.class);
+            createModuleConfig(PackageNameCheck.class);
         checkConfig.addAttribute("format", "[A-Z]+");
 
         final String pattern = "[A-Z]+";
 
         final String[] expected = {
-            "6:9: " + getCheckMessage(MSG_INVALID_PATTERN, "com.puppycrawl.tools.checkstyle", pattern),
+            "6:9: " + getCheckMessage(MSG_KEY,
+                "com.puppycrawl.tools.checkstyle.checks.naming.packagename", pattern),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputPackageNameSimple.java"), expected);
     }
 
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(PackageNameCheck.class);
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+            createModuleConfig(PackageNameCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputPackageNameSimple.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        PackageNameCheck packageNameCheckObj = new PackageNameCheck();
-        int[] actual = packageNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final PackageNameCheck packageNameCheckObj = new PackageNameCheck();
+        final int[] actual = packageNameCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.PACKAGE_DEF,
         };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,23 +22,26 @@ package com.puppycrawl.tools.checkstyle.checks.metrics;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * This check calculates the Non Commenting Source Statements (NCSS) metric for
  * java source files and methods. The check adheres to the <a
- * href="http://kclee.com/clemens/java/javancss/">JavaNCSS specification
+ * href="http://www.kclee.com/clemens/java/javancss">JavaNCSS specification
  * </a> and gives the same results as the JavaNCSS tool.
  *
- * The NCSS-metric tries to determine complexity of methods, classes and files
+ * <p>The NCSS-metric tries to determine complexity of methods, classes and files
  * by counting the non commenting lines. Roughly said this is (nearly)
  * equivalent to counting the semicolons and opening curly braces.
  *
- * @author Lars Ködderitzsch
  */
-public class JavaNCSSCheck extends Check {
+// -@cs[AbbreviationAsWordInName] We can not change it as,
+// check's name is a part of API (used in configurations).
+@FileStatefulCheck
+public class JavaNCSSCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -58,64 +61,35 @@ public class JavaNCSSCheck extends Check {
      */
     public static final String MSG_FILE = "ncss.file";
 
-    /** default constant for max file ncss */
+    /** Default constant for max file ncss. */
     private static final int FILE_MAX_NCSS = 2000;
 
-    /** default constant for max file ncss */
+    /** Default constant for max file ncss. */
     private static final int CLASS_MAX_NCSS = 1500;
 
-    /** default constant for max method ncss */
+    /** Default constant for max method ncss. */
     private static final int METHOD_MAX_NCSS = 50;
 
-    /** maximum ncss for a complete source file */
+    /** Maximum ncss for a complete source file. */
     private int fileMaximum = FILE_MAX_NCSS;
 
-    /** maximum ncss for a class */
+    /** Maximum ncss for a class. */
     private int classMaximum = CLASS_MAX_NCSS;
 
-    /** maximum ncss for a method */
+    /** Maximum ncss for a method. */
     private int methodMaximum = METHOD_MAX_NCSS;
 
-    /** list containing the stacked counters */
+    /** List containing the stacked counters. */
     private Deque<Counter> counters;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[]{
-            TokenTypes.CLASS_DEF,
-            TokenTypes.INTERFACE_DEF,
-            TokenTypes.METHOD_DEF,
-            TokenTypes.CTOR_DEF,
-            TokenTypes.INSTANCE_INIT,
-            TokenTypes.STATIC_INIT,
-            TokenTypes.PACKAGE_DEF,
-            TokenTypes.IMPORT,
-            TokenTypes.VARIABLE_DEF,
-            TokenTypes.CTOR_CALL,
-            TokenTypes.SUPER_CTOR_CALL,
-            TokenTypes.LITERAL_IF,
-            TokenTypes.LITERAL_ELSE,
-            TokenTypes.LITERAL_WHILE,
-            TokenTypes.LITERAL_DO,
-            TokenTypes.LITERAL_FOR,
-            TokenTypes.LITERAL_SWITCH,
-            TokenTypes.LITERAL_BREAK,
-            TokenTypes.LITERAL_CONTINUE,
-            TokenTypes.LITERAL_RETURN,
-            TokenTypes.LITERAL_THROW,
-            TokenTypes.LITERAL_SYNCHRONIZED,
-            TokenTypes.LITERAL_CATCH,
-            TokenTypes.LITERAL_FINALLY,
-            TokenTypes.EXPR,
-            TokenTypes.LABELED_STAT,
-            TokenTypes.LITERAL_CASE,
-            TokenTypes.LITERAL_DEFAULT,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return new int[]{
+        return new int[] {
             TokenTypes.CLASS_DEF,
             TokenTypes.INTERFACE_DEF,
             TokenTypes.METHOD_DEF,
@@ -149,36 +123,7 @@ public class JavaNCSSCheck extends Check {
 
     @Override
     public int[] getAcceptableTokens() {
-        return new int[]{
-            TokenTypes.CLASS_DEF,
-            TokenTypes.INTERFACE_DEF,
-            TokenTypes.METHOD_DEF,
-            TokenTypes.CTOR_DEF,
-            TokenTypes.INSTANCE_INIT,
-            TokenTypes.STATIC_INIT,
-            TokenTypes.PACKAGE_DEF,
-            TokenTypes.IMPORT,
-            TokenTypes.VARIABLE_DEF,
-            TokenTypes.CTOR_CALL,
-            TokenTypes.SUPER_CTOR_CALL,
-            TokenTypes.LITERAL_IF,
-            TokenTypes.LITERAL_ELSE,
-            TokenTypes.LITERAL_WHILE,
-            TokenTypes.LITERAL_DO,
-            TokenTypes.LITERAL_FOR,
-            TokenTypes.LITERAL_SWITCH,
-            TokenTypes.LITERAL_BREAK,
-            TokenTypes.LITERAL_CONTINUE,
-            TokenTypes.LITERAL_RETURN,
-            TokenTypes.LITERAL_THROW,
-            TokenTypes.LITERAL_SYNCHRONIZED,
-            TokenTypes.LITERAL_CATCH,
-            TokenTypes.LITERAL_FINALLY,
-            TokenTypes.EXPR,
-            TokenTypes.LABELED_STAT,
-            TokenTypes.LITERAL_CASE,
-            TokenTypes.LITERAL_DEFAULT,
-        };
+        return getRequiredTokens();
     }
 
     @Override
@@ -205,9 +150,7 @@ public class JavaNCSSCheck extends Check {
         //check if token is countable
         if (isCountable(ast)) {
             //increment the stacked counters
-            for (final Counter counter : counters) {
-                counter.increment();
-            }
+            counters.forEach(Counter::increment);
         }
     }
 
@@ -223,8 +166,7 @@ public class JavaNCSSCheck extends Check {
 
             final int count = counter.getCount();
             if (count > methodMaximum) {
-                log(ast.getLineNo(), ast.getColumnNo(), MSG_METHOD,
-                        count, methodMaximum);
+                log(ast, MSG_METHOD, count, methodMaximum);
             }
         }
         else if (tokenType == TokenTypes.CLASS_DEF) {
@@ -233,8 +175,7 @@ public class JavaNCSSCheck extends Check {
 
             final int count = counter.getCount();
             if (count > classMaximum) {
-                log(ast.getLineNo(), ast.getColumnNo(), MSG_CLASS,
-                        count, classMaximum);
+                log(ast, MSG_CLASS, count, classMaximum);
             }
         }
     }
@@ -246,8 +187,7 @@ public class JavaNCSSCheck extends Check {
 
         final int count = counter.getCount();
         if (count > fileMaximum) {
-            log(rootAST.getLineNo(), rootAST.getColumnNo(), MSG_FILE,
-                    count, fileMaximum);
+            log(rootAST, MSG_FILE, count, fileMaximum);
         }
     }
 
@@ -282,7 +222,7 @@ public class JavaNCSSCheck extends Check {
     }
 
     /**
-     * Checks if a token is countable for the ncss metric
+     * Checks if a token is countable for the ncss metric.
      *
      * @param ast
      *            the AST
@@ -313,7 +253,7 @@ public class JavaNCSSCheck extends Check {
     private static boolean isVariableDefCountable(DetailAST ast) {
         boolean countable = false;
 
-        //count variable defs only if they are direct child to a slist or
+        //count variable definitions only if they are direct child to a slist or
         // object block
         final int parentType = ast.getParent().getType();
 
@@ -323,7 +263,7 @@ public class JavaNCSSCheck extends Check {
 
             //is countable if no previous sibling is found or
             //the sibling is no COMMA.
-            //This is done because multiple assignment on one line are countes
+            //This is done because multiple assignment on one line are counted
             // as 1
             countable = prevSibling == null
                     || prevSibling.getType() != TokenTypes.COMMA;
@@ -339,7 +279,7 @@ public class JavaNCSSCheck extends Check {
      * @return true if the expression is countable, false otherwise
      */
     private static boolean isExpressionCountable(DetailAST ast) {
-        boolean countable;
+        final boolean countable;
 
         //count expressions only if they are direct child to a slist (method
         // body, for loop...)
@@ -366,28 +306,30 @@ public class JavaNCSSCheck extends Check {
     }
 
     /**
-     * @author Lars Ködderitzsch
+     * Class representing a counter.
      *
-     * Class representing a counter,
      */
     private static class Counter {
-        /** the counters internal integer */
-        private int ivCount;
+
+        /** The counters internal integer. */
+        private int count;
 
         /**
          * Increments the counter.
          */
         public void increment() {
-            ivCount++;
+            count++;
         }
 
         /**
-         * Gets the counters value
+         * Gets the counters value.
          *
          * @return the counter
          */
         public int getCount() {
-            return ivCount;
+            return count;
         }
+
     }
+
 }

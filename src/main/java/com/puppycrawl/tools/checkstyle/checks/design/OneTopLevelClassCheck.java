@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,17 +23,18 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
- *
  * Checks that each top-level class, interface
  * or enum resides in a source file of its own.
  * <p>
  * Official description of a 'top-level' term:<a
- * href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-7.html#jls-7.6">
+ * href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-7.html#jls-7.6">
  * 7.6. Top Level Type Declarations</a>. If file doesn't contains
  * public class, enum or interface, top-level type is the first type in file.
  * </p>
@@ -81,9 +82,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  *  so do not use the "tokens" property.
  * </p>
  *
- * @author maxvetrenko
  */
-public class OneTopLevelClassCheck extends Check {
+@FileStatefulCheck
+public class OneTopLevelClassCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -102,13 +103,18 @@ public class OneTopLevelClassCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return getAcceptableTokens();
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
     }
 
     // ZERO tokens as Check do Traverse of Tree himself, he does not need to subscribed to Tokens
     @Override
-    public int[] getAcceptableTokens() {
-        return new int[] {};
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
     }
 
     @Override
@@ -159,4 +165,5 @@ public class OneTopLevelClassCheck extends Check {
                 typeDef.findFirstToken(TokenTypes.MODIFIERS);
         return modifiers.findFirstToken(TokenTypes.LITERAL_PUBLIC) != null;
     }
+
 }

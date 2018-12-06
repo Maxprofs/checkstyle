@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,13 +21,11 @@ package com.puppycrawl.tools.checkstyle.checks.regexp;
 
 import java.util.regex.Matcher;
 
-import com.google.common.base.Strings;
 import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.LineColumn;
 
 /**
  * A detector that matches across multiple lines.
- * @author oliver
  */
 class MultilineDetector {
 
@@ -35,39 +33,39 @@ class MultilineDetector {
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String REGEXP_EXCEEDED = "regexp.exceeded";
+    public static final String MSG_REGEXP_EXCEEDED = "regexp.exceeded";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String REGEXP_MINIMUM = "regexp.minimum";
+    public static final String MSG_REGEXP_MINIMUM = "regexp.minimum";
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String EMPTY = "regexp.empty";
+    public static final String MSG_EMPTY = "regexp.empty";
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
      */
-    public static final String STACKOVERFLOW = "regexp.StackOverflowError";
+    public static final String MSG_STACKOVERFLOW = "regexp.StackOverflowError";
 
     /** The detection options to use. */
     private final DetectorOptions options;
     /** Tracks the number of matches. */
     private int currentMatches;
-    /** The matcher */
+    /** The matcher. */
     private Matcher matcher;
-    /** The file text content */
+    /** The file text content. */
     private FileText text;
 
     /**
      * Creates an instance.
      * @param options the options to use.
      */
-    public MultilineDetector(DetectorOptions options) {
+    MultilineDetector(DetectorOptions options) {
         this.options = options;
     }
 
@@ -76,11 +74,12 @@ class MultilineDetector {
      * @param fileText the text to process
      */
     public void processLines(FileText fileText) {
-        this.text = new FileText(fileText);
+        text = new FileText(fileText);
         resetState();
 
-        if (Strings.isNullOrEmpty(options.getFormat())) {
-            options.getReporter().log(0, EMPTY);
+        final String format = options.getFormat();
+        if (format == null || format.isEmpty()) {
+            options.getReporter().log(1, MSG_EMPTY);
         }
         else {
             matcher = options.getPattern().matcher(fileText.getFullText());
@@ -95,12 +94,12 @@ class MultilineDetector {
             boolean foundMatch = matcher.find();
 
             while (foundMatch) {
-                final LineColumn start = text.lineColumn(matcher.start());
                 currentMatches++;
                 if (currentMatches > options.getMaximum()) {
+                    final LineColumn start = text.lineColumn(matcher.start());
                     if (options.getMessage().isEmpty()) {
                         options.getReporter().log(start.getLine(),
-                                REGEXP_EXCEEDED, matcher.pattern().toString());
+                                MSG_REGEXP_EXCEEDED, matcher.pattern().toString());
                     }
                     else {
                         options.getReporter()
@@ -115,20 +114,19 @@ class MultilineDetector {
             // OK http://blog.igorminar.com/2008/05/catching-stackoverflowerror-and-bug-in.html
             // http://programmers.stackexchange.com/questions/
             //        209099/is-it-ever-okay-to-catch-stackoverflowerror-in-java
-            options.getReporter().log(0, STACKOVERFLOW, matcher.pattern().toString());
+            options.getReporter().log(1, MSG_STACKOVERFLOW, matcher.pattern().toString());
         }
-
     }
 
     /** Perform processing at the end of a set of lines. */
     private void finish() {
         if (currentMatches < options.getMinimum()) {
             if (options.getMessage().isEmpty()) {
-                options.getReporter().log(0, REGEXP_MINIMUM,
+                options.getReporter().log(1, MSG_REGEXP_MINIMUM,
                         options.getMinimum(), options.getFormat());
             }
             else {
-                options.getReporter().log(0, options.getMessage());
+                options.getReporter().log(1, options.getMessage());
             }
         }
     }
@@ -139,4 +137,5 @@ class MultilineDetector {
     private void resetState() {
         currentMatches = 0;
     }
+
 }

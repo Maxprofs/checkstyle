@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,52 +24,78 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class MethodLengthCheckTest extends BaseCheckTestSupport {
+public class MethodLengthCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/sizes/methodlength";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final MethodLengthCheck checkObj = new MethodLengthCheck();
+        assertArrayEquals(
+            "MethodLengthCheck#getRequiredTokens should return empty array by default",
+            CommonUtil.EMPTY_INT_ARRAY, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testGetAcceptableTokens() {
-        MethodLengthCheck methodLengthCheckObj =
+        final MethodLengthCheck methodLengthCheckObj =
             new MethodLengthCheck();
-        int[] actual = methodLengthCheckObj.getAcceptableTokens();
-        int[] expected = {
+        final int[] actual = methodLengthCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.METHOD_DEF,
             TokenTypes.CTOR_DEF,
         };
 
-        assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
 
     @Test
     public void testIt() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodLengthCheck.class);
+            createModuleConfig(MethodLengthCheck.class);
         checkConfig.addAttribute("max", "19");
         final String[] expected = {
             "79:5: " + getCheckMessage(MSG_KEY, 20, 19),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputMethodLengthSimple.java"), expected);
     }
 
     @Test
-    public void testcountEmpty() throws Exception {
+    public void testCountEmpty() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodLengthCheck.class);
+            createModuleConfig(MethodLengthCheck.class);
         checkConfig.addAttribute("max", "19");
         checkConfig.addAttribute("countEmpty", "false");
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputMethodLengthSimple.java"), expected);
+    }
+
+    @Test
+    public void testWithComments() throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(MethodLengthCheck.class);
+        checkConfig.addAttribute("max", "7");
+        checkConfig.addAttribute("countEmpty", "false");
         final String[] expected = {
+            "18:5: " + getCheckMessage(MSG_KEY, 8, 7),
         };
-        verify(checkConfig, getPath("InputSimple.java"), expected);
+        verify(checkConfig, getPath("InputMethodLengthComments.java"), expected);
     }
 
     @Test
     public void testAbstract() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(MethodLengthCheck.class);
-        final String[] expected = {
-        };
-        verify(checkConfig, getPath("InputModifier.java"), expected);
+            createModuleConfig(MethodLengthCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputMethodLengthModifier.java"), expected);
     }
+
 }

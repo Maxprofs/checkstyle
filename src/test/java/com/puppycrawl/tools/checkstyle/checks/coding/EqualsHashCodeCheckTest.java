@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,42 +19,112 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
-import static com.puppycrawl.tools.checkstyle.checks.coding.EqualsHashCodeCheck.MSG_KEY;
+import static com.puppycrawl.tools.checkstyle.checks.coding.EqualsHashCodeCheck.MSG_KEY_EQUALS;
+import static com.puppycrawl.tools.checkstyle.checks.coding.EqualsHashCodeCheck.MSG_KEY_HASHCODE;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.google.common.collect.ImmutableMap;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class EqualsHashCodeCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/equalshashcode";
+    }
+
     @Test
-    public void testIt() throws Exception {
+    public void testSemantic() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(EqualsHashCodeCheck.class);
+            createModuleConfig(EqualsHashCodeCheck.class);
         final String[] expected = {
-            "126:9: " + getCheckMessage(MSG_KEY),
-            "163:13: " + getCheckMessage(MSG_KEY),
-            "191:9: " + getCheckMessage(MSG_KEY),
+            "94:13: " + getCheckMessage(MSG_KEY_HASHCODE),
         };
-        verify(checkConfig, getPath("InputSemantic.java"), expected);
+        verify(checkConfig, getPath("InputEqualsHashCodeSemantic.java"), expected);
+    }
+
+    @Test
+    public void testNoEquals() throws Exception {
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(EqualsHashCodeCheck.class);
+        final String[] expected = {
+            "4:5: " + getCheckMessage(MSG_KEY_EQUALS),
+        };
+        verify(checkConfig, getPath("InputEqualsHashCodeNoEquals.java"), expected);
     }
 
     @Test
     public void testBooleanMethods() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(EqualsHashCodeCheck.class);
-        final String[] expected = {
+            createModuleConfig(EqualsHashCodeCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputEqualsHashCode.java"), expected);
+    }
+
+    @Test
+    public void testMultipleInputs() throws Exception {
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(EqualsHashCodeCheck.class);
+
+        final List<String> expectedFirstInputErrors = Collections.singletonList(
+            "4:5: " + getCheckMessage(MSG_KEY_EQUALS)
+        );
+        final List<String> expectedSecondInputErrors = Collections.singletonList(
+            "94:13: " + getCheckMessage(MSG_KEY_HASHCODE)
+        );
+        final List<String> expectedThirdInputErrors =
+            Arrays.asList(CommonUtil.EMPTY_STRING_ARRAY);
+
+        final String firstInput = getPath("InputEqualsHashCodeNoEquals.java");
+        final String secondInput = getPath("InputEqualsHashCodeSemantic.java");
+        final String thirdInput = getPath("InputEqualsHashCode.java");
+
+        final File[] inputs = {
+            new File(firstInput),
+            new File(secondInput),
+            new File(thirdInput),
         };
-        verify(checkConfig, getPath("coding/InputEqualsHashCodeCheck.java"), expected);
+
+        verify(createChecker(checkConfig), inputs, ImmutableMap.of(
+            firstInput, expectedFirstInputErrors,
+            secondInput, expectedSecondInputErrors,
+            thirdInput, expectedThirdInputErrors
+        ));
+    }
+
+    @Test
+    public void testEqualsParameter() throws Exception {
+        final DefaultConfiguration checkConfig =
+            createModuleConfig(EqualsHashCodeCheck.class);
+        final String[] expected = {
+            "10:9: " + getCheckMessage(MSG_KEY_EQUALS),
+            "18:9: " + getCheckMessage(MSG_KEY_HASHCODE),
+            "48:9: " + getCheckMessage(MSG_KEY_HASHCODE),
+            "53:9: " + getCheckMessage(MSG_KEY_EQUALS),
+            "65:9: " + getCheckMessage(MSG_KEY_EQUALS),
+            "68:9: " + getCheckMessage(MSG_KEY_HASHCODE),
+            "75:9: " + getCheckMessage(MSG_KEY_EQUALS),
+            "82:9: " + getCheckMessage(MSG_KEY_HASHCODE),
+        };
+        verify(checkConfig, getPath("InputEqualsHashCodeEqualsParameter.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        EqualsHashCodeCheck check = new EqualsHashCodeCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final EqualsHashCodeCheck check = new EqualsHashCodeCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for for loops.
  *
- * @author jrichard
  */
 public class ForHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -46,25 +46,25 @@ public class ForHandler extends BlockParentHandler {
      */
     private void checkForParams() {
         final IndentLevel expected =
-            new IndentLevel(getLevel(), getBasicOffset());
+            new IndentLevel(getIndent(), getBasicOffset());
         final DetailAST init = getMainAst().findFirstToken(TokenTypes.FOR_INIT);
 
-        if (init != null) {
+        if (init == null) {
+            // for each
+            final DetailAST forEach =
+                    getMainAst().findFirstToken(TokenTypes.FOR_EACH_CLAUSE);
+            checkExpressionSubtree(forEach, expected, false, false);
+        }
+        else {
             checkExpressionSubtree(init, expected, false, false);
 
             final DetailAST cond =
-                getMainAst().findFirstToken(TokenTypes.FOR_CONDITION);
+                    getMainAst().findFirstToken(TokenTypes.FOR_CONDITION);
             checkExpressionSubtree(cond, expected, false, false);
 
-            final DetailAST iter =
-                getMainAst().findFirstToken(TokenTypes.FOR_ITERATOR);
-            checkExpressionSubtree(iter, expected, false, false);
-        }
-        // for each
-        else {
-            final DetailAST forEach =
-                getMainAst().findFirstToken(TokenTypes.FOR_EACH_CLAUSE);
-            checkExpressionSubtree(forEach, expected, false, false);
+            final DetailAST forIterator =
+                    getMainAst().findFirstToken(TokenTypes.FOR_ITERATOR);
+            checkExpressionSubtree(forIterator, expected, false, false);
         }
     }
 
@@ -72,10 +72,7 @@ public class ForHandler extends BlockParentHandler {
     public void checkIndentation() {
         checkForParams();
         super.checkIndentation();
-        final LineWrappingHandler lineWrap =
-            new LineWrappingHandler(getIndentCheck(), getMainAst(),
-                getForLoopRightParen(getMainAst()));
-        lineWrap.checkIndentation();
+        checkWrappingIndentation(getMainAst(), getForLoopRightParen(getMainAst()));
     }
 
     /**
@@ -87,4 +84,5 @@ public class ForHandler extends BlockParentHandler {
     private static DetailAST getForLoopRightParen(DetailAST literalForAst) {
         return literalForAst.findFirstToken(TokenTypes.RPAREN);
     }
+
 }

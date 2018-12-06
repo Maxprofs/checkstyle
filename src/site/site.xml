@@ -2,29 +2,30 @@
 
 <project xmlns="http://maven.apache.org/DECORATION/1.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
-  
+    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0
+                        http://maven.apache.org/xsd/decoration-1.0.0.xsd">
+
   <bannerLeft>
     <alt>Checkstyle</alt>
-    <href>http://checkstyle.sourceforge.net</href>
+    <href>https://checkstyle.org</href>
     <src>images/header-checkstyle-logo.png</src>
   </bannerLeft>
   <bannerRight>
     <alt>Checkstyle</alt>
-    <href>http://checkstyle.sourceforge.net</href>
+    <href>https://checkstyle.org</href>
     <src>images/header-right-ruller.png</src>
   </bannerRight>
-  
+
   <publishDate position="right" />
   <version position="right" />
 
   <poweredBy>
-    <logo name="GitHub" href="https://github.com/checkstyle/checkstyle" 
-    	img="images/github_logo_social_coding_outlined.png" 
+    <logo name="GitHub" href="https://github.com/checkstyle/checkstyle"
+        img="images/github_logo_social_coding_outlined.png"
           />
     <logo name="SourceForge"
           img="images/sflogo.gif"
-          href="http://sourceforge.net/projects/checkstyle/"
+          href="https://sourceforge.net/projects/checkstyle/"
           />
     <logo name="Twitter"
           img="images/twitter_button.png"
@@ -32,7 +33,7 @@
           />
     <logo name="Stackoverflow"
           img="images/stackoverflow.jpeg"
-          href="http://stackoverflow.com/questions/tagged/checkstyle"
+          href="https://stackoverflow.com/questions/tagged/checkstyle"
           />
     <logo name="GoogleGroups"
           img="images/groups.png"
@@ -40,24 +41,31 @@
           />
     <logo name="Rss"
           img="images/rss-long.png"
-          href="http://sourceforge.net/p/checkstyle/news/feed"
+          href="https://sourceforge.net/p/checkstyle/news/feed"
           />
     <logo name="Google+"
           img="images/Google-Plus-Logo-120x38.png"
-          href="https://plus.google.com/108692338295483568100/posts"
+          href="https://plus.google.com/+CheckstyleJava"
+          />
+    <logo name="JProfiler"
+          img="https://www.ej-technologies.com/images/product_banners/jprofiler_medium.png"
+          href="https://www.ej-technologies.com/products/jprofiler/overview.html"
           />
   </poweredBy>
-  
+
   <body>
     <menu name="About">
       <item name="Checkstyle" href="index.html"/>
       <item name="Release Notes" href="releasenotes.html"/>
       <item name="Consulting" href="consulting.html"/>
+      <item name="Sponsoring" href="sponsoring.html"/>
     </menu>
 
     <menu name="Documentation">
       <item name="Configuration" href="config.html">
         <item name="Property Types" href="property_types.html"/>
+        <item name="Filters" href="config_filters.html"/>
+        <item name="File Filters" href="config_filefilters.html"/>
       </item>
 
       <item name="Running" href="running.html">
@@ -91,13 +99,15 @@
     <menu name="Developers">
       <item name="Extending Checkstyle" href="extending.html">
         <item name="Writing Checks" href="writingchecks.html"/>
+        <item name="Writing Javadoc Checks" href="writingjavadocchecks.html"/>
         <item name="Writing Filters" href="writingfilters.html"/>
+        <item name="Writing File Filters" href="writingfilefilters.html"/>
         <item name="Writing Listeners" href="writinglisteners.html"/>
       </item>
       <item name="Contributing" href="contributing.html"/>
       <item name="Beginning Development" href="beginning_development.html">
         <item name="Eclipse IDE" href="eclipse.html"/>
-        <item name="Netbeans IDE" href="netbeans.html"/>
+        <item name="NetBeans IDE" href="netbeans.html"/>
         <item name="IntelliJ IDE" href="idea.html"/>
       </item>
       <item name="Javadoc" href="apidocs/index.html"/>

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,14 +19,18 @@
 
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
 /**
  * <p>
  * Checks that the clone method is not overridden from the
  * Object class.
  * </p>
  *
- * <p>
- * Rationale: The clone method relies on strange/hard to follow rules that
+ * <p>Rationale: The clone method relies on strange/hard to follow rules that
  * do not work it all situations.  Consequently, it is difficult to
  * override correctly.  Below are some of the rules/reasons why the clone
  * method should be avoided.
@@ -69,18 +73,14 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
  * </li>
  * </ul>
  *
- *
- * <p>
- * Two alternatives to the clone method, in some cases, is a copy constructor
+ * <p>Two alternatives to the clone method, in some cases, is a copy constructor
  * or a static factory method to return copies of an object. Both of these
  * approaches are simpler and do not conflict with final fields. They do not
  * force the calling client to handle a CloneNotSupportedException.  They also
  * are typed therefore no casting is necessary. Finally, they are more
  * flexible since they can take interface types rather than concrete classes.
  *
- *
- * <p>
- * Sometimes a copy constructor or static factory is not an acceptable
+ * <p>Sometimes a copy constructor or static factory is not an acceptable
  * alternative to the clone method.  The example below highlights the
  * limitation of a copy constructor (or static factory). Assume
  * Square is a subclass for Shape.
@@ -89,7 +89,6 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
  * Shape s1 = new Square();
  * System.out.println(s1 instanceof Square); //true
  * </pre>
- *
  * ...assume at this point the code knows nothing of s1 being a Square
  *    that's the beauty of polymorphism but the code wants to copy
  *    the Square which is declared as a Shape, its super type...
@@ -98,7 +97,6 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
  * Shape s2 = new Shape(s1); //using the copy constructor
  * System.out.println(s2 instanceof Square); //false
  * </pre>
- *
  * The working solution (without knowing about all subclasses and doing many
  * casts) is to do the following (assuming correct clone implementation).
  *
@@ -106,25 +104,20 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
  * Shape s2 = s1.clone();
  * System.out.println(s2 instanceof Square); //true
  * </pre>
- *
  * Just keep in mind if this type of polymorphic cloning is required
  * then a properly implemented clone method may be the best choice.
  *
- *
- * <p>
- * Much of this information was taken from Effective Java:
+ * <p>Much of this information was taken from Effective Java:
  * Programming Language Guide First Edition by Joshua Bloch
  * pages 45-52.  Give Bloch credit for writing an excellent book.
  * </p>
  *
- * <p>
- * This check is almost exactly the same as the {@link NoFinalizerCheck}
+ * <p>This check is almost exactly the same as the {@link NoFinalizerCheck}
  *
- *
- * @author Travis Schneeberger
  * @see Object#clone()
  */
-public class NoCloneCheck extends AbstractIllegalMethodCheck {
+@StatelessCheck
+public class NoCloneCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -132,10 +125,35 @@ public class NoCloneCheck extends AbstractIllegalMethodCheck {
      */
     public static final String MSG_KEY = "avoid.clone.method";
 
-    /**
-     * Creates an instance.
-     */
-    public NoCloneCheck() {
-        super("clone", MSG_KEY);
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
     }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.METHOD_DEF};
+    }
+
+    @Override
+    public void visitToken(DetailAST aAST) {
+        final DetailAST mid = aAST.findFirstToken(TokenTypes.IDENT);
+        final String name = mid.getText();
+
+        if ("clone".equals(name)) {
+            final DetailAST params = aAST.findFirstToken(TokenTypes.PARAMETERS);
+            final boolean hasEmptyParamList =
+                params.findFirstToken(TokenTypes.PARAMETER_DEF) == null;
+
+            if (hasEmptyParamList) {
+                log(aAST.getLineNo(), MSG_KEY);
+            }
+        }
+    }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,29 +20,48 @@
 package com.puppycrawl.tools.checkstyle.checks.regexp;
 
 import java.io.File;
-import java.util.List;
 
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
 import com.puppycrawl.tools.checkstyle.api.AbstractFileSetCheck;
+import com.puppycrawl.tools.checkstyle.api.FileText;
 
 /**
  * Implementation of a check that looks for a single line in any file type.
- * @author Oliver Burn
  */
+@StatelessCheck
 public class RegexpSinglelineCheck extends AbstractFileSetCheck {
-    /** The detection options to use. */
-    private final DetectorOptions options = new DetectorOptions(0, this);
+
+    /** The format of the regular expression to match. */
+    private String format = "$.";
+    /** The message to report for a match. */
+    private String message;
+    /** The minimum number of matches required per file. */
+    private int minimum;
+    /** The maximum number of matches required per file. */
+    private int maximum;
+    /** Whether to ignore case when matching. */
+    private boolean ignoreCase;
+
     /** The detector to use. */
     private SinglelineDetector detector;
 
     @Override
     public void beginProcessing(String charset) {
-        super.beginProcessing(charset);
+        final DetectorOptions options = DetectorOptions.newBuilder()
+            .reporter(this)
+            .compileFlags(0)
+            .format(format)
+            .message(message)
+            .minimum(minimum)
+            .maximum(maximum)
+            .ignoreCase(ignoreCase)
+            .build();
         detector = new SinglelineDetector(options);
     }
 
     @Override
-    protected void processFiltered(File file, List<String> lines) {
-        detector.processLines(lines);
+    protected void processFiltered(File file, FileText fileText) {
+        detector.processLines(fileText);
     }
 
     /**
@@ -50,7 +69,7 @@ public class RegexpSinglelineCheck extends AbstractFileSetCheck {
      * @param format the format of the regular expression to match.
      */
     public void setFormat(String format) {
-        options.setFormat(format);
+        this.format = format;
     }
 
     /**
@@ -58,7 +77,7 @@ public class RegexpSinglelineCheck extends AbstractFileSetCheck {
      * @param message the message to report for a match.
      */
     public void setMessage(String message) {
-        options.setMessage(message);
+        this.message = message;
     }
 
     /**
@@ -66,7 +85,7 @@ public class RegexpSinglelineCheck extends AbstractFileSetCheck {
      * @param minimum the minimum number of matches required per file.
      */
     public void setMinimum(int minimum) {
-        options.setMinimum(minimum);
+        this.minimum = minimum;
     }
 
     /**
@@ -74,14 +93,15 @@ public class RegexpSinglelineCheck extends AbstractFileSetCheck {
      * @param maximum the maximum number of matches required per file.
      */
     public void setMaximum(int maximum) {
-        options.setMaximum(maximum);
+        this.maximum = maximum;
     }
 
     /**
      * Set whether to ignore case when matching.
-     * @param ignore whether to ignore case when matching.
+     * @param ignoreCase whether to ignore case when matching.
      */
-    public void setIgnoreCase(boolean ignore) {
-        options.setIgnoreCase(ignore);
+    public void setIgnoreCase(boolean ignoreCase) {
+        this.ignoreCase = ignoreCase;
     }
+
 }

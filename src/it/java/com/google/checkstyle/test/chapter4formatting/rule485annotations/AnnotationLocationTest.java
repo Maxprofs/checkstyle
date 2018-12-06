@@ -1,35 +1,46 @@
+////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code for adherence to a set of rules.
+// Copyright (C) 2001-2018 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+////////////////////////////////////////////////////////////////////////////////
+
 package com.google.checkstyle.test.chapter4formatting.rule485annotations;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.checkstyle.test.base.BaseCheckTestSupport;
-import com.google.checkstyle.test.base.ConfigurationBuilder;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.google.checkstyle.test.base.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.checks.annotation.AnnotationLocationCheck;
 
-public class AnnotationLocationTest extends BaseCheckTestSupport{
-    
-    static ConfigurationBuilder builder;
-    
-    @BeforeClass
-    public static void setConfigurationBuilder() throws CheckstyleException, IOException {
-        builder = new ConfigurationBuilder(new File("src/it/"));
+public class AnnotationLocationTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/google/checkstyle/test/chapter4formatting/rule485annotations";
     }
 
     @Test
-    public void annotationTest() throws IOException, Exception {
-        
-        Class<AnnotationLocationCheck> clazz = AnnotationLocationCheck.class;
-        String msgLocation = "annotation.location";
-        String msgLocationAlone = "annotation.location.alone";
+    public void testAnnotation() throws Exception {
+        final Class<AnnotationLocationCheck> clazz = AnnotationLocationCheck.class;
         getCheckMessage(clazz, "annotation.location.alone");
-        Configuration checkConfig = builder.getCheckConfig("AnnotationLocation");
+        final Configuration checkConfig = getModuleConfig("AnnotationLocation",
+                "AnnotationLocationMostCases");
 
+        final String msgLocationAlone = "annotation.location.alone";
+        final String msgLocation = "annotation.location";
         final String[] expected = {
             "3: " + getCheckMessage(clazz, msgLocationAlone, "MyAnnotation1"),
             "20: " + getCheckMessage(clazz, msgLocation, "MyAnnotation1", "8", "4"),
@@ -44,9 +55,28 @@ public class AnnotationLocationTest extends BaseCheckTestSupport{
             "90: " + getCheckMessage(clazz, msgLocation, "MyAnnotation2", "1", "0"),
         };
 
-        String filePath = builder.getFilePath("AnnotationLocationInput");
+        final String filePath = getPath("InputAnnotationLocation.java");
 
-        Integer[] warnList = builder.getLinesWithWarn(filePath);
+        final Integer[] warnList = getLinesWithWarn(filePath);
         verify(checkConfig, filePath, expected, warnList);
     }
+
+    @Test
+    public void testAnnotationVariables() throws Exception {
+        final Class<AnnotationLocationCheck> clazz = AnnotationLocationCheck.class;
+        getCheckMessage(clazz, "annotation.location.alone");
+        final Configuration checkConfig = getModuleConfig("AnnotationLocation",
+                "AnnotationLocationVariables");
+
+        final String msgLocation = "annotation.location";
+        final String[] expected = {
+            "63: " + getCheckMessage(clazz, msgLocation, "MyAnnotation2", "7", "4"),
+        };
+
+        final String filePath = getPath("InputAnnotationLocationVariables.java");
+
+        final Integer[] warnList = getLinesWithWarn(filePath);
+        verify(checkConfig, filePath, expected, warnList);
+    }
+
 }

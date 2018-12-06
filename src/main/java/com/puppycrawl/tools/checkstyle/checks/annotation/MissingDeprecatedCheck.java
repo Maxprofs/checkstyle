@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,13 +22,14 @@ package com.puppycrawl.tools.checkstyle.checks.annotation;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.AnnotationUtility;
-import com.puppycrawl.tools.checkstyle.Utils;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.JavadocTagInfo;
 import com.puppycrawl.tools.checkstyle.api.TextBlock;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTagInfo;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * <p>
@@ -70,9 +71,34 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * &lt;module name="JavadocDeprecated"/&gt;
  * </pre>
  *
- * @author Travis Schneeberger
+ * <p>
+ * In addition you can configure this check with skipNoJavadoc
+ * option to allow it to ignore cases when JavaDoc is missing,
+ * but still warns when JavaDoc is present but either
+ * {@link Deprecated Deprecated} is missing from JavaDoc or
+ * {@link Deprecated Deprecated} is missing from the element.
+ * To configure this check to allow it use:
+ * </p>
+ *
+ * <pre>   &lt;property name="skipNoJavadoc" value="true" /&gt;</pre>
+ *
+ * <p>Examples of validating source code with skipNoJavadoc:</p>
+ *
+ * <pre>
+ * <code>
+ * {@literal @}deprecated
+ * public static final int MY_CONST = 123456; // no violation
+ *
+ * &#47;** This javadoc is missing deprecated tag. *&#47;
+ * {@literal @}deprecated
+ * public static final int COUNTER = 10; // violation as javadoc exists
+ * </code>
+ * </pre>
+ *
  */
-public final class MissingDeprecatedCheck extends Check {
+@StatelessCheck
+public final class MissingDeprecatedCheck extends AbstractCheck {
+
     /**
      * A key is pointing to the warning message text in "messages.properties"
      * file.
@@ -93,36 +119,52 @@ public final class MissingDeprecatedCheck extends Check {
      */
     public static final String MSG_KEY_JAVADOC_MISSING = "javadoc.missing";
 
-    /** {@link Deprecated Deprecated} annotation name */
+    /** {@link Deprecated Deprecated} annotation name. */
     private static final String DEPRECATED = "Deprecated";
 
-    /** fully-qualified {@link Deprecated Deprecated} annotation name */
+    /** Fully-qualified {@link Deprecated Deprecated} annotation name. */
     private static final String FQ_DEPRECATED = "java.lang." + DEPRECATED;
 
-    /** compiled regexp to match Javadoc tag with no argument * */
+    /** Compiled regexp to match Javadoc tag with no argument. */
     private static final Pattern MATCH_DEPRECATED =
-        Utils.createPattern("@(deprecated)\\s+\\S");
+            CommonUtil.createPattern("@(deprecated)\\s+\\S");
 
-    /** compiled regexp to match first part of multilineJavadoc tags * */
+    /** Compiled regexp to match first part of multilineJavadoc tags. */
     private static final Pattern MATCH_DEPRECATED_MULTILINE_START =
-        Utils.createPattern("@(deprecated)\\s*$");
+            CommonUtil.createPattern("@(deprecated)\\s*$");
 
-    /** compiled regexp to look for a continuation of the comment * */
+    /** Compiled regexp to look for a continuation of the comment. */
     private static final Pattern MATCH_DEPRECATED_MULTILINE_CONT =
-        Utils.createPattern("(\\*/|@|[^\\s\\*])");
+            CommonUtil.createPattern("(\\*/|@|[^\\s\\*])");
 
-    /** Multiline finished at end of comment * */
+    /** Multiline finished at end of comment. */
     private static final String END_JAVADOC = "*/";
-    /** Multiline finished at next Javadoc * */
+    /** Multiline finished at next Javadoc. */
     private static final String NEXT_TAG = "@";
+
+    /** Is deprecated element valid without javadoc. */
+    private boolean skipNoJavadoc;
+
+    /**
+     * Set skipJavadoc value.
+     * @param skipNoJavadoc user's value of skipJavadoc
+     */
+    public void setSkipNoJavadoc(boolean skipNoJavadoc) {
+        this.skipNoJavadoc = skipNoJavadoc;
+    }
 
     @Override
     public int[] getDefaultTokens() {
-        return getAcceptableTokens();
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.INTERFACE_DEF,
             TokenTypes.CLASS_DEF,
@@ -142,12 +184,12 @@ public final class MissingDeprecatedCheck extends Check {
             getFileContents().getJavadocBefore(ast.getLineNo());
 
         final boolean containsAnnotation =
-            AnnotationUtility.containsAnnotation(ast, DEPRECATED)
-            || AnnotationUtility.containsAnnotation(ast, FQ_DEPRECATED);
+            AnnotationUtil.containsAnnotation(ast, DEPRECATED)
+            || AnnotationUtil.containsAnnotation(ast, FQ_DEPRECATED);
 
         final boolean containsJavadocTag = containsJavadocTag(javadoc);
 
-        if (containsAnnotation ^ containsJavadocTag) {
+        if (containsAnnotation ^ containsJavadocTag && !(skipNoJavadoc && javadoc == null)) {
             log(ast.getLineNo(), MSG_KEY_ANNOTATION_MISSING_DEPRECATED);
         }
     }
@@ -159,34 +201,28 @@ public final class MissingDeprecatedCheck extends Check {
      * @return true if contains the tag
      */
     private boolean containsJavadocTag(final TextBlock javadoc) {
-        if (javadoc == null) {
-            return false;
-        }
-
-        final String[] lines = javadoc.getText();
-
         boolean found = false;
+        if (javadoc != null) {
+            final String[] lines = javadoc.getText();
+            int currentLine = javadoc.getStartLineNo() - 1;
 
-        int currentLine = javadoc.getStartLineNo() - 1;
+            for (int i = 0; i < lines.length; i++) {
+                currentLine++;
+                final String line = lines[i];
 
-        for (int i = 0; i < lines.length; i++) {
-            currentLine++;
-            final String line = lines[i];
+                final Matcher javadocNoArgMatcher = MATCH_DEPRECATED.matcher(line);
+                final Matcher noArgMultilineStart = MATCH_DEPRECATED_MULTILINE_START.matcher(line);
 
-            final Matcher javadocNoargMatcher =
-                MATCH_DEPRECATED.matcher(line);
-            final Matcher noargMultilineStart = MATCH_DEPRECATED_MULTILINE_START.matcher(line);
-
-            if (javadocNoargMatcher.find()) {
-                if (found) {
-                    log(currentLine, MSG_KEY_JAVADOC_DUPLICATE_TAG,
-                        JavadocTagInfo.DEPRECATED.getText());
+                if (javadocNoArgMatcher.find()) {
+                    if (found) {
+                        log(currentLine, MSG_KEY_JAVADOC_DUPLICATE_TAG,
+                                JavadocTagInfo.DEPRECATED.getText());
+                    }
+                    found = true;
                 }
-                found = true;
-            }
-            else if (noargMultilineStart.find()) {
-                found = validateTagAtTheRestOfComment(lines, found, currentLine, i);
-
+                else if (noArgMultilineStart.find()) {
+                    found = checkTagAtTheRestOfComment(lines, found, currentLine, i);
+                }
             }
         }
         return found;
@@ -200,38 +236,31 @@ public final class MissingDeprecatedCheck extends Check {
      * @param lines all lines
      * @param foundBefore flag from parent method
      * @param currentLine current line
-     * @param i som index
+     * @param index som index
      * @return true if Tag is found
      */
-    private boolean validateTagAtTheRestOfComment(String[] lines, boolean foundBefore,
-                                                  int currentLine, int i) {
-
+    private boolean checkTagAtTheRestOfComment(String[] lines, boolean foundBefore,
+            int currentLine, int index) {
         boolean found = false;
-        for (int reindex = i + 1;
-            reindex < lines.length; reindex++) {
+        int reindex = index + 1;
+        while (reindex <= lines.length - 1) {
             final Matcher multilineCont = MATCH_DEPRECATED_MULTILINE_CONT.matcher(lines[reindex]);
 
             if (multilineCont.find()) {
                 reindex = lines.length;
                 final String lFin = multilineCont.group(1);
-                if (!lFin.equals(NEXT_TAG)
-                    && !lFin.equals(END_JAVADOC)) {
-                    if (foundBefore) {
-                        log(currentLine, MSG_KEY_JAVADOC_DUPLICATE_TAG,
-                            JavadocTagInfo.DEPRECATED.getText());
-                    }
-                    found = true;
-                }
-                else {
+                if (lFin.equals(NEXT_TAG) || lFin.equals(END_JAVADOC)) {
                     log(currentLine, MSG_KEY_JAVADOC_MISSING);
-                    if (foundBefore) {
-                        log(currentLine, MSG_KEY_JAVADOC_DUPLICATE_TAG,
-                            JavadocTagInfo.DEPRECATED.getText());
-                    }
-                    found = true;
                 }
+                if (foundBefore) {
+                    log(currentLine, MSG_KEY_JAVADOC_DUPLICATE_TAG,
+                            JavadocTagInfo.DEPRECATED.getText());
+                }
+                found = true;
             }
+            reindex++;
         }
         return found;
     }
+
 }

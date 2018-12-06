@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@ package com.puppycrawl.tools.checkstyle.filters;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.Utils;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.Filter;
 
@@ -37,138 +36,155 @@ import com.puppycrawl.tools.checkstyle.api.Filter;
  *   <li>(optionally) the check's columns is in the filter's column CSV.</li>
  * </ul>
  *
- * @author Rick Giles
  */
 public class SuppressElement
     implements Filter {
-    /** the regexp to match file names against */
+
+    /** The regexp to match file names against. */
     private final Pattern fileRegexp;
 
-    /** the pattern for file names*/
+    /** The pattern for file names. */
     private final String filePattern;
 
-    /** the regexp to match check names against */
-    private Pattern checkRegexp;
+    /** The regexp to match check names against. */
+    private final Pattern checkRegexp;
 
-    /** the pattern for check class names*/
-    private String checkPattern;
+    /** The pattern for check class names. */
+    private final String checkPattern;
 
-    /** module id filter. */
-    private String moduleId;
+    /** The regexp to match message names against. */
+    private final Pattern messageRegexp;
 
-    /** line number filter */
-    private CSVFilter lineFilter;
+    /** The pattern for message names. */
+    private final String messagePattern;
 
-    /** CSV for line number filter */
-    private String linesCSV;
+    /** Module id filter. */
+    private final String moduleId;
 
-    /** column number filter */
-    private CSVFilter columnFilter;
+    /** Line number filter. */
+    private final CsvFilter lineFilter;
 
-    /** CSV for column number filter */
-    private String columnsCSV;
+    /** CSV for line number filter. */
+    private final String linesCsv;
+
+    /** Column number filter. */
+    private final CsvFilter columnFilter;
+
+    /** CSV for column number filter. */
+    private final String columnsCsv;
 
     /**
      * Constructs a {@code SuppressElement} for a
-     * file name pattern. Must either call {@link #setColumns(String)} or
-     * {@link #setModuleId(String)} before using this object.
-     * @param files regular expression for names of filtered files.
+     * file name pattern.
+     *
+     * @param files   regular expression for names of filtered files.
+     * @param checks  regular expression for filtered check classes.
+     * @param message regular expression for messages.
+     * @param modId   the id
+     * @param lines   lines CSV values and ranges for line number filtering.
+     * @param columns columns CSV values and ranges for column number filtering.
      */
-    public SuppressElement(String files) {
+    public SuppressElement(String files, String checks,
+                           String message, String modId, String lines, String columns) {
         filePattern = files;
-        fileRegexp = Pattern.compile(files);
-    }
-
-    /**
-     * Set the check class pattern.
-     * @param checks regular expression for filtered check classes.
-     */
-    public void setChecks(final String checks) {
-        checkPattern = checks;
-        checkRegexp = Utils.createPattern(checks);
-    }
-
-    /**
-     * Set the module id for filtering. Cannot be null.
-     * @param moduleId the id
-     */
-    public void setModuleId(final String moduleId) {
-        this.moduleId = moduleId;
-    }
-    /**
-     * Sets the CSV values and ranges for line number filtering.
-     * E.g. "1,7-15,18".
-     * @param lines CSV values and ranges for line number filtering.
-     */
-    public void setLines(String lines) {
-        linesCSV = lines;
-        if (lines != null) {
-            lineFilter = new CSVFilter(lines);
+        if (files == null) {
+            fileRegexp = null;
         }
         else {
+            fileRegexp = Pattern.compile(files);
+        }
+        checkPattern = checks;
+        if (checks == null) {
+            checkRegexp = null;
+        }
+        else {
+            checkRegexp = Pattern.compile(checks);
+        }
+        messagePattern = message;
+        if (message == null) {
+            messageRegexp = null;
+        }
+        else {
+            messageRegexp = Pattern.compile(message);
+        }
+        moduleId = modId;
+        linesCsv = lines;
+        if (lines == null) {
             lineFilter = null;
         }
-    }
-
-    /**
-     * Sets the CSV values and ranges for column number filtering.
-     *  E.g. "1,7-15,18".
-     * @param columns CSV values and ranges for column number filtering.
-     */
-    public void setColumns(String columns) {
-        columnsCSV = columns;
-        if (columns != null) {
-            columnFilter = new CSVFilter(columns);
+        else {
+            lineFilter = new CsvFilter(lines);
+        }
+        columnsCsv = columns;
+        if (columns == null) {
+            columnFilter = null;
         }
         else {
-            columnFilter = null;
+            columnFilter = new CsvFilter(columns);
         }
     }
 
     @Override
     public boolean accept(AuditEvent event) {
-        // reject if file or check module mismatch?
-        if (isFileNameAndModuleNotMatching(event)) {
-            return true;
-        }
-
-        // reject if no line/column matching
-        return (lineFilter != null || columnFilter != null)
-                && (lineFilter == null || !lineFilter.accept(event.getLine()))
-                && (columnFilter == null || !columnFilter.accept(event.getColumn()));
+        return isFileNameAndModuleNotMatching(event)
+                || !isMessageNameMatching(event)
+                || isLineAndColumnMatch(event);
     }
 
     /**
-     * is matching by file name and Check name
+     * Is matching by file name and Check name.
      * @param event event
      * @return true is matching
      */
     private boolean isFileNameAndModuleNotMatching(AuditEvent event) {
         return event.getFileName() == null
-                || !fileRegexp.matcher(event.getFileName()).find()
+                || fileRegexp != null && !fileRegexp.matcher(event.getFileName()).find()
                 || event.getLocalizedMessage() == null
                 || moduleId != null && !moduleId.equals(event.getModuleId())
                 || checkRegexp != null && !checkRegexp.matcher(event.getSourceName()).find();
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(filePattern, checkPattern, moduleId, linesCSV, columnsCSV);
+    /**
+     * Is matching by message.
+     * @param event event
+     * @return true is matching or not set.
+     */
+    private boolean isMessageNameMatching(AuditEvent event) {
+        return messageRegexp == null || messageRegexp.matcher(event.getMessage()).find();
+    }
+
+    /**
+     * Whether line and column match.
+     * @param event event to process.
+     * @return true if line and column match.
+     */
+    private boolean isLineAndColumnMatch(AuditEvent event) {
+        return (lineFilter != null || columnFilter != null)
+                && (lineFilter == null || !lineFilter.accept(event.getLine()))
+                && (columnFilter == null || !columnFilter.accept(event.getColumn()));
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public int hashCode() {
+        return Objects.hash(filePattern, checkPattern, messagePattern, moduleId, linesCsv,
+                columnsCsv);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (other == null || getClass() != other.getClass()) {
             return false;
         }
-        final SuppressElement suppressElement = (SuppressElement) o;
+        final SuppressElement suppressElement = (SuppressElement) other;
         return Objects.equals(filePattern, suppressElement.filePattern)
                 && Objects.equals(checkPattern, suppressElement.checkPattern)
+                && Objects.equals(messagePattern, suppressElement.messagePattern)
                 && Objects.equals(moduleId, suppressElement.moduleId)
-                && Objects.equals(linesCSV, suppressElement.linesCSV)
-                && Objects.equals(columnsCSV, suppressElement.columnsCSV);
+                && Objects.equals(linesCsv, suppressElement.linesCsv)
+                && Objects.equals(columnsCsv, suppressElement.columnsCsv);
     }
+
 }

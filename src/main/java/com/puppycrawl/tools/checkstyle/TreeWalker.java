@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,99 +20,71 @@
 package com.puppycrawl.tools.checkstyle;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map.Entry;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import antlr.CommonHiddenStreamToken;
-import antlr.RecognitionException;
-import antlr.Token;
-import antlr.TokenStreamException;
-import antlr.TokenStreamHiddenTokenFilter;
-import antlr.TokenStreamRecognitionException;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.AbstractFileSetCheck;
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.api.Context;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.ExternalResourceHolder;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.LocalizedMessage;
-import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.grammars.GeneratedJavaLexer;
-import com.puppycrawl.tools.checkstyle.grammars.GeneratedJavaRecognizer;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
 
 /**
  * Responsible for walking an abstract syntax tree and notifying interested
  * checks at each each node.
  *
- * @author Oliver Burn
  */
-public final class TreeWalker
-    extends AbstractFileSetCheck {
-    /**
-     * State of AST.
-     * Indicates whether tree contains certain nodes.
-     */
-    private enum AstState {
-        /**
-         * Ordinary tree.
-         */
-        ORDINARY,
+@FileStatefulCheck
+public final class TreeWalker extends AbstractFileSetCheck implements ExternalResourceHolder {
 
-        /**
-         * AST contains comment nodes.
-         */
-        WITH_COMMENTS
-    }
-
-    /** default distance between tab stops */
+    /** Default distance between tab stops. */
     private static final int DEFAULT_TAB_WIDTH = 8;
 
-    /** logger for debug purpose */
-    private static final Log LOG = LogFactory.getLog(TreeWalker.class);
+    /** Maps from token name to ordinary checks. */
+    private final Map<String, Set<AbstractCheck>> tokenToOrdinaryChecks =
+        new HashMap<>();
 
-    /** maps from token name to ordinary checks */
-    private final Multimap<String, Check> tokenToOrdinaryChecks =
-        HashMultimap.create();
+    /** Maps from token name to comment checks. */
+    private final Map<String, Set<AbstractCheck>> tokenToCommentChecks =
+            new HashMap<>();
 
-    /** maps from token name to comment checks */
-    private final Multimap<String, Check> tokenToCommentChecks =
-            HashMultimap.create();
+    /** Registered ordinary checks, that don't use comment nodes. */
+    private final Set<AbstractCheck> ordinaryChecks = new HashSet<>();
 
-    /** registered ordinary checks, that don't use comment nodes */
-    private final Set<Check> ordinaryChecks = Sets.newHashSet();
+    /** Registered comment checks. */
+    private final Set<AbstractCheck> commentChecks = new HashSet<>();
 
-    /** registered comment checks */
-    private final Set<Check> commentChecks = Sets.newHashSet();
+    /** The ast filters. */
+    private final Set<TreeWalkerFilter> filters = new HashSet<>();
 
-    /** the distance between tab stops */
+    /** The sorted set of messages. */
+    private final SortedSet<LocalizedMessage> messages = new TreeSet<>();
+
+    /** The distance between tab stops. */
     private int tabWidth = DEFAULT_TAB_WIDTH;
 
-    /** cache file **/
-    private PropertyCacheFile cache;
-
-    /** class loader to resolve classes with. **/
+    /** Class loader to resolve classes with. **/
     private ClassLoader classLoader;
 
-    /** context of child components */
+    /** Context of child components. */
     private Context childContext;
 
-    /** a factory for creating submodules (i.e. the Checks) */
+    /** A factory for creating submodules (i.e. the Checks) */
     private ModuleFactory moduleFactory;
 
     /**
@@ -122,22 +94,31 @@ public final class TreeWalker
         setFileExtensions("java");
     }
 
-    /** @param tabWidth the distance between tab stops */
+    /**
+     * Sets tab width.
+     * @param tabWidth the distance between tab stops
+     */
     public void setTabWidth(int tabWidth) {
         this.tabWidth = tabWidth;
     }
 
-    /** @param fileName the cache file
-     *  @throws IOException if there are some problems with file loading
+    /**
+     * Sets cache file.
+     * @deprecated Use {@link Checker#setCacheFile} instead. It does not do anything now. We just
+     *             keep the setter for transition period to the same option in Checker. The
+     *             method will be completely removed in Checkstyle 8.0. See
+     *             <a href="https://github.com/checkstyle/checkstyle/issues/2883">issue#2883</a>
+     * @param fileName the cache file
      */
-    public void setCacheFile(String fileName) throws IOException {
-        final Configuration configuration = getConfiguration();
-        cache = new PropertyCacheFile(configuration, fileName);
-
-        cache.load();
+    @Deprecated
+    public void setCacheFile(String fileName) {
+        // Deprecated
     }
 
-    /** @param classLoader class loader to resolve classes with. */
+    /**
+     * Sets classLoader to load class.
+     * @param classLoader class loader to resolve classes with.
+     */
     public void setClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
@@ -154,90 +135,90 @@ public final class TreeWalker
     public void finishLocalSetup() {
         final DefaultContext checkContext = new DefaultContext();
         checkContext.add("classLoader", classLoader);
-        checkContext.add("messages", getMessageCollector());
         checkContext.add("severity", getSeverity());
         checkContext.add("tabWidth", String.valueOf(tabWidth));
 
         childContext = checkContext;
     }
 
+    /**
+     * {@inheritDoc} Creates child module.
+     * @noinspection ChainOfInstanceofChecks
+     */
     @Override
     public void setupChild(Configuration childConf)
-        throws CheckstyleException {
+            throws CheckstyleException {
         final String name = childConf.getName();
         final Object module = moduleFactory.createModule(name);
-        if (!(module instanceof Check)) {
-            throw new CheckstyleException(
-                "TreeWalker is not allowed as a parent of " + name);
+        if (module instanceof AutomaticBean) {
+            final AutomaticBean bean = (AutomaticBean) module;
+            bean.contextualize(childContext);
+            bean.configure(childConf);
         }
-        final Check check = (Check) module;
-        check.contextualize(childContext);
-        check.configure(childConf);
-        check.init();
-
-        registerCheck(check);
+        if (module instanceof AbstractCheck) {
+            final AbstractCheck check = (AbstractCheck) module;
+            check.init();
+            registerCheck(check);
+        }
+        else if (module instanceof TreeWalkerFilter) {
+            final TreeWalkerFilter filter = (TreeWalkerFilter) module;
+            filters.add(filter);
+        }
+        else {
+            throw new CheckstyleException(
+                "TreeWalker is not allowed as a parent of " + name
+                        + " Please review 'Parent Module' section for this Check in web"
+                        + " documentation if Check is standard.");
+        }
     }
 
     @Override
-    protected void processFiltered(File file, List<String> lines) {
+    protected void processFiltered(File file, FileText fileText) throws CheckstyleException {
         // check if already checked and passed the file
-        final String fileName = file.getPath();
-        final long timestamp = file.lastModified();
-        if (cache != null
-                && (cache.inCache(fileName, timestamp)
-                    || !Utils.fileExtensionMatches(file, getFileExtensions()))) {
-            return;
-        }
-
-        final String msg = "%s occurred during the analysis of file %s.";
-
-        try {
-            final FileText text = FileText.fromLines(file, lines);
-            final FileContents contents = new FileContents(text);
-            final DetailAST rootAST = parse(contents);
-
-            getMessageCollector().reset();
-
-            walk(rootAST, contents, AstState.ORDINARY);
-
-            final DetailAST astWithComments = appendHiddenCommentNodes(rootAST);
-
-            walk(astWithComments, contents, AstState.WITH_COMMENTS);
-        }
-        catch (final TokenStreamRecognitionException tre) {
-            final String exceptionMsg = String.format(msg, "TokenStreamRecognitionException",
-                     fileName);
-            LOG.error(exceptionMsg);
-            final RecognitionException re = tre.recog;
-            final String message = re.getMessage();
-            getMessageCollector().add(createLocalizedMessage(message));
-        }
-        // RecognitionException and any other (need to check if needed)
-        catch (Throwable ex) {
-            final String exceptionMsg = String.format(msg, ex.getClass().getSimpleName(), fileName);
-            LOG.error(exceptionMsg, ex);
-            getMessageCollector().add(createLocalizedMessage(ex.getMessage()));
-        }
-
-        if (cache != null && getMessageCollector().size() == 0) {
-            cache.put(fileName, timestamp);
+        if (CommonUtil.matchesFileExtension(file, getFileExtensions())
+                && (!ordinaryChecks.isEmpty() || !commentChecks.isEmpty())) {
+            final FileContents contents = new FileContents(fileText);
+            final DetailAST rootAST = JavaParser.parse(contents);
+            if (!ordinaryChecks.isEmpty()) {
+                walk(rootAST, contents, AstState.ORDINARY);
+            }
+            if (!commentChecks.isEmpty()) {
+                final DetailAST astWithComments = JavaParser.appendHiddenCommentNodes(rootAST);
+                walk(astWithComments, contents, AstState.WITH_COMMENTS);
+            }
+            if (filters.isEmpty()) {
+                addMessages(messages);
+            }
+            else {
+                final SortedSet<LocalizedMessage> filteredMessages =
+                    getFilteredMessages(file.getAbsolutePath(), contents, rootAST);
+                addMessages(filteredMessages);
+            }
+            messages.clear();
         }
     }
 
     /**
-     * Creates {@link LocalizedMessage} object using default attributes.
-     * @param message
-     *        message that will be used for created object
-     * @return instance of created object
+     * Returns filtered set of {@link LocalizedMessage}.
+     * @param fileName path to the file
+     * @param fileContents the contents of the file
+     * @param rootAST root AST element {@link DetailAST} of the file
+     * @return filtered set of messages
      */
-    private LocalizedMessage createLocalizedMessage(String message) {
-        return new LocalizedMessage(
-                0,
-                Definitions.CHECKSTYLE_BUNDLE,
-                "general.exception",
-                new String[] {message },
-                getId(),
-                getClass(), null);
+    private SortedSet<LocalizedMessage> getFilteredMessages(
+            String fileName, FileContents fileContents, DetailAST rootAST) {
+        final SortedSet<LocalizedMessage> result = new TreeSet<>(messages);
+        for (LocalizedMessage element : messages) {
+            final TreeWalkerAuditEvent event =
+                    new TreeWalkerAuditEvent(fileContents, fileName, element, rootAST);
+            for (TreeWalkerFilter filter : filters) {
+                if (!filter.accept(event)) {
+                    result.remove(element);
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -245,8 +226,9 @@ public final class TreeWalker
      * @param check the check to register
      * @throws CheckstyleException if an error occurs
      */
-    private void registerCheck(Check check)
-        throws CheckstyleException {
+    private void registerCheck(AbstractCheck check)
+            throws CheckstyleException {
+        validateDefaultTokens(check);
         final int[] tokens;
         final Set<String> checkTokens = check.getTokenNames();
         if (checkTokens.isEmpty()) {
@@ -259,14 +241,15 @@ public final class TreeWalker
             final int[] acceptableTokens = check.getAcceptableTokens();
             Arrays.sort(acceptableTokens);
             for (String token : checkTokens) {
-                final int tokenId = Utils.getTokenId(token);
+                final int tokenId = TokenUtil.getTokenId(token);
                 if (Arrays.binarySearch(acceptableTokens, tokenId) >= 0) {
                     registerCheck(token, check);
                 }
                 else {
-                    throw new CheckstyleException("Token \""
-                        + token + "\" was not found in Acceptable tokens list"
-                                + " in check " + check);
+                    final String message = String.format(Locale.ROOT, "Token \"%s\" was "
+                            + "not found in Acceptable tokens list in check %s",
+                            token, check.getClass().getName());
+                    throw new CheckstyleException(message);
                 }
             }
         }
@@ -283,30 +266,52 @@ public final class TreeWalker
 
     /**
      * Register a check for a specified token id.
-     * @param tokenID the id of the token
+     * @param tokenId the id of the token
      * @param check the check to register
+     * @throws CheckstyleException if Check is misconfigured
      */
-    private void registerCheck(int tokenID, Check check) {
-        registerCheck(Utils.getTokenName(tokenID), check);
+    private void registerCheck(int tokenId, AbstractCheck check) throws CheckstyleException {
+        registerCheck(TokenUtil.getTokenName(tokenId), check);
     }
 
     /**
-     * Register a check for a specified token name
+     * Register a check for a specified token name.
      * @param token the name of the token
      * @param check the check to register
+     * @throws CheckstyleException if Check is misconfigured
      */
-    private void registerCheck(String token, Check check) {
+    private void registerCheck(String token, AbstractCheck check) throws CheckstyleException {
         if (check.isCommentNodesRequired()) {
-            tokenToCommentChecks.put(token, check);
+            tokenToCommentChecks.computeIfAbsent(token, empty -> new HashSet<>()).add(check);
         }
-        else if (Utils.isCommentType(token)) {
-            final String message = String.format("Check '%s' waits for comment type "
-                    + "token ('%s') and should override 'isCommentNodesRequred()' "
+        else if (TokenUtil.isCommentType(token)) {
+            final String message = String.format(Locale.ROOT, "Check '%s' waits for comment type "
+                    + "token ('%s') and should override 'isCommentNodesRequired()' "
                     + "method to return 'true'", check.getClass().getName(), token);
-            LOG.warn(message);
+            throw new CheckstyleException(message);
         }
         else {
-            tokenToOrdinaryChecks.put(token, check);
+            tokenToOrdinaryChecks.computeIfAbsent(token, empty -> new HashSet<>()).add(check);
+        }
+    }
+
+    /**
+     * Validates that check's required tokens are subset of default tokens.
+     * @param check to validate
+     * @throws CheckstyleException when validation of default tokens fails
+     */
+    private static void validateDefaultTokens(AbstractCheck check) throws CheckstyleException {
+        if (check.getRequiredTokens().length != 0) {
+            final int[] defaultTokens = check.getDefaultTokens();
+            Arrays.sort(defaultTokens);
+            for (final int token : check.getRequiredTokens()) {
+                if (Arrays.binarySearch(defaultTokens, token) < 0) {
+                    final String message = String.format(Locale.ROOT, "Token \"%s\" from required "
+                            + "tokens was not found in default tokens list in check %s",
+                            token, check.getClass().getName());
+                    throw new CheckstyleException(message);
+                }
+            }
         }
     }
 
@@ -335,7 +340,7 @@ public final class TreeWalker
      */
     private void notifyBegin(DetailAST rootAST, FileContents contents,
             AstState astState) {
-        Set<Check> checks;
+        final Set<AbstractCheck> checks;
 
         if (astState == AstState.WITH_COMMENTS) {
             checks = commentChecks;
@@ -344,8 +349,9 @@ public final class TreeWalker
             checks = ordinaryChecks;
         }
 
-        for (Check check : checks) {
+        for (AbstractCheck check : checks) {
             check.setFileContents(contents);
+            check.clearMessages();
             check.beginTree(rootAST);
         }
     }
@@ -356,7 +362,7 @@ public final class TreeWalker
      * @param astState state of AST.
      */
     private void notifyEnd(DetailAST rootAST, AstState astState) {
-        Set<Check> checks;
+        final Set<AbstractCheck> checks;
 
         if (astState == AstState.WITH_COMMENTS) {
             checks = commentChecks;
@@ -365,8 +371,9 @@ public final class TreeWalker
             checks = ordinaryChecks;
         }
 
-        for (Check check : checks) {
+        for (AbstractCheck check : checks) {
             check.finishTree(rootAST);
+            messages.addAll(check.getMessages());
         }
     }
 
@@ -376,24 +383,12 @@ public final class TreeWalker
      * @param astState state of AST.
      */
     private void notifyVisit(DetailAST ast, AstState astState) {
-        Collection<Check> visitors;
-        final String tokenType = Utils.getTokenName(ast.getType());
+        final Collection<AbstractCheck> visitors = getListOfChecks(ast, astState);
 
-        if (astState == AstState.WITH_COMMENTS) {
-            if (!tokenToCommentChecks.containsKey(tokenType)) {
-                return;
+        if (visitors != null) {
+            for (AbstractCheck check : visitors) {
+                check.visitToken(ast);
             }
-            visitors = tokenToCommentChecks.get(tokenType);
-        }
-        else {
-            if (!tokenToOrdinaryChecks.containsKey(tokenType)) {
-                return;
-            }
-            visitors = tokenToOrdinaryChecks.get(tokenType);
-        }
-
-        for (Check check : visitors) {
-            check.visitToken(ast);
         }
     }
 
@@ -404,80 +399,94 @@ public final class TreeWalker
      * @param astState state of AST.
      */
     private void notifyLeave(DetailAST ast, AstState astState) {
-        Collection<Check> visitors;
-        final String tokenType = Utils.getTokenName(ast.getType());
+        final Collection<AbstractCheck> visitors = getListOfChecks(ast, astState);
 
-        if (astState == AstState.WITH_COMMENTS) {
-            if (!tokenToCommentChecks.containsKey(tokenType)) {
-                return;
+        if (visitors != null) {
+            for (AbstractCheck check : visitors) {
+                check.leaveToken(ast);
             }
-            visitors = tokenToCommentChecks.get(tokenType);
-        }
-        else {
-            if (!tokenToOrdinaryChecks.containsKey(tokenType)) {
-                return;
-            }
-            visitors = tokenToOrdinaryChecks.get(tokenType);
-        }
-
-        for (Check check : visitors) {
-            check.leaveToken(ast);
         }
     }
 
     /**
-     * Static helper method to parses a Java source file.
+     * Method returns list of checks.
      *
-     * @param contents
-     *                contains the contents of the file
-     * @return the root of the AST
-     * @throws TokenStreamException
-     *                 if lexing failed
-     * @throws RecognitionException
-     *                 if parsing failed
+     * @param ast
+     *            the node to notify for
+     * @param astState
+     *            state of AST.
+     * @return list of visitors
      */
-    public static DetailAST parse(FileContents contents)
-        throws RecognitionException, TokenStreamException {
-        final String fullText = contents.getText().getFullText().toString();
-        final Reader sr = new StringReader(fullText);
-        final GeneratedJavaLexer lexer = new GeneratedJavaLexer(sr);
-        lexer.setFilename(contents.getFileName());
-        lexer.setCommentListener(contents);
-        lexer.setTreatAssertAsKeyword(true);
-        lexer.setTreatEnumAsKeyword(true);
-        lexer.setTokenObjectClass("antlr.CommonHiddenStreamToken");
+    private Collection<AbstractCheck> getListOfChecks(DetailAST ast, AstState astState) {
+        Collection<AbstractCheck> visitors = null;
+        final String tokenType = TokenUtil.getTokenName(ast.getType());
 
-        final TokenStreamHiddenTokenFilter filter =
-                new TokenStreamHiddenTokenFilter(lexer);
-        filter.hide(TokenTypes.SINGLE_LINE_COMMENT);
-        filter.hide(TokenTypes.BLOCK_COMMENT_BEGIN);
-
-        final GeneratedJavaRecognizer parser =
-            new GeneratedJavaRecognizer(filter);
-        parser.setFilename(contents.getFileName());
-        parser.setASTNodeClass(DetailAST.class.getName());
-        parser.compilationUnit();
-
-        return (DetailAST) parser.getAST();
+        if (astState == AstState.WITH_COMMENTS) {
+            if (tokenToCommentChecks.containsKey(tokenType)) {
+                visitors = tokenToCommentChecks.get(tokenType);
+            }
+        }
+        else {
+            if (tokenToOrdinaryChecks.containsKey(tokenType)) {
+                visitors = tokenToOrdinaryChecks.get(tokenType);
+            }
+        }
+        return visitors;
     }
 
     @Override
     public void destroy() {
-        for (Check check : ordinaryChecks) {
-            check.destroy();
-        }
-        for (Check check : commentChecks) {
-            check.destroy();
-        }
-        if (cache != null) {
-            try {
-                cache.persist();
-            }
-            catch (IOException e) {
-                throw new IllegalStateException("Unable to persist cache file", e);
-            }
-        }
+        ordinaryChecks.forEach(AbstractCheck::destroy);
+        commentChecks.forEach(AbstractCheck::destroy);
         super.destroy();
+    }
+
+    @Override
+    public Set<String> getExternalResourceLocations() {
+        final Set<String> ordinaryChecksResources =
+                getExternalResourceLocationsOfChecks(ordinaryChecks);
+        final Set<String> commentChecksResources =
+                getExternalResourceLocationsOfChecks(commentChecks);
+        final Set<String> filtersResources =
+                getExternalResourceLocationsOfFilters();
+        final int resultListSize = commentChecksResources.size()
+                + ordinaryChecksResources.size()
+                + filtersResources.size();
+        final Set<String> resourceLocations = new HashSet<>(resultListSize);
+        resourceLocations.addAll(ordinaryChecksResources);
+        resourceLocations.addAll(commentChecksResources);
+        resourceLocations.addAll(filtersResources);
+        return resourceLocations;
+    }
+
+    /**
+     * Returns a set of external configuration resource locations which are used by the filters set.
+     * @return a set of external configuration resource locations which are used by the filters set.
+     */
+    private Set<String> getExternalResourceLocationsOfFilters() {
+        final Set<String> externalConfigurationResources = new HashSet<>();
+        filters.stream().filter(filter -> filter instanceof ExternalResourceHolder)
+                .forEach(filter -> {
+                    final Set<String> checkExternalResources =
+                        ((ExternalResourceHolder) filter).getExternalResourceLocations();
+                    externalConfigurationResources.addAll(checkExternalResources);
+                });
+        return externalConfigurationResources;
+    }
+
+    /**
+     * Returns a set of external configuration resource locations which are used by the checks set.
+     * @param checks a set of checks.
+     * @return a set of external configuration resource locations which are used by the checks set.
+     */
+    private static Set<String> getExternalResourceLocationsOfChecks(Set<AbstractCheck> checks) {
+        final Set<String> externalConfigurationResources = new HashSet<>();
+        checks.stream().filter(check -> check instanceof ExternalResourceHolder).forEach(check -> {
+            final Set<String> checkExternalResources =
+                ((ExternalResourceHolder) check).getExternalResourceLocations();
+            externalConfigurationResources.addAll(checkExternalResources);
+        });
+        return externalConfigurationResources;
     }
 
     /**
@@ -503,191 +512,21 @@ public final class TreeWalker
     }
 
     /**
-     * Appends comment nodes to existing AST.
-     * It traverses each node in AST, looks for hidden comment tokens
-     * and appends found comment tokens as nodes in AST.
-     * @param root
-     *        root of AST.
-     * @return root of AST with comment nodes.
+     * State of AST.
+     * Indicates whether tree contains certain nodes.
      */
-    private static DetailAST appendHiddenCommentNodes(DetailAST root) {
-        DetailAST result = root;
-        DetailAST curNode = root;
-        DetailAST lastNode = root;
+    private enum AstState {
 
-        while (curNode != null) {
-            if (isPositionGreater(curNode, lastNode)) {
-                lastNode = curNode;
-            }
+        /**
+         * Ordinary tree.
+         */
+        ORDINARY,
 
-            CommonHiddenStreamToken tokenBefore = curNode.getHiddenBefore();
-            DetailAST currentSibling = curNode;
-            while (tokenBefore != null) { // threat multiple comments
-                final DetailAST newCommentNode =
-                         createCommentAstFromToken(tokenBefore);
+        /**
+         * AST contains comment nodes.
+         */
+        WITH_COMMENTS,
 
-                currentSibling.addPreviousSibling(newCommentNode);
-
-                if (currentSibling == result) {
-                    result = newCommentNode;
-                }
-
-                currentSibling = newCommentNode;
-                tokenBefore = tokenBefore.getHiddenBefore();
-            }
-
-            DetailAST toVisit = curNode.getFirstChild();
-            while (curNode != null && toVisit == null) {
-                toVisit = curNode.getNextSibling();
-                if (toVisit == null) {
-                    curNode = curNode.getParent();
-                }
-            }
-            curNode = toVisit;
-        }
-        if (lastNode != null) {
-            CommonHiddenStreamToken tokenAfter = lastNode.getHiddenAfter();
-            DetailAST currentSibling = lastNode;
-            while (tokenAfter != null) {
-                final DetailAST newCommentNode =
-                        createCommentAstFromToken(tokenAfter);
-
-                currentSibling.addNextSibling(newCommentNode);
-
-                currentSibling = newCommentNode;
-                tokenAfter = tokenAfter.getHiddenAfter();
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Checks if position of first DetailAST is greater than position of
-     * second DetailAST. Position is line number and column number in source
-     * file.
-     * @param ast1
-     *        first DetailAST node.
-     * @param ast2
-     *        second DetailAST node.
-     * @return true if position of ast1 is greater than position of ast2.
-     */
-    private static boolean isPositionGreater(DetailAST ast1, DetailAST ast2) {
-        if (ast1.getLineNo() > ast2.getLineNo()) {
-            return true;
-        }
-        if (ast1.getLineNo() < ast2.getLineNo()) {
-            return false;
-        }
-        return ast1.getColumnNo() > ast2.getColumnNo();
-    }
-
-    /**
-     * Create comment AST from token. Depending on token type
-     * SINGLE_LINE_COMMENT or BLOCK_COMMENT_BEGIN is created.
-     * @param token
-     *        Token object.
-     * @return DetailAST of comment node.
-     */
-    private static DetailAST createCommentAstFromToken(Token token) {
-        if (token.getType() == TokenTypes.SINGLE_LINE_COMMENT) {
-            return createSlCommentNode(token);
-        }
-        else {
-            return createBlockCommentNode(token);
-        }
-    }
-
-    /**
-     * Create single-line comment from token.
-     * @param token
-     *        Token object.
-     * @return DetailAST with SINGLE_LINE_COMMENT type.
-     */
-    private static DetailAST createSlCommentNode(Token token) {
-        final DetailAST slComment = new DetailAST();
-        slComment.setType(TokenTypes.SINGLE_LINE_COMMENT);
-        slComment.setText("//");
-
-        // column counting begins from 0
-        slComment.setColumnNo(token.getColumn() - 1);
-        slComment.setLineNo(token.getLine());
-
-        final DetailAST slCommentContent = new DetailAST();
-        slCommentContent.initialize(token);
-        slCommentContent.setType(TokenTypes.COMMENT_CONTENT);
-
-        // column counting begins from 0
-        // plus length of '//'
-        slCommentContent.setColumnNo(token.getColumn() - 1 + 2);
-        slCommentContent.setLineNo(token.getLine());
-        slCommentContent.setText(token.getText());
-
-        slComment.addChild(slCommentContent);
-        return slComment;
-    }
-
-    /**
-     * Create block comment from token.
-     * @param token
-     *        Token object.
-     * @return DetailAST with BLOCK_COMMENT type.
-     */
-    private static DetailAST createBlockCommentNode(Token token) {
-        final DetailAST blockComment = new DetailAST();
-        blockComment.initialize(TokenTypes.BLOCK_COMMENT_BEGIN, "/*");
-
-        // column counting begins from 0
-        blockComment.setColumnNo(token.getColumn() - 1);
-        blockComment.setLineNo(token.getLine());
-
-        final DetailAST blockCommentContent = new DetailAST();
-        blockCommentContent.initialize(token);
-        blockCommentContent.setType(TokenTypes.COMMENT_CONTENT);
-
-        // column counting begins from 0
-        // plus length of '/*'
-        blockCommentContent.setColumnNo(token.getColumn() - 1 + 2);
-        blockCommentContent.setLineNo(token.getLine());
-        blockCommentContent.setText(token.getText());
-
-        final DetailAST blockCommentClose = new DetailAST();
-        blockCommentClose.initialize(TokenTypes.BLOCK_COMMENT_END, "*/");
-
-        final Entry<Integer, Integer> linesColumns = countLinesColumns(
-                token.getText(), token.getLine(), token.getColumn());
-        blockCommentClose.setLineNo(linesColumns.getKey());
-        blockCommentClose.setColumnNo(linesColumns.getValue());
-
-        blockComment.addChild(blockCommentContent);
-        blockComment.addChild(blockCommentClose);
-        return blockComment;
-    }
-
-    /**
-     * Count lines and columns (in last line) in text.
-     * @param text
-     *        String.
-     * @param initialLinesCnt
-     *        initial value of lines counter.
-     * @param initialColumnsCnt
-     *        initial value of columns counter.
-     * @return entry(pair), first element is lines counter, second - columns
-     *         counter.
-     */
-    private static Entry<Integer, Integer> countLinesColumns(
-            String text, int initialLinesCnt, int initialColumnsCnt) {
-        int lines = initialLinesCnt;
-        int columns = initialColumnsCnt;
-        for (char c : text.toCharArray()) {
-            if (c == '\n') {
-                lines++;
-                columns = 0;
-            }
-            else {
-                columns++;
-            }
-        }
-        return new SimpleEntry<>(lines, columns);
     }
 
 }

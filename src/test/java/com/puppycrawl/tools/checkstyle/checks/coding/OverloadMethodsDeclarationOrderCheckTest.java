@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,15 +24,21 @@ import static com.puppycrawl.tools.checkstyle.checks.coding.OverloadMethodsDecla
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 
 public class OverloadMethodsDeclarationOrderCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/coding/overloadmethodsdeclarationorder";
+    }
+
     @Test
     public void testDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(OverloadMethodsDeclarationOrderCheck.class);
+            createModuleConfig(OverloadMethodsDeclarationOrderCheck.class);
 
         final String[] expected = {
             "28: " + getCheckMessage(MSG_KEY, 17),
@@ -40,14 +46,16 @@ public class OverloadMethodsDeclarationOrderCheckTest
             "68: " + getCheckMessage(MSG_KEY, 66),
             "111: " + getCheckMessage(MSG_KEY, 100),
         };
-        verify(checkConfig, getPath("coding/InputOverloadMethodsDeclarationOrder.java"), expected);
+        verify(checkConfig, getPath("InputOverloadMethodsDeclarationOrder.java"), expected);
     }
 
     @Test
     public void testTokensNotNull() {
-        OverloadMethodsDeclarationOrderCheck check = new OverloadMethodsDeclarationOrderCheck();
-        Assert.assertNotNull(check.getAcceptableTokens());
-        Assert.assertNotNull(check.getDefaultTokens());
-        Assert.assertNotNull(check.getRequiredTokens());
+        final OverloadMethodsDeclarationOrderCheck check =
+            new OverloadMethodsDeclarationOrderCheck();
+        Assert.assertNotNull("Acceptable tokens should not be null", check.getAcceptableTokens());
+        Assert.assertNotNull("Default tokens should not be null", check.getDefaultTokens());
+        Assert.assertNotNull("Required tokens should not be null", check.getRequiredTokens());
     }
+
 }

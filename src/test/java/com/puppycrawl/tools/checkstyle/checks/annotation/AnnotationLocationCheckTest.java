@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,29 +21,43 @@ package com.puppycrawl.tools.checkstyle.checks.annotation;
 
 import static com.puppycrawl.tools.checkstyle.checks.annotation.AnnotationLocationCheck.MSG_KEY_ANNOTATION_LOCATION;
 import static com.puppycrawl.tools.checkstyle.checks.annotation.AnnotationLocationCheck.MSG_KEY_ANNOTATION_LOCATION_ALONE;
+import static org.junit.Assert.assertArrayEquals;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class AnnotationLocationCheckTest extends BaseCheckTestSupport {
+public class AnnotationLocationCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/annotation/annotationlocation";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final AnnotationLocationCheck checkObj = new AnnotationLocationCheck();
+        assertArrayEquals(
+            "AnnotationLocationCheck#getRequiredTokens should return empty array by default",
+            CommonUtil.EMPTY_INT_ARRAY, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testCorrect() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(AnnotationLocationCheck.class);
-        final String[] expected = {
-        };
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig, getPath("annotation/InputCorrectAnnotationLocation.java"), expected);
+        verify(checkConfig, getPath("InputAnnotationLocationCorrect.java"), expected);
     }
 
     @Test
     public void testIncorrect() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(AnnotationLocationCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
         final String[] expected = {
-            "6: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION_ALONE, "MyAnnotation1"),
+            "6: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION_ALONE, "MyAnn"),
             "11: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION_ALONE, "MyAnnotation1"),
             "17: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION, "MyAnnotation1", 8, 4),
             "25: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION, "MyAnnotation1", 8, 4),
@@ -63,14 +77,14 @@ public class AnnotationLocationCheckTest extends BaseCheckTestSupport {
             "88: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION, "MyAnnotation2", 10, 8),
             "98: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION, "MyAnnotation2", 0, 3),
         };
-        verify(checkConfig, getPath("annotation/InputIncorrectAnnotationLocation.java"), expected);
+        verify(checkConfig, getPath("InputAnnotationLocationIncorrect.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        AnnotationLocationCheck constantNameCheckObj = new AnnotationLocationCheck();
-        int[] actual = constantNameCheckObj.getAcceptableTokens();
-        int[] expected = new int[] {
+        final AnnotationLocationCheck constantNameCheckObj = new AnnotationLocationCheck();
+        final int[] actual = constantNameCheckObj.getAcceptableTokens();
+        final int[] expected = {
             TokenTypes.CLASS_DEF,
             TokenTypes.INTERFACE_DEF,
             TokenTypes.ENUM_DEF,
@@ -87,21 +101,19 @@ public class AnnotationLocationCheckTest extends BaseCheckTestSupport {
             TokenTypes.DOT,
             TokenTypes.ANNOTATION_FIELD_DEF,
             };
-        Assert.assertNotNull(actual);
-        Assert.assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
 
     @Test
     public void testWithoutAnnotations() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(AnnotationLocationCheck.class);
-        final String[] expected = {
-            };
-        verify(checkConfig, getPath("annotation/InputAnnotationLocationCheckTest1.java"), expected);
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputAnnotationLocationEmpty.java"), expected);
     }
 
     @Test
     public void testWithParameters() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(AnnotationLocationCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
         checkConfig.addAttribute("allowSamelineSingleParameterlessAnnotation", "true");
         checkConfig.addAttribute("allowSamelineParameterizedAnnotation", "true");
         checkConfig.addAttribute("allowSamelineMultipleAnnotations", "true");
@@ -120,19 +132,45 @@ public class AnnotationLocationCheckTest extends BaseCheckTestSupport {
             "88: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION, "MyAnnotation2", 10, 8),
             "98: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION, "MyAnnotation2", 0, 3),
             };
-        verify(checkConfig, getPath("annotation/InputIncorrectAnnotationLocation.java"), expected);
+        verify(checkConfig, getPath("InputAnnotationLocationIncorrect.java"), expected);
     }
 
     @Test
     public void testWithMultipleAnnotations() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(AnnotationLocationCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
         checkConfig.addAttribute("allowSamelineSingleParameterlessAnnotation", "false");
         final String[] expected = {
             "3: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION_ALONE, "MyAnnotation11"),
             "3: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION_ALONE, "MyAnnotation12"),
             "3: " + getCheckMessage(MSG_KEY_ANNOTATION_LOCATION_ALONE, "MyAnnotation13"),
             };
-        verify(checkConfig, getPath("annotation/InputAnnotationLocationCheckTest2.java"), expected);
+        verify(checkConfig, getPath("InputAnnotationLocationCustomAnnotationsDeclared.java"),
+                expected);
+    }
+
+    @Test
+    public void testAllTokens() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
+        checkConfig.addAttribute("tokens", "CLASS_DEF, INTERFACE_DEF, ENUM_DEF, METHOD_DEF, "
+                + "CTOR_DEF, VARIABLE_DEF, PARAMETER_DEF, ANNOTATION_DEF, TYPECAST, "
+                + "LITERAL_THROWS, IMPLEMENTS_CLAUSE, TYPE_ARGUMENT, LITERAL_NEW, DOT, "
+                + "ANNOTATION_FIELD_DEF");
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputAnnotationLocationWithoutAnnotations.java"), expected);
+    }
+
+    @Test
+    public void testAnnotationInForEachLoopParameterAndVariableDef() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(AnnotationLocationCheck.class);
+        checkConfig.addAttribute("tokens", "CLASS_DEF, INTERFACE_DEF, ENUM_DEF, METHOD_DEF,"
+            + " CTOR_DEF, VARIABLE_DEF, PARAMETER_DEF, ANNOTATION_DEF, TYPECAST, LITERAL_THROWS,"
+            + " IMPLEMENTS_CLAUSE, TYPE_ARGUMENT, LITERAL_NEW, DOT, ANNOTATION_FIELD_DEF,"
+            + " TYPE_ARGUMENT");
+        checkConfig.addAttribute("allowSamelineMultipleAnnotations", "false");
+        checkConfig.addAttribute("allowSamelineSingleParameterlessAnnotation", "false");
+        checkConfig.addAttribute("allowSamelineParameterizedAnnotation", "false");
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputAnnotationLocationDeprecatedAndCustom.java"), expected);
     }
 
 }

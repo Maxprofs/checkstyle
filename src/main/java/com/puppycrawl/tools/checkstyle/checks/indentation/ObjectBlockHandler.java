@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 /**
  * Handler for inner classes.
  *
- * @author jrichard
  */
 public class ObjectBlockHandler extends BlockParentHandler {
+
     /**
      * Construct an instance of this handler with the given indentation check,
      * abstract syntax tree, and parent handler.
@@ -42,17 +42,17 @@ public class ObjectBlockHandler extends BlockParentHandler {
     }
 
     @Override
-    protected DetailAST getToplevelAST() {
+    protected DetailAST getTopLevelAst() {
         return null;
     }
 
     @Override
-    protected DetailAST getLCurly() {
+    protected DetailAST getLeftCurly() {
         return getMainAst().findFirstToken(TokenTypes.LCURLY);
     }
 
     @Override
-    protected DetailAST getRCurly() {
+    protected DetailAST getRightCurly() {
         return getMainAst().findFirstToken(TokenTypes.RCURLY);
     }
 
@@ -62,14 +62,14 @@ public class ObjectBlockHandler extends BlockParentHandler {
     }
 
     @Override
-    protected IndentLevel getLevelImpl() {
+    protected IndentLevel getIndentImpl() {
         final DetailAST parentAST = getMainAst().getParent();
-        IndentLevel indent = getParent().getLevel();
+        IndentLevel indent = getParent().getIndent();
         if (parentAST.getType() == TokenTypes.LITERAL_NEW) {
-            indent.addAcceptedIndent(super.getLevelImpl());
+            indent.addAcceptedIndent(super.getIndentImpl());
         }
         else if (parentAST.getType() == TokenTypes.ENUM_CONSTANT_DEF) {
-            indent = super.getLevelImpl();
+            indent = super.getIndentImpl();
         }
         return indent;
     }
@@ -81,23 +81,16 @@ public class ObjectBlockHandler extends BlockParentHandler {
         // only do this if we have a new for a parent (anonymous inner
         // class)
         final DetailAST parentAST = getMainAst().getParent();
-        if (parentAST.getType() != TokenTypes.LITERAL_NEW) {
-            return;
+        if (parentAST.getType() == TokenTypes.LITERAL_NEW) {
+            super.checkIndentation();
         }
-
-        super.checkIndentation();
     }
 
     @Override
-    protected void checkRCurly() {
-        final DetailAST rcurly = getRCurly();
-        final int rcurlyPos = expandedTabsColumnNo(rcurly);
-        final IndentLevel level = curlyLevel();
-        level.addAcceptedIndent(level.getFirstIndentLevel() + getLineWrappingIndentation());
-
-        if (!level.accept(rcurlyPos) && startsLine(rcurly)) {
-            logError(rcurly, "rcurly", rcurlyPos, curlyLevel());
-        }
+    protected IndentLevel curlyIndent() {
+        final IndentLevel indent = super.curlyIndent();
+        indent.addAcceptedIndent(indent.getFirstIndentLevel() + getLineWrappingIndentation());
+        return indent;
     }
 
     /**
@@ -108,4 +101,5 @@ public class ObjectBlockHandler extends BlockParentHandler {
     private int getLineWrappingIndentation() {
         return getIndentCheck().getLineWrappingIndentation();
     }
+
 }

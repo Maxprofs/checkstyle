@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,15 +19,38 @@
 
 package com.puppycrawl.tools.checkstyle;
 
-import org.junit.Test;
+import java.util.Properties;
 
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class PropertiesExpanderTest {
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testCtorException()  throws CheckstyleException {
-        PropertiesExpander object = new PropertiesExpander(null);
+    @Test
+    public void testCtorException() {
+        try {
+            final Object test = new PropertiesExpander(null);
+            Assert.fail("exception expected but got " + test);
+        }
+        catch (IllegalArgumentException ex) {
+            Assert.assertEquals("Invalid exception message", "cannot pass null", ex.getMessage());
+        }
+    }
+
+    @Test
+    public void testDefaultProperties() {
+        final Properties properties = new Properties(System.getProperties());
+        properties.setProperty("test", "checkstyle");
+        Assert.assertEquals("Invalid user.home property",
+                System.getProperty("user.home"), properties.getProperty("user.home"));
+        Assert.assertEquals("Invalid checkstyle property",
+                "checkstyle", properties.getProperty("test"));
+
+        final PropertiesExpander expander = new PropertiesExpander(properties);
+        Assert.assertEquals("Invalid user.home property",
+                System.getProperty("user.home"), expander.resolve("user.home"));
+        Assert.assertEquals("Invalid checkstyle property",
+                "checkstyle", expander.resolve("test"));
     }
 
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,24 +20,25 @@
 package com.puppycrawl.tools.checkstyle.checks.coding;
 
 import antlr.collections.AST;
-
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * <p>Checks that string literals are not used with
- * {@code ==} or {@code &#33;=}.
+ * {@code ==} or <code>&#33;=</code>.
  * </p>
  * <p>
  * Rationale: Novice Java programmers often use code like
- * {@code if (x == &quot;something&quot;)} when they mean
- * {@code if (&quot;something&quot;.equals(x))}.
+ * {@code if (x == "something")} when they mean
+ * {@code if ("something".equals(x))}.
  * </p>
  *
- * @author Lars K&uuml;hne
+ * @noinspection HtmlTagCanBeJavadocTag
  */
-public class StringLiteralEqualityCheck extends Check {
+@StatelessCheck
+public class StringLiteralEqualityCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -47,11 +48,16 @@ public class StringLiteralEqualityCheck extends Check {
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {TokenTypes.EQUAL, TokenTypes.NOT_EQUAL};
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {TokenTypes.EQUAL, TokenTypes.NOT_EQUAL};
     }
 
@@ -63,8 +69,8 @@ public class StringLiteralEqualityCheck extends Check {
 
         if (firstChild.getType() == TokenTypes.STRING_LITERAL
                 || secondChild.getType() == TokenTypes.STRING_LITERAL) {
-            log(ast.getLineNo(), ast.getColumnNo(),
-                    MSG_KEY, ast.getText());
+            log(ast, MSG_KEY, ast.getText());
         }
     }
+
 }

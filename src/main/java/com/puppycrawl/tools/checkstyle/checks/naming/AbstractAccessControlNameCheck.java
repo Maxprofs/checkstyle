@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -33,8 +33,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * {@code "package"}, and {@code private}.
  * </p>
  *
- * <p>
- * Level is configured using the following properties:
+ * <p>Level is configured using the following properties:
  * <ol>
  * <li>applyToPublic, default true;</li>
  * <li>applyToProtected, default true;</li>
@@ -43,10 +42,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </ol>
  *
  *
- * @author Rick Giles
  */
 public abstract class AbstractAccessControlNameCheck
     extends AbstractNameCheck {
+
     /** If true, applies the check be public members. */
     private boolean applyToPublic = true;
 
@@ -71,7 +70,7 @@ public abstract class AbstractAccessControlNameCheck
 
     @Override
     protected boolean mustCheckName(DetailAST ast) {
-        return shouldCheckInScope(ast);
+        return shouldCheckInScope(ast.findFirstToken(TokenTypes.MODIFIERS));
     }
 
     /**
@@ -83,11 +82,11 @@ public abstract class AbstractAccessControlNameCheck
      */
     protected boolean shouldCheckInScope(DetailAST modifiers) {
         final boolean isPublic = modifiers
-                .branchContains(TokenTypes.LITERAL_PUBLIC);
+                .findFirstToken(TokenTypes.LITERAL_PUBLIC) != null;
         final boolean isProtected = modifiers
-                .branchContains(TokenTypes.LITERAL_PROTECTED);
+                .findFirstToken(TokenTypes.LITERAL_PROTECTED) != null;
         final boolean isPrivate = modifiers
-                .branchContains(TokenTypes.LITERAL_PRIVATE);
+                .findFirstToken(TokenTypes.LITERAL_PRIVATE) != null;
         final boolean isPackage = !(isPublic || isProtected || isPrivate);
 
         return applyToPublic && isPublic
@@ -131,4 +130,5 @@ public abstract class AbstractAccessControlNameCheck
     public void setApplyToPrivate(boolean applyTo) {
         applyToPrivate = applyTo;
     }
+
 }

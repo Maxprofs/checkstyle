@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,50 +20,65 @@
 package com.puppycrawl.tools.checkstyle.checks;
 
 import java.io.File;
+import java.util.regex.Pattern;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
  * Checks that the outer type name and the file name match.
- * @author Oliver Burn
- * @author maxvetrenko
  */
-public class OuterTypeFilenameCheck extends Check {
-    /** indicates whether the first token has been seen in the file. */
+@FileStatefulCheck
+public class OuterTypeFilenameCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties"
+     * file.
+     */
+    public static final String MSG_KEY = "type.file.mismatch";
+
+    /** Pattern matching any file extension with dot included. */
+    private static final Pattern FILE_EXTENSION_PATTERN = Pattern.compile("\\.[^.]*$");
+
+    /** Indicates whether the first token has been seen in the file. */
     private boolean seenFirstToken;
 
-    /** Current file name*/
+    /** Current file name. */
     private String fileName;
 
-    /** If file has public type*/
+    /** If file has public type. */
     private boolean hasPublic;
 
-    /** If first type has has same name as file*/
+    /** If first type has has same name as file. */
     private boolean validFirst;
 
-    /** Outer type with mismatched file name*/
+    /** Outer type with mismatched file name. */
     private DetailAST wrongType;
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF,
-            TokenTypes.ENUM_DEF, TokenTypes.ANNOTATION_DEF,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
-            TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF,
-            TokenTypes.ENUM_DEF, TokenTypes.ANNOTATION_DEF,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ANNOTATION_DEF,
         };
     }
 
     @Override
-    public void beginTree(DetailAST ast) {
+    public void beginTree(DetailAST rootAST) {
         fileName = getFileName();
         seenFirstToken = false;
         validFirst = false;
@@ -73,7 +88,6 @@ public class OuterTypeFilenameCheck extends Check {
 
     @Override
     public void visitToken(DetailAST ast) {
-        final String outerTypeName = ast.findFirstToken(TokenTypes.IDENT).getText();
         if (seenFirstToken) {
             final DetailAST modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
             if (modifiers.findFirstToken(TokenTypes.LITERAL_PUBLIC) != null
@@ -82,6 +96,7 @@ public class OuterTypeFilenameCheck extends Check {
             }
         }
         else {
+            final String outerTypeName = ast.findFirstToken(TokenTypes.IDENT).getText();
 
             if (fileName.equals(outerTypeName)) {
                 validFirst = true;
@@ -96,7 +111,7 @@ public class OuterTypeFilenameCheck extends Check {
     @Override
     public void finishTree(DetailAST rootAST) {
         if (!validFirst && !hasPublic && wrongType != null) {
-            log(wrongType.getLineNo(), "type.file.mismatch");
+            log(wrongType.getLineNo(), MSG_KEY);
         }
     }
 
@@ -105,9 +120,10 @@ public class OuterTypeFilenameCheck extends Check {
      * @return source file name.
      */
     private String getFileName() {
-        String fname = getFileContents().getFileName();
-        fname = fname.substring(fname.lastIndexOf(File.separatorChar) + 1);
-        fname = fname.replaceAll("\\.[^\\.]*$", "");
-        return fname;
+        String name = getFileContents().getFileName();
+        name = name.substring(name.lastIndexOf(File.separatorChar) + 1);
+        name = FILE_EXTENSION_PATTERN.matcher(name).replaceAll("");
+        return name;
     }
+
 }

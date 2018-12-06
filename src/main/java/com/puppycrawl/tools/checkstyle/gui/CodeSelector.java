@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,58 +20,52 @@
 package com.puppycrawl.tools.checkstyle.gui;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JTextArea;
 
-import com.google.common.collect.ImmutableList;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
 
 /**
  * Helper class to select a code.
  */
 public class CodeSelector {
-    /** DetailAST node*/
-    private final DetailAST ast;
-    /** editor */
+
+    /** Editor. */
     private final JTextArea editor;
-    /** mapping */
-    private final List<Integer> lines2position;
+    /** Presentation model. */
+    private final CodeSelectorPresentation pModel;
 
     /**
      * Constructor.
-     * @param ast ast node.
+     * @param node ast node.
      * @param editor text area editor.
      * @param lines2position list to map lines.
      */
-    public CodeSelector(final DetailAST ast, final JTextArea editor,
+    public CodeSelector(final Object node, final JTextArea editor,
                         final List<Integer> lines2position) {
-        this.ast = ast;
         this.editor = editor;
-        this.lines2position = ImmutableList.copyOf(lines2position);
+        if (node instanceof DetailAST) {
+            pModel = new CodeSelectorPresentation((DetailAST) node,
+                    new ArrayList<>(lines2position));
+        }
+        else {
+            pModel = new CodeSelectorPresentation((DetailNode) node,
+                    new ArrayList<>(lines2position));
+        }
     }
 
     /**
-     * Set a selection position from AST line and Column.
+     * Set selection.
      */
     public void select() {
-        final int start = lines2position.get(ast.getLineNo()) + ast.getColumnNo();
-        final int end = findLastPosition(ast);
-
+        pModel.findSelectionPositions();
         editor.setSelectedTextColor(Color.blue);
         editor.requestFocusInWindow();
-        editor.setSelectionStart(start);
-        editor.setSelectionEnd(end);
-        editor.transferFocusBackward();
+        editor.setCaretPosition(pModel.getSelectionStart());
+        editor.moveCaretPosition(pModel.getSelectionEnd());
     }
 
-    private int findLastPosition(final DetailAST astNode) {
-        if (astNode.getChildCount() == 0) {
-            return lines2position.get(astNode.getLineNo()) + astNode.getColumnNo()
-                + astNode.getText().length();
-        }
-        else {
-            return findLastPosition(astNode.getLastChild());
-        }
-    }
 }

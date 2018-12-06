@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,50 +22,133 @@ package com.puppycrawl.tools.checkstyle.checks.imports;
 import static com.puppycrawl.tools.checkstyle.checks.imports.IllegalImportCheck.MSG_KEY;
 import static org.junit.Assert.assertArrayEquals;
 
-import java.io.File;
-
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-public class IllegalImportCheckTest extends BaseCheckTestSupport {
+public class IllegalImportCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/imports/illegalimport";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final IllegalImportCheck checkObj = new IllegalImportCheck();
+        final int[] expected = {TokenTypes.IMPORT, TokenTypes.STATIC_IMPORT};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testWithSupplied()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalImportCheck.class);
+            createModuleConfig(IllegalImportCheck.class);
         checkConfig.addAttribute("illegalPkgs", "java.io");
         final String[] expected = {
             "9:1: " + getCheckMessage(MSG_KEY, "java.io.*"),
             "23:1: " + getCheckMessage(MSG_KEY, "java.io.File.listRoots"),
             "27:1: " + getCheckMessage(MSG_KEY, "java.io.File.createTempFile"),
         };
-        verify(checkConfig, getPath("imports" + File.separator + "InputIllegalImportCheck.java"),
-                expected);
+        verify(checkConfig, getPath("InputIllegalImportDefault.java"), expected);
     }
 
     @Test
     public void testWithDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(IllegalImportCheck.class);
+            createModuleConfig(IllegalImportCheck.class);
         final String[] expected = {
             "15:1: " + getCheckMessage(MSG_KEY, "sun.applet.*"),
             "28:1: " + getCheckMessage(MSG_KEY, "sun.*"),
         };
-        verify(checkConfig, getPath("imports" + File.separator + "InputIllegalImportCheck.java"),
-                expected);
+        verify(checkConfig, getPath("InputIllegalImportDefault.java"), expected);
     }
 
     @Test
     public void testGetAcceptableTokens() {
-        IllegalImportCheck testCheckObject =
+        final IllegalImportCheck testCheckObject =
                 new IllegalImportCheck();
-        int[] actual = testCheckObject.getAcceptableTokens();
-        int[] expected = new int[]{TokenTypes.IMPORT, TokenTypes.STATIC_IMPORT};
+        final int[] actual = testCheckObject.getAcceptableTokens();
+        final int[] expected = {TokenTypes.IMPORT, TokenTypes.STATIC_IMPORT};
 
-        assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
+
+    @Test
+    public void testIllegalClasses()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalImportCheck.class);
+        checkConfig.addAttribute("illegalClasses", "java.sql.Connection");
+        final String[] expected = {
+            "11:1: " + getCheckMessage(MSG_KEY, "java.sql.Connection"),
+            "15:1: " + getCheckMessage(MSG_KEY, "sun.applet.*"),
+            "28:1: " + getCheckMessage(MSG_KEY, "sun.*"),
+        };
+        verify(checkConfig, getPath("InputIllegalImportDefault.java"), expected);
+    }
+
+    @Test
+    public void testIllegalPackagesRegularExpression()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalImportCheck.class);
+        checkConfig.addAttribute("illegalPkgs", "java\\.util");
+        checkConfig.addAttribute("regexp", "true");
+        final String[] expected = {
+            "12:1: " + getCheckMessage(MSG_KEY, "java.util.List"),
+            "13:1: " + getCheckMessage(MSG_KEY, "java.util.List"),
+            "16:1: " + getCheckMessage(MSG_KEY, "java.util.Enumeration"),
+            "17:1: " + getCheckMessage(MSG_KEY, "java.util.Arrays"),
+            "34:1: " + getCheckMessage(MSG_KEY, "java.util.Date"),
+            "35:1: " + getCheckMessage(MSG_KEY, "java.util.Calendar"),
+            "36:1: " + getCheckMessage(MSG_KEY, "java.util.BitSet"),
+        };
+        verify(checkConfig, getPath("InputIllegalImportDefault.java"), expected);
+    }
+
+    @Test
+    public void testIllegalClassesRegularExpression()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalImportCheck.class);
+        checkConfig.addAttribute("illegalPkgs", "");
+        checkConfig.addAttribute("illegalClasses", "^java\\.util\\.(List|Arrays)");
+        checkConfig.addAttribute("regexp", "true");
+        final String[] expected = {
+            "12:1: " + getCheckMessage(MSG_KEY, "java.util.List"),
+            "13:1: " + getCheckMessage(MSG_KEY, "java.util.List"),
+            "17:1: " + getCheckMessage(MSG_KEY, "java.util.Arrays"),
+        };
+        verify(checkConfig, getPath("InputIllegalImportDefault.java"), expected);
+    }
+
+    @Test
+    public void testIllegalPackagesAndClassesRegularExpression()
+            throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(IllegalImportCheck.class);
+        checkConfig.addAttribute("illegalPkgs", "java\\.util");
+        checkConfig.addAttribute("illegalClasses",
+                "^com\\.puppycrawl\\.tools\\.checkstyle\\.Checker.*");
+        checkConfig.addAttribute("regexp", "true");
+        final String[] expected = {
+            "12:1: " + getCheckMessage(MSG_KEY, "java.util.List"),
+            "13:1: " + getCheckMessage(MSG_KEY, "java.util.List"),
+            "16:1: " + getCheckMessage(MSG_KEY, "java.util.Enumeration"),
+            "17:1: " + getCheckMessage(MSG_KEY, "java.util.Arrays"),
+            "34:1: " + getCheckMessage(MSG_KEY, "java.util.Date"),
+            "35:1: " + getCheckMessage(MSG_KEY, "java.util.Calendar"),
+            "36:1: " + getCheckMessage(MSG_KEY, "java.util.BitSet"),
+            "38:1: " + getCheckMessage(MSG_KEY, "com.puppycrawl.tools.checkstyle.Checker"),
+            "39:1: " + getCheckMessage(MSG_KEY, "com.puppycrawl.tools.checkstyle.CheckerTest"),
+        };
+        verify(checkConfig, getPath("InputIllegalImportDefault.java"), expected);
+    }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,8 +22,8 @@ package com.puppycrawl.tools.checkstyle.checks.coding;
 import java.util.Arrays;
 
 import antlr.collections.AST;
-
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -34,15 +34,15 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * </p>
  * <p>
  * Rationale: With the exception of {@code for} iterators, all assignments
- * should occur in their own toplevel statement to increase readability.
+ * should occur in their own top-level statement to increase readability.
  * With inner assignments like the above it is difficult to see all places
  * where a variable is set.
  * </p>
  *
- * @author lkuehne
  */
+@StatelessCheck
 public class InnerAssignmentCheck
-        extends Check {
+        extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -51,10 +51,10 @@ public class InnerAssignmentCheck
     public static final String MSG_KEY = "assignment.inner.avoid";
 
     /**
-     * list of allowed AST types from an assignement AST node
+     * List of allowed AST types from an assignment AST node
      * towards the root.
      */
-    private static final int[][] ALLOWED_ASSIGMENT_CONTEXT = {
+    private static final int[][] ALLOWED_ASSIGNMENT_CONTEXT = {
         {TokenTypes.EXPR, TokenTypes.SLIST},
         {TokenTypes.VARIABLE_DEF},
         {TokenTypes.EXPR, TokenTypes.ELIST, TokenTypes.FOR_INIT},
@@ -68,7 +68,7 @@ public class InnerAssignmentCheck
     };
 
     /**
-     * list of allowed AST types from an assignement AST node
+     * List of allowed AST types from an assignment AST node
      * towards the root.
      */
     private static final int[][] CONTROL_CONTEXT = {
@@ -80,10 +80,10 @@ public class InnerAssignmentCheck
     };
 
     /**
-     * list of allowed AST types from a comparison node (above an assignement)
+     * List of allowed AST types from a comparison node (above an assignment)
      * towards the root.
      */
-    private static final int[][] ALLOWED_ASSIGMENT_IN_COMPARISON_CONTEXT = {
+    private static final int[][] ALLOWED_ASSIGNMENT_IN_COMPARISON_CONTEXT = {
         {TokenTypes.EXPR, TokenTypes.LITERAL_WHILE, },
     };
 
@@ -105,24 +105,16 @@ public class InnerAssignmentCheck
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.ASSIGN,            // '='
-            TokenTypes.DIV_ASSIGN,        // "/="
-            TokenTypes.PLUS_ASSIGN,       // "+="
-            TokenTypes.MINUS_ASSIGN,      //"-="
-            TokenTypes.STAR_ASSIGN,       // "*="
-            TokenTypes.MOD_ASSIGN,        // "%="
-            TokenTypes.SR_ASSIGN,         // ">>="
-            TokenTypes.BSR_ASSIGN,        // ">>>="
-            TokenTypes.SL_ASSIGN,         // "<<="
-            TokenTypes.BXOR_ASSIGN,       // "^="
-            TokenTypes.BOR_ASSIGN,        // "|="
-            TokenTypes.BAND_ASSIGN,       // "&="
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
         return new int[] {
             TokenTypes.ASSIGN,            // '='
             TokenTypes.DIV_ASSIGN,        // "/="
@@ -141,19 +133,11 @@ public class InnerAssignmentCheck
 
     @Override
     public void visitToken(DetailAST ast) {
-        if (isInContext(ast, ALLOWED_ASSIGMENT_CONTEXT)) {
-            return;
+        if (!isInContext(ast, ALLOWED_ASSIGNMENT_CONTEXT)
+                && !isInNoBraceControlStatement(ast)
+                && !isInWhileIdiom(ast)) {
+            log(ast, MSG_KEY);
         }
-
-        if (isInNoBraceControlStatement(ast)) {
-            return;
-        }
-
-        if (isInWhileIdiom(ast)) {
-            return;
-        }
-
-        log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY);
     }
 
     /**
@@ -186,34 +170,37 @@ public class InnerAssignmentCheck
      * @return whether ast is in the body of a flow control statement
      */
     private static boolean isInNoBraceControlStatement(DetailAST ast) {
-        if (!isInContext(ast, CONTROL_CONTEXT)) {
-            return false;
+        boolean result = false;
+        if (isInContext(ast, CONTROL_CONTEXT)) {
+            final DetailAST expr = ast.getParent();
+            final AST exprNext = expr.getNextSibling();
+            result = exprNext.getType() == TokenTypes.SEMI;
         }
-        final DetailAST expr = ast.getParent();
-        final AST exprNext = expr.getNextSibling();
-        return exprNext.getType() == TokenTypes.SEMI;
+        return result;
     }
 
     /**
-     * Tests whether the given AST is used in the "assignment in while test"
-     * idiom.
-     * <p>
+     * Tests whether the given AST is used in the "assignment in while" idiom.
      * <pre>
-     * while ((b = is.read()) != -1) {
-     *   // work with b
+     * String line;
+     * while ((line = bufferedReader.readLine()) != null) {
+     *    // process the line
      * }
      * </pre>
-     * </p>
+     * Assignment inside a condition is not a problem here, as the assignment is surrounded by an
+     * extra pair of parentheses. The comparison is {@code != null} and there is no chance that
+     * intention was to write {@code line == reader.readLine()}.
      *
      * @param ast assignment AST
-     * @return whether the context of the assignemt AST indicates the idiom
+     * @return whether the context of the assignment AST indicates the idiom
      */
     private static boolean isInWhileIdiom(DetailAST ast) {
-        if (!isComparison(ast.getParent())) {
-            return false;
+        boolean result = false;
+        if (isComparison(ast.getParent())) {
+            result = isInContext(
+                    ast.getParent(), ALLOWED_ASSIGNMENT_IN_COMPARISON_CONTEXT);
         }
-        return isInContext(
-                ast.getParent(), ALLOWED_ASSIGMENT_IN_COMPARISON_CONTEXT);
+        return result;
     }
 
     /**
@@ -233,8 +220,7 @@ public class InnerAssignmentCheck
      * @param ast the AST from which to start walking towards root
      * @param contextSet the contexts to test against.
      *
-     * @return whether the parents nodes of ast match
-     * one of the allowed type paths
+     * @return whether the parents nodes of ast match one of the allowed type paths.
      */
     private static boolean isInContext(DetailAST ast, int[]... contextSet) {
         boolean found = false;
@@ -242,8 +228,7 @@ public class InnerAssignmentCheck
             DetailAST current = ast;
             for (int anElement : element) {
                 current = current.getParent();
-                final int expectedType = anElement;
-                if (current.getType() == expectedType) {
+                if (current.getType() == anElement) {
                     found = true;
                 }
                 else {
@@ -258,4 +243,5 @@ public class InnerAssignmentCheck
         }
         return found;
     }
+
 }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,39 +23,50 @@ import static com.puppycrawl.tools.checkstyle.checks.whitespace.NoLineWrapCheck.
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 public class NoLineWrapCheckTest
-    extends BaseCheckTestSupport {
+    extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/whitespace/nolinewrap";
+    }
+
     @Test
     public void testCaseWithoutLineWrapping() throws Exception {
-        final DefaultConfiguration checkConfig = createCheckConfig(NoLineWrapCheck.class);
-        final String[] expected = {};
-        verify(checkConfig, getPath("whitespace/NoLineWrapGoodInput.java"), expected);
+        final DefaultConfiguration checkConfig = createModuleConfig(NoLineWrapCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputNoLineWrapGood.java"), expected);
     }
 
     @Test
     public void testDefaultTokensLineWrapping() throws Exception {
-        final DefaultConfiguration checkConfig = createCheckConfig(NoLineWrapCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(NoLineWrapCheck.class);
         final String[] expected = {
             "1: " + getCheckMessage(MSG_KEY, "package"),
             "6: " + getCheckMessage(MSG_KEY, "import"),
+            "10: " + getCheckMessage(MSG_KEY, "import"),
         };
-        verify(checkConfig, getPath("whitespace/NoLineWrapBadInput.java"), expected);
+        verify(checkConfig, getPath("InputNoLineWrapBad.java"), expected);
     }
 
     @Test
     public void testCustomTokensLineWrapping()
-        throws Exception {
-        final DefaultConfiguration checkConfig = createCheckConfig(NoLineWrapCheck.class);
-        checkConfig.addAttribute("tokens", "IMPORT, CLASS_DEF, METHOD_DEF, ENUM_DEF");
+            throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(NoLineWrapCheck.class);
+        checkConfig.addAttribute(
+                "tokens", "IMPORT, STATIC_IMPORT, CLASS_DEF, METHOD_DEF, ENUM_DEF");
         final String[] expected = {
             "6: " + getCheckMessage(MSG_KEY, "import"),
-            "10: " + getCheckMessage(MSG_KEY, "CLASS_DEF"),
-            "13: " + getCheckMessage(MSG_KEY, "METHOD_DEF"),
-            "20: " + getCheckMessage(MSG_KEY, "ENUM_DEF"),
+            "10: " + getCheckMessage(MSG_KEY, "import"),
+            "13: " + getCheckMessage(MSG_KEY, "CLASS_DEF"),
+            "16: " + getCheckMessage(MSG_KEY, "METHOD_DEF"),
+            "23: " + getCheckMessage(MSG_KEY, "ENUM_DEF"),
         };
-        verify(checkConfig, getPath("whitespace/NoLineWrapBadInput.java"), expected);
+        verify(checkConfig, getPath("InputNoLineWrapBad.java"), expected);
     }
+
 }

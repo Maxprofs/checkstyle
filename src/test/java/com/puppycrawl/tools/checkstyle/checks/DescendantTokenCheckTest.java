@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,97 +24,102 @@ import static com.puppycrawl.tools.checkstyle.checks.DescendantTokenCheck.MSG_KE
 import static com.puppycrawl.tools.checkstyle.checks.DescendantTokenCheck.MSG_KEY_SUM_MAX;
 import static com.puppycrawl.tools.checkstyle.checks.DescendantTokenCheck.MSG_KEY_SUM_MIN;
 
-import java.io.File;
-
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
-public class DescendantTokenCheckTest extends BaseCheckTestSupport {
+public class DescendantTokenCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/descendanttoken";
+    }
+
     @Test
     public void testDefault()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
-        final String[] expected = {};
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+            createModuleConfig(DescendantTokenCheck.class);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testMaximumNumber()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_NATIVE");
         checkConfig.addAttribute("limitedTokens", "LITERAL_NATIVE");
         checkConfig.addAttribute("maximumNumber", "0");
         final String[] expected = {
-            "20:12: " + getCheckMessage(MSG_KEY_MAX, 1, 0, "LITERAL_NATIVE", "LITERAL_NATIVE"),
+            "17:12: " + getCheckMessage(MSG_KEY_MAX, 1, 0, "LITERAL_NATIVE", "LITERAL_NATIVE"),
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testMessage()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_NATIVE");
         checkConfig.addAttribute("limitedTokens", "LITERAL_NATIVE");
         checkConfig.addAttribute("maximumNumber", "0");
         checkConfig.addAttribute("maximumMessage", "Using ''native'' is not allowed.");
         final String[] expected = {
-            "20:12: Using 'native' is not allowed.",
+            "17:12: Using 'native' is not allowed.",
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testMinimumNumber()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_SWITCH");
         checkConfig.addAttribute("limitedTokens", "LITERAL_DEFAULT");
         checkConfig.addAttribute("minimumNumber", "2");
         final String[] expected = {
-            "11:9: " + getCheckMessage(MSG_KEY_MIN, 1, 2, "LITERAL_SWITCH", "LITERAL_DEFAULT"),
+            "8:9: " + getCheckMessage(MSG_KEY_MIN, 1, 2, "LITERAL_SWITCH", "LITERAL_DEFAULT"),
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testMinimumDepth()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_SWITCH");
         checkConfig.addAttribute("limitedTokens", "LITERAL_DEFAULT");
         checkConfig.addAttribute("maximumNumber", "0");
         checkConfig.addAttribute("minimumDepth", "3");
-        final String[] expected = {};
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testMaximumDepth()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_SWITCH");
         checkConfig.addAttribute("limitedTokens", "LITERAL_DEFAULT");
         checkConfig.addAttribute("maximumNumber", "0");
         checkConfig.addAttribute("maximumDepth", "1");
-        final String[] expected = {};
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testEmptyStatements()
-        throws Exception {
+            throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "EMPTY_STAT");
         checkConfig.addAttribute("limitedTokens", "EMPTY_STAT");
         checkConfig.addAttribute("maximumNumber", "0");
@@ -122,31 +127,31 @@ public class DescendantTokenCheckTest extends BaseCheckTestSupport {
         checkConfig.addAttribute("maximumMessage", "Empty statement.");
 
         final String[] expected = {
+            "7:7: Empty statement.",
             "12:7: Empty statement.",
-            "17:7: Empty statement.",
-            "22:19: Empty statement.",
-            "26:10: Empty statement.",
-            "29:16: Empty statement.",
-            "33:10: Empty statement.",
-            "43:10: Empty statement.",
-            "49:13: Empty statement.",
-            "51:13: Empty statement.",
-            "54:19: Empty statement.",
-            "58:10: Empty statement.",
-            "61:9: Empty statement.",
-            "66:10: Empty statement.",
-            "72:10: Empty statement.",
-            "76:10: Empty statement.",
-            "80:10: Empty statement.",
+            "17:19: Empty statement.",
+            "21:10: Empty statement.",
+            "24:16: Empty statement.",
+            "28:10: Empty statement.",
+            "38:10: Empty statement.",
+            "44:13: Empty statement.",
+            "46:13: Empty statement.",
+            "49:19: Empty statement.",
+            "53:10: Empty statement.",
+            "56:9: Empty statement.",
+            "61:10: Empty statement.",
+            "67:10: Empty statement.",
+            "71:10: Empty statement.",
+            "75:10: Empty statement.",
         };
 
-        verify(checkConfig, getPath("InputEmptyStatement.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenEmptyStatement.java"), expected);
     }
 
     @Test
     public void testMissingSwitchDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_SWITCH");
         checkConfig.addAttribute("limitedTokens", "LITERAL_DEFAULT");
         checkConfig.addAttribute("minimumNumber", "1");
@@ -157,31 +162,32 @@ public class DescendantTokenCheckTest extends BaseCheckTestSupport {
             "17:9: switch without \"default\" clause.",
         };
 
-        verify(checkConfig, getPath("InputMissingSwitchDefault.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenMissingSwitchDefault.java"), expected);
     }
 
     @Test
     public void testStringLiteralEquality() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "EQUAL,NOT_EQUAL");
         checkConfig.addAttribute("limitedTokens", "STRING_LITERAL");
         checkConfig.addAttribute("maximumNumber", "0");
         checkConfig.addAttribute("maximumDepth", "1");
-        checkConfig.addAttribute("maximumMessage", "Literal Strings should be compared using equals(), not ''==''.");
+        checkConfig.addAttribute("maximumMessage",
+            "Literal Strings should be compared using equals(), not ''==''.");
 
         final String[] expected = {
-            "11:18: Literal Strings should be compared using equals(), not '=='.",
-            "16:20: Literal Strings should be compared using equals(), not '=='.",
-            "21:22: Literal Strings should be compared using equals(), not '=='.",
+            "7:18: Literal Strings should be compared using equals(), not '=='.",
+            "12:20: Literal Strings should be compared using equals(), not '=='.",
+            "17:22: Literal Strings should be compared using equals(), not '=='.",
         };
-        verify(checkConfig, getPath("coding" + File.separator + "InputStringLiteralEquality.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenStringLiteralEquality.java"), expected);
     }
 
     @Test
     public void testIllegalTokenDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_SWITCH, POST_INC, POST_DEC");
         checkConfig.addAttribute("limitedTokens", "LITERAL_SWITCH, POST_INC, POST_DEC");
         checkConfig.addAttribute("maximumNumber", "0");
@@ -189,17 +195,17 @@ public class DescendantTokenCheckTest extends BaseCheckTestSupport {
         checkConfig.addAttribute("maximumMessage", "Using ''{2}'' is not allowed.");
 
         final String[] expected = {
-            "11:9: Using 'LITERAL_SWITCH' is not allowed.",
-            "14:18: Using 'POST_DEC' is not allowed.",
-            "15:18: Using 'POST_INC' is not allowed.",
+            "8:9: Using 'LITERAL_SWITCH' is not allowed.",
+            "11:18: Using 'POST_DEC' is not allowed.",
+            "12:18: Using 'POST_INC' is not allowed.",
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testIllegalTokenNative() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(DescendantTokenCheck.class);
+            createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "LITERAL_NATIVE");
         checkConfig.addAttribute("limitedTokens", "LITERAL_NATIVE");
         checkConfig.addAttribute("maximumNumber", "0");
@@ -207,69 +213,62 @@ public class DescendantTokenCheckTest extends BaseCheckTestSupport {
         checkConfig.addAttribute("maximumMessage", "Using ''{2}'' is not allowed.");
 
         final String[] expected = {
-            "20:12: Using 'LITERAL_NATIVE' is not allowed.",
+            "17:12: Using 'LITERAL_NATIVE' is not allowed.",
         };
-        verify(checkConfig, getPath("InputIllegalTokens.java"), expected);
+        verify(checkConfig, getPath("InputDescendantTokenIllegalTokens.java"), expected);
     }
 
     @Test
     public void testReturnFromCatch() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
 
         checkConfig.addAttribute("tokens", "LITERAL_CATCH");
         checkConfig.addAttribute("limitedTokens", "LITERAL_RETURN");
         checkConfig.addAttribute("maximumNumber", "0");
         checkConfig.addAttribute("maximumMessage", "Return from catch is not allowed.");
 
-        String[] expected = {
+        final String[] expected = {
             "7:11: Return from catch is not allowed.",
             "15:11: Return from catch is not allowed.",
         };
 
-        verify(checkConfig,
-               getPath("coding" + File.separator + "InputReturnFromCatchCheck.java"),
-               expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromCatch.java"), expected);
     }
 
     @Test
     public void testReturnFromFinally() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
 
         checkConfig.addAttribute("tokens", "LITERAL_FINALLY");
         checkConfig.addAttribute("limitedTokens", "LITERAL_RETURN");
         checkConfig.addAttribute("maximumNumber", "0");
         checkConfig.addAttribute("maximumMessage", "Return from finally is not allowed.");
 
-        String[] expected = {
+        final String[] expected = {
             "7:11: Return from finally is not allowed.",
             "15:11: Return from finally is not allowed.",
         };
 
-        verify(checkConfig,
-               getPath("coding" + File.separator + "InputReturnFromFinallyCheck.java"),
-               expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromFinally.java"), expected);
     }
 
     @Test
     public void testNoSum() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
 
         checkConfig.addAttribute("tokens", "NOT_EQUAL,EQUAL");
         checkConfig.addAttribute("limitedTokens", "LITERAL_THIS,LITERAL_NULL");
         checkConfig.addAttribute("maximumNumber", "1");
         checkConfig.addAttribute("maximumMessage", "What are you doing?");
 
-        String[] expected = {
-        };
+        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
 
-        verify(checkConfig,
-               getPath("coding" + File.separator + "InputReturnFromFinallyCheck.java"),
-               expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromFinally.java"), expected);
     }
 
     @Test
     public void testWithSumCustomMsg() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "NOT_EQUAL,EQUAL");
         checkConfig.addAttribute("limitedTokens", "LITERAL_THIS,LITERAL_NULL");
         checkConfig.addAttribute("maximumNumber", "1");
@@ -277,83 +276,106 @@ public class DescendantTokenCheckTest extends BaseCheckTestSupport {
         checkConfig.addAttribute("maximumMessage", "this cannot be null.");
         checkConfig.addAttribute("sumTokenCounts", "true");
 
-        String[] expected = {
+        final String[] expected = {
             "22:32: this cannot be null.",
             "22:50: this cannot be null.",
             "23:33: this cannot be null.",
             "23:51: this cannot be null.",
         };
 
-        verify(checkConfig,
-               getPath("coding" + File.separator + "InputReturnFromFinallyCheck.java"),
-               expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromFinally.java"), expected);
     }
 
     @Test
     public void testWithSumDefaultMsg() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "NOT_EQUAL,EQUAL");
         checkConfig.addAttribute("limitedTokens", "LITERAL_THIS,LITERAL_NULL");
         checkConfig.addAttribute("maximumNumber", "1");
         checkConfig.addAttribute("maximumDepth", "1");
         checkConfig.addAttribute("sumTokenCounts", "true");
 
-        String[] expected = {
+        final String[] expected = {
             "22:32: " + getCheckMessage(MSG_KEY_SUM_MAX, 2, 1, "EQUAL"),
             "22:50: " + getCheckMessage(MSG_KEY_SUM_MAX, 2, 1, "EQUAL"),
             "23:33: " + getCheckMessage(MSG_KEY_SUM_MAX, 2, 1, "NOT_EQUAL"),
             "23:51: " + getCheckMessage(MSG_KEY_SUM_MAX, 2, 1, "NOT_EQUAL"),
         };
 
-        verify(checkConfig,
-               getPath("coding" + File.separator + "InputReturnFromFinallyCheck.java"),
-               expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromFinally.java"), expected);
     }
 
     @Test
     public void testWithSumLessThenMinDefMsg() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "NOT_EQUAL,EQUAL");
         checkConfig.addAttribute("limitedTokens", "LITERAL_THIS,LITERAL_NULL");
         checkConfig.addAttribute("minimumNumber", "3");
         checkConfig.addAttribute("sumTokenCounts", "true");
 
-        String[] expected = {
+        final String[] expected = {
             "16:44: " + getCheckMessage(MSG_KEY_SUM_MIN, 0, 3, "EQUAL"),
             "22:32: " + getCheckMessage(MSG_KEY_SUM_MIN, 2, 3, "EQUAL"),
             "22:50: " + getCheckMessage(MSG_KEY_SUM_MIN, 2, 3, "EQUAL"),
             "23:33: " + getCheckMessage(MSG_KEY_SUM_MIN, 2, 3, "NOT_EQUAL"),
             "23:51: " + getCheckMessage(MSG_KEY_SUM_MIN, 2, 3, "NOT_EQUAL"),
-            "24:54: " + getCheckMessage(MSG_KEY_SUM_MIN, 2, 3, "EQUAL"),
-            "24:77: " + getCheckMessage(MSG_KEY_SUM_MIN, 1, 3, "EQUAL"),
+            "25:13: " + getCheckMessage(MSG_KEY_SUM_MIN, 2, 3, "EQUAL"),
+            "25:36: " + getCheckMessage(MSG_KEY_SUM_MIN, 1, 3, "EQUAL"),
         };
 
-        verify(checkConfig,
-                getPath("coding" + File.separator + "InputReturnFromFinallyCheck.java"),
-                expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromFinally.java"), expected);
     }
 
     @Test
-    public void testWithSumLessThenMinCustMsg() throws Exception {
-        DefaultConfiguration checkConfig = createCheckConfig(DescendantTokenCheck.class);
+    public void testWithSumLessThenMinCustomMsg() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(DescendantTokenCheck.class);
         checkConfig.addAttribute("tokens", "NOT_EQUAL,EQUAL");
         checkConfig.addAttribute("limitedTokens", "LITERAL_THIS,LITERAL_NULL");
         checkConfig.addAttribute("minimumNumber", "3");
         checkConfig.addAttribute("sumTokenCounts", "true");
         checkConfig.addAttribute("minimumMessage", "custom message");
 
-        String[] expected = {
+        final String[] expected = {
             "16:44: custom message",
             "22:32: custom message",
             "22:50: custom message",
             "23:33: custom message",
             "23:51: custom message",
-            "24:54: custom message",
-            "24:77: custom message",
+            "25:13: custom message",
+            "25:36: custom message",
         };
 
-        verify(checkConfig,
-                getPath("coding" + File.separator + "InputReturnFromFinallyCheck.java"),
-                expected);
+        verify(checkConfig, getPath("InputDescendantTokenReturnFromFinally.java"), expected);
     }
+
+    @Test
+    public void testMaxTokenType() throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(DescendantTokenCheck.class);
+        checkConfig.addAttribute("tokens", "OBJBLOCK");
+        checkConfig.addAttribute("limitedTokens", "LCURLY,RCURLY");
+        checkConfig.addAttribute("maximumNumber", "0");
+        checkConfig.addAttribute("maximumDepth", "2");
+        final String[] expected = {
+            "6:48: " + getCheckMessage(MSG_KEY_MAX, 1, 0, "OBJBLOCK", "LCURLY"),
+            "6:48: " + getCheckMessage(MSG_KEY_MAX, 1, 0, "OBJBLOCK", "RCURLY"),
+        };
+        verify(checkConfig, getPath("InputDescendantTokenLastTokenType.java"), expected);
+    }
+
+    @Test
+    public void testMaxTokenTypeReverseOrder() throws Exception {
+        final DefaultConfiguration checkConfig =
+                createModuleConfig(DescendantTokenCheck.class);
+        checkConfig.addAttribute("tokens", "OBJBLOCK");
+        checkConfig.addAttribute("limitedTokens", "RCURLY,LCURLY");
+        checkConfig.addAttribute("maximumNumber", "0");
+        checkConfig.addAttribute("maximumDepth", "2");
+        final String[] expected = {
+            "6:48: " + getCheckMessage(MSG_KEY_MAX, 1, 0, "OBJBLOCK", "LCURLY"),
+            "6:48: " + getCheckMessage(MSG_KEY_MAX, 1, 0, "OBJBLOCK", "RCURLY"),
+        };
+        verify(checkConfig, getPath("InputDescendantTokenLastTokenType.java"), expected);
+    }
+
 }

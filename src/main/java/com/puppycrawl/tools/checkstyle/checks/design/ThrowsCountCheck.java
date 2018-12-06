@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,8 @@
 
 package com.puppycrawl.tools.checkstyle.checks.design;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -50,9 +51,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
  * <b>ignorePrivateMethods</b> - allows to skip private methods as they do
  * not cause problems for other classes.
  * </p>
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
  */
-public final class ThrowsCountCheck extends Check {
+@StatelessCheck
+public final class ThrowsCountCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -60,45 +61,35 @@ public final class ThrowsCountCheck extends Check {
      */
     public static final String MSG_KEY = "throws.count";
 
-    /** default value of max property */
+    /** Default value of max property. */
     private static final int DEFAULT_MAX = 4;
 
-    /** whether private methods must be ignored **/
+    /** Whether private methods must be ignored. **/
     private boolean ignorePrivateMethods = true;
 
-    /** maximum allowed throws statements */
+    /** Maximum allowed throws statements. */
     private int max;
 
     /** Creates new instance of the check. */
     public ThrowsCountCheck() {
-        setMax(DEFAULT_MAX);
+        max = DEFAULT_MAX;
     }
 
     @Override
     public int[] getDefaultTokens() {
-        return new int[] {
-            TokenTypes.LITERAL_THROWS,
-        };
+        return getRequiredTokens();
     }
 
     @Override
     public int[] getRequiredTokens() {
-        return getDefaultTokens();
-    }
-
-    @Override
-    public int[] getAcceptableTokens() {
         return new int[] {
             TokenTypes.LITERAL_THROWS,
         };
     }
 
-    /**
-     * Getter for max property.
-     * @return maximum allowed throws statements.
-     */
-    public int getMax() {
-        return max;
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
     }
 
     /**
@@ -136,9 +127,8 @@ public final class ThrowsCountCheck extends Check {
                 && !isOverriding(ast)) {
             // Account for all the commas!
             final int count = (ast.getChildCount() + 1) / 2;
-            if (count > getMax()) {
-                log(ast.getLineNo(),  ast.getColumnNo(), MSG_KEY,
-                    count, getMax());
+            if (count > max) {
+                log(ast, MSG_KEY, count, max);
             }
         }
     }
@@ -151,12 +141,13 @@ public final class ThrowsCountCheck extends Check {
     private static boolean isOverriding(DetailAST ast) {
         final DetailAST modifiers = ast.getParent().findFirstToken(TokenTypes.MODIFIERS);
         boolean isOverriding = false;
-        if (modifiers.branchContains(TokenTypes.ANNOTATION)) {
+        if (modifiers.findFirstToken(TokenTypes.ANNOTATION) != null) {
             DetailAST child = modifiers.getFirstChild();
             while (child != null) {
                 if (child.getType() == TokenTypes.ANNOTATION
                         && "Override".equals(getAnnotationName(child))) {
                     isOverriding = true;
+                    break;
                 }
                 child = child.getNextSibling();
             }
@@ -171,12 +162,12 @@ public final class ThrowsCountCheck extends Check {
      */
     private static String getAnnotationName(DetailAST annotation) {
         final DetailAST dotAst = annotation.findFirstToken(TokenTypes.DOT);
-        String name;
-        if (dotAst != null) {
-            name = dotAst.findFirstToken(TokenTypes.IDENT).getText();
+        final String name;
+        if (dotAst == null) {
+            name = annotation.findFirstToken(TokenTypes.IDENT).getText();
         }
         else {
-            name = annotation.findFirstToken(TokenTypes.IDENT).getText();
+            name = dotAst.findFirstToken(TokenTypes.IDENT).getText();
         }
         return name;
     }
@@ -190,4 +181,5 @@ public final class ThrowsCountCheck extends Check {
         final DetailAST methodModifiers = ast.getParent().findFirstToken(TokenTypes.MODIFIERS);
         return methodModifiers.findFirstToken(TokenTypes.LITERAL_PRIVATE) != null;
     }
+
 }

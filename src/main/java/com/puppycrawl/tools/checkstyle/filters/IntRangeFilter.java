@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -23,13 +23,13 @@ import java.util.Objects;
 
 /**
  * This filter accepts an Integer in a range.
- * @author Rick Giles
  */
 class IntRangeFilter implements IntFilter {
-    /** lower bound of the range */
+
+    /** Lower bound of the range. */
     private final Integer lowerBound;
 
-    /** upper bound of the range */
+    /** Upper bound of the range. */
     private final Integer upperBound;
 
     /**
@@ -38,7 +38,7 @@ class IntRangeFilter implements IntFilter {
      * @param lowerBound the lower bound of the range.
      * @param upperBound the upper bound of the range.
      */
-    public IntRangeFilter(int lowerBound, int upperBound) {
+    IntRangeFilter(int lowerBound, int upperBound) {
         this.lowerBound = lowerBound;
         this.upperBound = upperBound;
     }
@@ -55,15 +55,16 @@ class IntRangeFilter implements IntFilter {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object other) {
+        if (this == other) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (other == null || getClass() != other.getClass()) {
             return false;
         }
-        final IntRangeFilter intRangeFilter = (IntRangeFilter) o;
+        final IntRangeFilter intRangeFilter = (IntRangeFilter) other;
         return Objects.equals(lowerBound, intRangeFilter.lowerBound)
                 && Objects.equals(upperBound, intRangeFilter.upperBound);
     }
+
 }

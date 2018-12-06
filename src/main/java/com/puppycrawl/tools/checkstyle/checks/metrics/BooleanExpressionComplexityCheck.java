@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,10 +22,11 @@ package com.puppycrawl.tools.checkstyle.checks.metrics;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.puppycrawl.tools.checkstyle.api.Check;
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
 
 /**
  * Restricts nested boolean operators (&amp;&amp;, ||, &amp;, | and ^) to
@@ -34,10 +35,9 @@ import com.puppycrawl.tools.checkstyle.checks.CheckUtils;
  * method call because they can be applied to non boolean variables and
  * Checkstyle does not know types of methods from different classes.
  *
- * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
- * @author o_sukhodolsky
  */
-public final class BooleanExpressionComplexityCheck extends Check {
+@FileStatefulCheck
+public final class BooleanExpressionComplexityCheck extends AbstractCheck {
 
     /**
      * A key is pointing to the warning message text in "messages.properties"
@@ -57,7 +57,7 @@ public final class BooleanExpressionComplexityCheck extends Check {
 
     /** Creates new instance of the check. */
     public BooleanExpressionComplexityCheck() {
-        setMax(DEFAULT_MAX);
+        max = DEFAULT_MAX;
     }
 
     @Override
@@ -95,14 +95,6 @@ public final class BooleanExpressionComplexityCheck extends Check {
             TokenTypes.BOR,
             TokenTypes.BXOR,
         };
-    }
-
-    /**
-     * Getter for maximum allowed complexity.
-     * @return value of maximum allowed complexity.
-     */
-    public int getMax() {
-        return max;
     }
 
     /**
@@ -156,7 +148,7 @@ public final class BooleanExpressionComplexityCheck extends Check {
     /**
      * Checks if {@link TokenTypes#BOR binary OR} is applied to exceptions
      * in
-     * <a href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-14.html#jls-14.20">
+     * <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-14.html#jls-14.20">
      * multi-catch</a> (pipe-syntax).
      * @param binaryOr {@link TokenTypes#BOR binary or}
      * @return true if binary or is applied to exceptions in multi-catch.
@@ -186,7 +178,7 @@ public final class BooleanExpressionComplexityCheck extends Check {
      */
     private void visitMethodDef(DetailAST ast) {
         contextStack.push(context);
-        final boolean check = !CheckUtils.isEqualsMethod(ast);
+        final boolean check = !CheckUtil.isEqualsMethod(ast);
         context = new Context(check);
     }
 
@@ -213,10 +205,9 @@ public final class BooleanExpressionComplexityCheck extends Check {
     /**
      * Represents context (method/expression) in which we check complexity.
      *
-     * @author <a href="mailto:simon@redhillconsulting.com.au">Simon Harris</a>
-     * @author o_sukhodolsky
      */
     private class Context {
+
         /**
          * Should we perform check in current context or not.
          * Usually false if we are inside equals() method.
@@ -229,7 +220,7 @@ public final class BooleanExpressionComplexityCheck extends Check {
          * Creates new instance.
          * @param checking should we check in current context or not.
          */
-        public Context(boolean checking) {
+        Context(boolean checking) {
             this.checking = checking;
             count = 0;
         }
@@ -252,12 +243,13 @@ public final class BooleanExpressionComplexityCheck extends Check {
          * @param ast a node we check now.
          */
         public void checkCount(DetailAST ast) {
-            if (checking && count > getMax()) {
+            if (checking && count > max) {
                 final DetailAST parentAST = ast.getParent();
 
-                log(parentAST.getLineNo(), parentAST.getColumnNo(),
-                    MSG_KEY, count, getMax());
+                log(parentAST, MSG_KEY, count, max);
             }
         }
+
     }
+
 }

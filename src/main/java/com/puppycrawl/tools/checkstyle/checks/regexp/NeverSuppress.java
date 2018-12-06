@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -22,11 +22,11 @@ package com.puppycrawl.tools.checkstyle.checks.regexp;
 /**
  * An implementation of {@link MatchSuppressor} that never suppresses a
  * match.
- * @author oliver
  */
 public final class NeverSuppress implements MatchSuppressor {
+
     /** The shared instance. */
-    static final MatchSuppressor INSTANCE = new NeverSuppress();
+    public static final MatchSuppressor INSTANCE = new NeverSuppress();
 
     /** Stop creation of instances. */
     private NeverSuppress() {
@@ -37,4 +37,5 @@ public final class NeverSuppress implements MatchSuppressor {
             int endLineNo, int endColNo) {
         return false;
     }
+
 }

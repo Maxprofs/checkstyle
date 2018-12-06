@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // checkstyle: Checks Java source code for adherence to a set of rules.
-// Copyright (C) 2001-2015 the original author or authors.
+// Copyright (C) 2001-2018 the original author or authors.
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -24,29 +24,42 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.Test;
 
-import com.puppycrawl.tools.checkstyle.BaseCheckTestSupport;
+import com.puppycrawl.tools.checkstyle.AbstractModuleTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 /**
- * @author Rob Worth
- * @author Lars Kühne
+ * Unit test for AnonInnerLengthCheck.
  */
-public class AnonInnerLengthCheckTest extends BaseCheckTestSupport {
+public class AnonInnerLengthCheckTest extends AbstractModuleTestSupport {
+
+    @Override
+    protected String getPackageLocation() {
+        return "com/puppycrawl/tools/checkstyle/checks/sizes/anoninnerlength";
+    }
+
+    @Test
+    public void testGetRequiredTokens() {
+        final AnonInnerLengthCheck checkObj = new AnonInnerLengthCheck();
+        final int[] expected = {TokenTypes.LITERAL_NEW};
+        assertArrayEquals("Default required tokens are invalid",
+            expected, checkObj.getRequiredTokens());
+    }
+
     @Test
     public void testGetAcceptableTokens() {
-        AnonInnerLengthCheck anonInnerLengthCheckObj =
+        final AnonInnerLengthCheck anonInnerLengthCheckObj =
                 new AnonInnerLengthCheck();
-        int[] actual = anonInnerLengthCheckObj.getAcceptableTokens();
-        int[] expected = new int[]{TokenTypes.LITERAL_NEW};
+        final int[] actual = anonInnerLengthCheckObj.getAcceptableTokens();
+        final int[] expected = {TokenTypes.LITERAL_NEW};
 
-        assertArrayEquals(expected, actual);
+        assertArrayEquals("Default acceptable tokens are invalid", expected, actual);
     }
 
     @Test
     public void testDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(AnonInnerLengthCheck.class);
+            createModuleConfig(AnonInnerLengthCheck.class);
         final String[] expected = {
             "50:35: " + getCheckMessage(MSG_KEY, 21, 20),
         };
@@ -56,7 +69,7 @@ public class AnonInnerLengthCheckTest extends BaseCheckTestSupport {
     @Test
     public void testNonDefault() throws Exception {
         final DefaultConfiguration checkConfig =
-            createCheckConfig(AnonInnerLengthCheck.class);
+            createModuleConfig(AnonInnerLengthCheck.class);
         checkConfig.addAttribute("max", "6");
         final String[] expected = {
             "50:35: " + getCheckMessage(MSG_KEY, 21, 6),
@@ -64,4 +77,5 @@ public class AnonInnerLengthCheckTest extends BaseCheckTestSupport {
         };
         verify(checkConfig, getPath("InputAnonInnerLength.java"), expected);
     }
+
 }
